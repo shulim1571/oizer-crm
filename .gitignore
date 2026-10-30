@@ -5,3 +5,4 @@ dist
 *.xlsx
 *.csv
 data/
+*.tsbuildinfo
