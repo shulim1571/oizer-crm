@@ -54,8 +54,8 @@ The build output (`dist/`) is a static site, so any static host works:
 
 - **Netlify / Vercel / Cloudflare Pages:** import this GitHub repo, build command `npm run build`, output `dist`,
   and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-- **GitHub Pages:** enable Pages (Settings → Pages → Source: GitHub Actions), then run the
-  *Deploy to GitHub Pages* workflow. Private repos need a paid GitHub plan for Pages.
+- **GitHub Pages (current):** live at https://oizer.trubase.org (CNAME → `shulim1571.github.io`). Run the
+  *Deploy to GitHub Pages* workflow to publish changes.
 
 After deploying, add the site URL in Supabase → Authentication → URL Configuration (Site URL and Redirect URLs),
 so confirmation and password-reset emails link back to it.

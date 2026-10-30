@@ -29,7 +29,8 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # Served from the custom domain root (oizer.trubase.org).
+          VITE_BASE_PATH: /
           VITE_SUPABASE_URL: https://poymxghhjisendozqgkm.supabase.co
           VITE_SUPABASE_ANON_KEY: sb_publishable_deHBO_6wJSzo2sAVwTU6AQ_p6XJoSIQ
       - uses: actions/upload-pages-artifact@v3
