@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          # Publishable key: safe in the browser; data is protected by row-level security.
+          VITE_SUPABASE_URL: https://poymxghhjisendozqgkm.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_deHBO_6wJSzo2sAVwTU6AQ_p6XJoSIQ
