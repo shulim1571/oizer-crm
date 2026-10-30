@@ -15,14 +15,21 @@ export type Row = Record<string, any>;
 
 type PageQuery = (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>;
 
-/** PostgREST caps responses at 1000 rows; page through until everything is loaded. */
-export async function fetchAll(query: PageQuery, pageSize = 1000): Promise<Row[]> {
-  const rows: Row[] = [];
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await query(from, from + pageSize - 1);
+/**
+ * PostgREST caps responses at 1000 rows; page through until everything is loaded.
+ * After the first page, requests go out a few at a time in parallel.
+ */
+export async function fetchAll(query: PageQuery, pageSize = 1000, parallel = 4): Promise<Row[]> {
+  const page = async (n: number) => {
+    const { data, error } = await query(n * pageSize, (n + 1) * pageSize - 1);
     if (error) throw new Error(error.message);
-    rows.push(...(data ?? []));
-    if (!data || data.length < pageSize) break;
+    return data ?? [];
+  };
+  const rows = await page(0);
+  if (rows.length < pageSize) return rows;
+  for (let next = 1; ; next += parallel) {
+    const batch = await Promise.all(Array.from({ length: parallel }, (_, i) => page(next + i)));
+    for (const b of batch) rows.push(...b);
+    if (batch.some(b => b.length < pageSize)) return rows;
   }
-  return rows;
 }

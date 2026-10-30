@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import { useAuth } from './lib/auth';
 import { supabase } from './lib/supabase';
-import Login, { SetNewPassword } from './pages/Login';
+import Login, { AuthShell, SetNewPassword } from './pages/Login';
 import Campaigns from './pages/Campaigns';
 import CampaignDetail from './pages/CampaignDetail';
 import { AllDonations, NewDonation, RecentDonations } from './pages/Donations';
@@ -29,23 +29,22 @@ export default function App() {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  if (loading) return <div className="splash">Loading…</div>;
+  if (loading) return <div className="splash"><div className="logo">O</div></div>;
   if (recovering) return <SetNewPassword onDone={() => setRecovering(false)} />;
   if (!session) return <Login />;
   if (!profile || profile.role === 'pending') {
     return (
-      <div className="login">
-        <div className="card login-card">
-          <div className="brand big">Oizer</div>
-          <h2>Waiting for access</h2>
-          <p>You're signed in as <b>{session.user.email}</b>, but an admin hasn't given this login access yet.</p>
+      <AuthShell>
+        <div className="auth-card">
+          <h1>Waiting for access</h1>
+          <p className="lead">You're signed in as <b>{session.user.email}</b>, but an admin hasn't given this login access yet.</p>
           <p className="muted">Ask the office to link your login to your campaigns, then refresh.</p>
-          <div className="form-actions">
+          <div className="auth-links">
             <button className="btn" onClick={refresh}>Refresh</button>
             <button className="btn primary" onClick={signOut}>Sign out</button>
           </div>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 

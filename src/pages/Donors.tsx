@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Pencil, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, HandCoins, Landmark, Pencil, Plus, TrendingUp } from 'lucide-react';
+import Kpi from '../components/Kpi';
 import DataTable from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import { campLabel } from '../components/CrudPage';
@@ -22,26 +23,37 @@ export function DonorsPage() {
   return (
     <>
       <DataTable
-        title="Donor"
+        title="Donors"
         rows={data ?? []}
         loading={loading}
         error={error}
         onOpen={r => nav(`/donors/${r.id}`)}
         initialSort={{ key: 'total_given', dir: 'desc' }}
         columns={[
-          { key: 'display_name', label: 'Name', width: 180 },
-          { key: 'yiddish_name', label: 'Yiddish Name', width: 180 },
+          {
+            key: 'display_name', label: 'Donor', width: 220,
+            value: r => `${r.display_name} ${r.yiddish_name ?? ''}`,
+            render: r => (
+              <div className="person">
+                <span className="avatar sm">{(r.display_name || '?')[0]}</span>
+                <div>
+                  <div>{r.display_name}</div>
+                  {r.yiddish_name && r.yiddish_name !== r.display_name && <div className="muted small">{r.yiddish_name}</div>}
+                </div>
+              </div>
+            ),
+          },
+          { key: 'total_given', label: 'Total Given', render: r => <b className="num">{money(r.total_given)}</b>, align: 'right' },
+          { key: 'gift_count', label: 'Gifts', align: 'right' },
           { key: 'phone', label: 'Phone' },
           { key: 'email', label: 'Email' },
           { key: 'address', label: 'Address' },
-          { key: 'gift_count', label: 'Gifts', align: 'right' },
-          { key: 'total_given', label: 'Total Given', render: r => money(r.total_given), align: 'right' },
           { key: 'campaign_count', label: 'Campaigns', align: 'right' },
           { key: 'last_gift_at', label: 'Last Gift', render: r => date(r.last_gift_at) },
           { key: 'matbia_id', label: 'Matbia ID' },
           { key: 'ojc_id', label: 'OJC ID' },
         ]}
-        actions={isAdmin && <button className="btn primary" onClick={() => setAdding(true)}><Plus size={18} /> Add</button>}
+        actions={isAdmin && <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New donor</button>}
       />
       {adding && (
         <RecordForm table="donors" title="New Donor" fields={donorFields} onClose={() => setAdding(false)} onSaved={r => nav(`/donors/${r.id}`)} />
@@ -103,10 +115,14 @@ export function DonorDetail() {
   return (
     <div className="detail">
       <div className="detail-head">
-        <button className="icon-btn" onClick={() => nav(-1)} title="Back"><ArrowLeft size={20} /></button>
+        <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={18} /></button>
+        <div className="hero-avatar">{(d.display_name || '?')[0]}</div>
         <div>
           <h1>{d.english_title ? `${d.english_title} ` : ''}{d.display_name}</h1>
-          {d.yiddish_name && d.yiddish_name !== d.display_name && <div className="muted hebrew">{d.yiddish_name}</div>}
+          <div className="sub">
+            {d.yiddish_name && d.yiddish_name !== d.display_name && <span className="hebrew">{d.yiddish_name}</span>}
+            <span>Donor since {date(d.first_gift_at ?? d.created_at)}</span>
+          </div>
         </div>
         <div className="spacer" />
         {(role === 'admin' || role === 'manager') && (
@@ -116,11 +132,11 @@ export function DonorDetail() {
       </div>
 
       <div className="kpis">
-        <div className="kpi"><div className="kpi-label">Total given</div><div className="kpi-value">{money(d.total_given)}</div></div>
-        <div className="kpi"><div className="kpi-label">Gifts</div><div className="kpi-value">{d.gift_count}</div></div>
-        <div className="kpi"><div className="kpi-label">Average gift</div><div className="kpi-value">{money(d.gift_count ? d.total_given / d.gift_count : 0)}</div></div>
-        <div className="kpi"><div className="kpi-label">First gift</div><div className="kpi-value small">{date(d.first_gift_at)}</div></div>
-        <div className="kpi"><div className="kpi-label">Last gift</div><div className="kpi-value small">{date(d.last_gift_at)}</div></div>
+        <Kpi label="Lifetime giving" value={money(d.total_given)} icon={<TrendingUp size={18} />} tone="green" />
+        <Kpi label="Gifts" value={d.gift_count} icon={<HandCoins size={18} />} tone="violet"
+             sub={`avg ${money(d.gift_count ? d.total_given / d.gift_count : 0)}`} />
+        <Kpi label="Campaigns" value={d.campaign_count ?? 0} icon={<Landmark size={18} />} tone="blue" />
+        <Kpi label="Last gift" value={date(d.last_gift_at) || '—'} icon={<CalendarDays size={18} />} tone="amber" small />
       </div>
 
       <div className="cards">
@@ -139,8 +155,19 @@ export function DonorDetail() {
           <h3>Giving by campaign</h3>
           <table className="mini">
             <tbody>
-              {byCampaign.map(c => <tr key={c.label}><td>{c.label}</td><td className="right">{c.count}</td><td className="right">{money(c.total)}</td></tr>)}
-              {byCampaign.length === 0 && <tr><td className="muted">No gifts yet</td></tr>}
+              {byCampaign.slice(0, 8).map(c => (
+                <tr key={c.label}>
+                  <td>
+                    {c.label} <span className="muted small">· {c.count}</span>
+                    <div className="bar"><span style={{ width: `${(c.total / (byCampaign[0]?.total || 1)) * 100}%` }} /></div>
+                  </td>
+                  <td className="right num">{money(c.total)}</td>
+                </tr>
+              ))}
+              {byCampaign.length === 0 && <tr><td className="muted">{gifts.loading ? 'Loading…' : 'No gifts yet'}</td></tr>}
+              {byCampaign.length > 8 && (
+                <tr><td colSpan={2} className="muted small">+ {byCampaign.length - 8} more campaigns in the history below</td></tr>
+              )}
             </tbody>
           </table>
         </div>

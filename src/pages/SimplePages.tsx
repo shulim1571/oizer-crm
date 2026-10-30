@@ -1,4 +1,5 @@
 import CrudPage, { campLabel } from '../components/CrudPage';
+import { StatusPill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, yn } from '../lib/format';
 import {
@@ -10,7 +11,7 @@ const CAMP = 'id, real_name, campaign_name, friendly_name';
 export function ExpensesPage() {
   return (
     <CrudPage
-      title="Expense"
+      title="Expenses" noun="Expense"
       table="expenses"
       select={`*, campaigns(${CAMP}), accounts(name)`}
       order={{ column: 'created_at', ascending: false }}
@@ -36,7 +37,7 @@ export function ExpensesPage() {
 export function TransfersPage() {
   return (
     <CrudPage
-      title="Transfer"
+      title="Transfers" noun="Transfer"
       table="transfers"
       select={`*, from:campaigns!transfers_from_campaign_id_fkey(${CAMP}), to:campaigns!transfers_to_campaign_id_fkey(${CAMP})`}
       order={{ column: 'created_at', ascending: false }}
@@ -57,7 +58,7 @@ export function TransfersPage() {
 export function SourcesPage() {
   return (
     <CrudPage
-      title="Source"
+      title="Sources" noun="Source"
       table="sources"
       order={{ column: 'name' }}
       columns={[
@@ -73,7 +74,7 @@ export function SourcesPage() {
 export function AccountsPage() {
   return (
     <CrudPage
-      title="Account"
+      title="Accounts" noun="Account"
       table="accounts"
       order={{ column: 'name' }}
       columns={[
@@ -95,30 +96,30 @@ const personColumns = [
 ];
 
 export function ManagersPage() {
-  return <CrudPage title="Manager" table="managers" order={{ column: 'full_name' }} columns={personColumns} fields={personFields} />;
+  return <CrudPage title="Managers" noun="Manager" table="managers" order={{ column: 'full_name' }} columns={personColumns} fields={personFields} />;
 }
 
 export function CollectorsPage() {
-  return <CrudPage title="Collector" table="collectors" order={{ column: 'full_name' }} columns={personColumns} fields={personFields} />;
+  return <CrudPage title="Collectors" noun="Collector" table="collectors" order={{ column: 'full_name' }} columns={personColumns} fields={personFields} />;
 }
 
 export function TasksPage() {
   const { role } = useAuth();
   return (
     <CrudPage
-      title="Task"
+      title="Tasks" noun="Task"
       table="tasks"
       select={`*, campaigns(${CAMP}), donors(display_name)`}
       order={{ column: 'created_at', ascending: false }}
       canEdit={role === 'admin' || role === 'manager'}
       defaults={{ status: 'Pending' }}
-      groupBy={{ value: r => r.status }}
+      groupBy={{ label: "Status", value: r => r.status }}
       columns={[
         { key: 'title', label: 'Task', width: 200 },
         { key: 'campaign', label: 'Campaign', value: r => campLabel(r.campaigns), render: r => campLabel(r.campaigns) },
         { key: 'donor', label: 'Donor', value: r => r.donors?.display_name, render: r => r.donors?.display_name },
         { key: 'assigned_to', label: 'Assigned to' },
-        { key: 'status', label: 'Status' },
+        { key: "status", label: "Status", render: r => <StatusPill value={r.status} /> },
         { key: 'due_date', label: 'Due' },
         { key: 'description', label: 'Description' },
         { key: 'created_at', label: 'Created', render: r => dateTime(r.created_at) },

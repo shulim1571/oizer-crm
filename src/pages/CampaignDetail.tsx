@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Pencil, Plus } from 'lucide-react';
+import {
+  ArrowLeft, Clock, ExternalLink, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, StickyNote, TrendingUp,
+} from 'lucide-react';
 import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
 import { campLabel } from '../components/CrudPage';
+import Kpi from '../components/Kpi';
+import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
-import { balanceClass, dateTime, money, pct, yn } from '../lib/format';
+import { date, dateTime, money, pct, yn } from '../lib/format';
 import { campaignFields, donationFields, expenseFields, taskFields, transferFields } from '../lib/schemas';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
 
@@ -83,7 +87,7 @@ export default function CampaignDetail() {
     },
     transfers: {
       columns: [
-        { key: 'direction', label: 'Direction', value: (r: Row) => (r.to_campaign_id === id ? 'In' : 'Out') },
+        { key: 'direction', label: 'Direction', value: (r: Row) => (r.to_campaign_id === id ? 'In' : 'Out'), render: (r: Row) => (r.to_campaign_id === id ? <Pill tone="green">In</Pill> : <Pill tone="amber">Out</Pill>) },
         { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
         { key: 'from', label: 'From', value: (r: Row) => campLabel(r.from) },
         { key: 'to', label: 'To', value: (r: Row) => campLabel(r.to) },
@@ -96,7 +100,7 @@ export default function CampaignDetail() {
     tasks: {
       columns: [
         { key: 'title', label: 'Task' },
-        { key: 'status', label: 'Status' },
+        { key: 'status', label: 'Status', render: (r: Row) => <StatusPill value={r.status} /> },
         { key: 'assigned_to', label: 'Assigned to' },
         { key: 'donor', label: 'Donor', value: (r: Row) => r.donors?.display_name },
         { key: 'due_date', label: 'Due' },
@@ -122,39 +126,49 @@ export default function CampaignDetail() {
   return (
     <div className="detail">
       <div className="detail-head">
-        <button className="icon-btn" onClick={() => nav(-1)} title="Back"><ArrowLeft size={20} /></button>
+        <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={18} /></button>
+        <div className="hero-avatar">{(c.real_name || c.campaign_name || '#')[0]}</div>
         <div>
-          <h1>{c.real_name || c.campaign_name} <span className="muted">#{c.id}</span></h1>
-          <div className="muted">
-            {c.friendly_name}
-            {c.manager_name && <> · Manager: {c.manager_name}</>}
-            {c.sub_managers.length > 0 && <> · Sub: {c.sub_managers.map((m: Row) => m.full_name).join(', ')}</>}
-            {c.archived_at && <> · <span className="tag">Archived {dateTime(c.archived_at)}</span></>}
+          <h1>
+            {c.real_name || c.campaign_name}
+            <span className="id-tag">#{c.id}</span>
+            <StatusPill value={c.archived_at ? 'Archived' : 'Active'} />
+          </h1>
+          <div className="sub">
+            {c.friendly_name && <span>{c.friendly_name}</span>}
+            {c.manager_name && <span>· Managed by <b>{c.manager_name}</b></span>}
+            {c.sub_managers.length > 0 && <span>· with {c.sub_managers.map((m: Row) => m.full_name).join(', ')}</span>}
+            {c.archived_at && <span>· archived {date(c.archived_at)}</span>}
           </div>
         </div>
         <div className="spacer" />
+        {c.payment_link && (
+          <a className="btn" href={c.payment_link} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>
+        )}
         {isAdmin && (
-          <button className="btn" onClick={() => setForm({ table: 'campaigns', title: 'Edit Campaign', fields: campaignFields, record: c })}>
+          <button className="btn" onClick={() => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c })}>
             <Pencil size={16} /> Edit
           </button>
         )}
       </div>
 
       <div className="kpis">
-        <Kpi label="Raised" value={money(c.raised)} />
-        <Kpi label="Fees" value={`${money(c.fees)} · ${pct(c.fee_percent)}`} />
-        <Kpi label="Expenses" value={money(c.expenses)} />
-        <Kpi label="Balance" value={money(c.balance)} cls={balanceClass(c.balance)} />
-        <Kpi label="Pending Balance" value={money(c.pending_balance)} />
-        <Kpi label="Donations" value={Number(c.donation_count).toLocaleString()} />
+        <Kpi label="Raised" value={money(c.raised)} icon={<TrendingUp size={18} />} tone="green"
+             sub={`${Number(c.donation_count).toLocaleString()} donations`} />
+        <Kpi label="Fees" value={money(c.fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(c.fee_percent)} of raised`} />
+        <Kpi label="Expenses" value={money(c.expenses)} icon={<Receipt size={18} />} tone="amber" />
+        <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} />
+        <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={18} />} tone="blue"
+             sub={c.last_donation_at ? `last gift ${date(c.last_donation_at)}` : undefined} />
       </div>
 
-      <div className="info">
-        {c.email && <span>✉ {c.email}</span>}
-        {c.phone && <span>☎ {c.phone}</span>}
-        {c.payment_link && <a href={c.payment_link} target="_blank" rel="noreferrer">Payment page ↗</a>}
-        {c.notes && <span>{c.notes}</span>}
-      </div>
+      {(c.email || c.phone || c.notes) && (
+        <div className="info">
+          {c.email && <span><Mail size={14} /> {c.email}</span>}
+          {c.phone && <span><Phone size={14} /> {c.phone}</span>}
+          {c.notes && <span><StickyNote size={14} /> {c.notes}</span>}
+        </div>
+      )}
 
       <div className="tabs">
         {(['donations', 'expenses', 'transfers', 'tasks', 'pledges'] as Tab[]).map(t => (
@@ -172,7 +186,7 @@ export default function CampaignDetail() {
         onOpen={tabConfig.edit ? r => setForm({ ...tabConfig.edit as { table: string; title: string; fields: Field[] }, record: r }) : undefined}
         actions={tabConfig.add && (
           <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
-            <Plus size={18} /> Add
+            <Plus size={16} /> Add
           </button>
         )}
       />
@@ -189,15 +203,6 @@ export default function CampaignDetail() {
           onSaved={row => (form.table === 'campaigns' && row.id !== id ? nav(`/campaigns/${encodeURIComponent(row.id)}`) : saved())}
         />
       )}
-    </div>
-  );
-}
-
-function Kpi({ label, value, cls }: { label: string; value: string; cls?: string }) {
-  return (
-    <div className="kpi">
-      <div className="kpi-label">{label}</div>
-      <div className={`kpi-value ${cls ?? ''}`}>{value}</div>
     </div>
   );
 }

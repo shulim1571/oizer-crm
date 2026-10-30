@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import SearchSelect from '../components/SearchSelect';
+import { StatusPill } from '../components/Pill';
 import { supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { managerOptions, type Option } from '../lib/lookups';
@@ -44,8 +45,10 @@ export default function UsersPage() {
 
   return (
     <section className="view">
-      <div className="view-head"><h1>Users &amp; Access</h1></div>
-      <div className="pad">
+      <div className="view-head">
+        <div className="view-title"><h1>Users &amp; Access</h1><span className="count">Who can sign in and what they can see</span></div>
+      </div>
+      <div>
         <p className="muted">
           People create their own login on the sign-in page. Emails listed under <b>Admin emails</b> become admins automatically.
           Anyone whose email matches a <b>Manager</b> record becomes a campaign manager and only sees campaigns where they are the
@@ -54,7 +57,7 @@ export default function UsersPage() {
         {msg && <div className="notice">{msg}</div>}
 
         <h2>Logins</h2>
-        <div className="table-wrap">
+        <div className="table-card"><div className="table-wrap">
           <table className="grid">
             <thead><tr><th>Email</th><th>Role</th><th>Linked manager records</th><th>Created</th></tr></thead>
             <tbody>
@@ -62,6 +65,7 @@ export default function UsersPage() {
                 <tr key={u.user_id}>
                   <td>{u.email}</td>
                   <td>
+                    <StatusPill value={u.role} />{" "}
                     <select value={u.role} disabled={u.user_id === me?.user_id} onChange={e => setRole(u, e.target.value)}>
                       <option value="pending">pending</option>
                       <option value="manager">manager</option>
@@ -84,7 +88,7 @@ export default function UsersPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </div></div>
 
         <h2>Admin emails</h2>
         <ul className="plain">

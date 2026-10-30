@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { HandCoins, Landmark, Plus, TrendingUp } from 'lucide-react';
+import Kpi from '../components/Kpi';
 import DataTable, { sumBadge } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import { useSearch } from '../components/Layout';
@@ -50,17 +51,33 @@ export function RecentDonations() {
   return (
     <>
       <DataTable
-        title="Donation last 7 days"
+        title="Last 7 Days"
         rows={data ?? []}
         loading={loading}
         error={error}
         columns={donationColumns()}
-        groupBy={{ value: r => r.type, badge: sumBadge('amount') }}
+        groupBy={{ label: 'Type', value: r => r.type, badge: sumBadge('amount') }}
         onOpen={open ?? undefined}
-        actions={isAdmin && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={18} /> Add</button>}
+        summary={data && <WeekSummary rows={data} />}
+        actions={isAdmin && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
       />
       {editor}
     </>
+  );
+}
+
+function WeekSummary({ rows }: { rows: Row[] }) {
+  const live = rows.filter(r => r.type !== 'Voided');
+  const total = live.reduce((s, r) => s + Number(r.amount ?? 0), 0);
+  const fees = live.reduce((s, r) => s + Number(r.fee ?? 0), 0);
+  const campaigns = new Set(live.map(r => r.campaign_id)).size;
+  return (
+    <div className="kpis">
+      <Kpi label="Received" value={money(total)} icon={<TrendingUp size={18} />} tone="green" sub={`${money(fees)} in fees`} />
+      <Kpi label="Gifts" value={live.length.toLocaleString()} icon={<HandCoins size={18} />} tone="violet"
+           sub={`avg ${money(live.length ? total / live.length : 0)}`} />
+      <Kpi label="Campaigns" value={campaigns} icon={<Landmark size={18} />} tone="blue" sub="received gifts" />
+    </div>
   );
 }
 
@@ -106,6 +123,7 @@ export function AllDonations() {
     <>
       <DataTable
         title="All Donations"
+        subtitle={`${(data?.count ?? 0).toLocaleString()} donations`}
         rows={data?.rows ?? []}
         loading={loading}
         error={error}
@@ -120,15 +138,17 @@ export function AllDonations() {
             </select>
             <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(0); }} title="From" />
             <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(0); }} title="To" />
-            {isAdmin && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={18} /> Add</button>}
+            {isAdmin && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
           </>
         }
         footer={
-          <div className="pager">
-            <button className="btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</button>
-            <span>Page {page + 1} of {Math.max(pages, 1)} · {(data?.count ?? 0).toLocaleString()} donations</span>
-            <button className="btn" disabled={page + 1 >= pages} onClick={() => setPage(p => p + 1)}>Next</button>
-          </div>
+          <>
+            <span>Page {page + 1} of {Math.max(pages, 1)}</span>
+            <div className="pager">
+              <button className="btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</button>
+              <button className="btn" disabled={page + 1 >= pages} onClick={() => setPage(p => p + 1)}>Next</button>
+            </div>
+          </>
         }
       />
       {editor}
@@ -142,7 +162,9 @@ export function NewDonation() {
   const [key, setKey] = useState(0);
   return (
     <section className="view narrow">
-      <div className="view-head"><h1>New Donation</h1></div>
+      <div className="view-head">
+        <div className="view-title"><h1>New Donation</h1><span className="count">Record a gift against a campaign</span></div>
+      </div>
       {last && (
         <div className="notice">
           Saved {money(last.amount)} to campaign {last.campaign_id}.{' '}

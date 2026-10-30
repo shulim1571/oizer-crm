@@ -8,6 +8,8 @@ import { useAuth } from '../lib/auth';
 
 interface Props {
   title: string;
+  /** Singular name for buttons and form titles; defaults to the title. */
+  noun?: string;
   table: string;
   select?: string;
   order?: { column: string; ascending?: boolean };
@@ -62,7 +64,7 @@ export default function CrudPage(p: Props) {
           <>
             {p.extraActions}
             {canEdit && (
-              <button className="btn primary" onClick={() => setEditing(null)}><Plus size={18} /> Add</button>
+              <button className="btn primary" onClick={() => setEditing(null)}><Plus size={16} /> New {(p.noun ?? p.title).toLowerCase()}</button>
             )}
           </>
         }
@@ -71,7 +73,7 @@ export default function CrudPage(p: Props) {
         <RecordForm
           table={p.table}
           pk={p.pk}
-          title={editing ? `Edit ${p.title}` : `New ${p.title}`}
+          title={editing ? `Edit ${(p.noun ?? p.title).toLowerCase()}` : `New ${(p.noun ?? p.title).toLowerCase()}`}
           fields={p.fields}
           record={editing}
           defaults={p.defaults}
