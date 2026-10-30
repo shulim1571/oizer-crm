@@ -7,6 +7,7 @@ import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
 import { campLabel } from '../components/CrudPage';
 import Kpi from '../components/Kpi';
+import AdminLink from '../components/AdminLink';
 import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -136,7 +137,7 @@ export default function CampaignDetail() {
           </h1>
           <div className="sub">
             {c.friendly_name && <span>{c.friendly_name}</span>}
-            {c.manager_name && <span>· Managed by <b>{c.manager_name}</b></span>}
+            {c.manager_name && <span>· Managed by <b><AdminLink to={`/managers/${encodeURIComponent(c.manager_id)}`}>{c.manager_name}</AdminLink></b></span>}
             {c.sub_managers.length > 0 && <span>· with {c.sub_managers.map((m: Row) => m.full_name).join(', ')}</span>}
             {c.archived_at && <span>· archived {date(c.archived_at)}</span>}
           </div>

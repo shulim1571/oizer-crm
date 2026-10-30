@@ -9,6 +9,7 @@ import CampaignDetail from './pages/CampaignDetail';
 import { AllDonations, NewDonation, RecentDonations } from './pages/Donations';
 import { DonorDetail, DonorsPage } from './pages/Donors';
 import UsersPage from './pages/Users';
+import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
   AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage, TransfersPage,
 } from './pages/SimplePages';
@@ -62,8 +63,11 @@ export default function App() {
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="transfers" element={<TransfersPage />} />
         <Route path="sources" element={<AdminOnly><SourcesPage /></AdminOnly>} />
+        <Route path="sources/:id" element={<AdminOnly><SourceDetail /></AdminOnly>} />
         <Route path="accounts" element={<AdminOnly><AccountsPage /></AdminOnly>} />
+        <Route path="accounts/:id" element={<AdminOnly><AccountDetail /></AdminOnly>} />
         <Route path="managers" element={<AdminOnly><ManagersPage /></AdminOnly>} />
+        <Route path="managers/:id" element={<AdminOnly><ManagerDetail /></AdminOnly>} />
         <Route path="collectors" element={<AdminOnly><CollectorsPage /></AdminOnly>} />
         <Route path="donors" element={<DonorsPage />} />
         <Route path="donors/:id" element={<DonorDetail />} />

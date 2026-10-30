@@ -4,6 +4,7 @@ import { Clock, Plus, Receipt, Scale, TrendingUp } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import Kpi from '../components/Kpi';
+import AdminLink from '../components/AdminLink';
 import { Balance, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -22,7 +23,10 @@ export const campaignColumns: Column[] = [
     ),
   },
   { key: 'id', label: 'ID', value: r => Number(r.id) || r.id, render: r => <span className="id-tag">{r.id}</span> },
-  { key: 'manager_name', label: 'Manager', width: 140 },
+  {
+    key: 'manager_name', label: 'Manager', width: 140,
+    render: r => r.manager_id && <AdminLink to={`/managers/${encodeURIComponent(r.manager_id)}`}>{r.manager_name}</AdminLink>,
+  },
   { key: 'raised', label: 'Raised', render: r => money(r.raised), align: 'right' },
   { key: 'fees', label: 'Fees', render: r => money(r.fees), align: 'right' },
   { key: 'fee_percent', label: 'Fee %', render: r => pct(r.fee_percent), align: 'right' },

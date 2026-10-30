@@ -84,6 +84,11 @@ function WeekSummary({ rows }: { rows: Row[] }) {
 const PAGE = 500;
 
 export function AllDonations() {
+  return <PagedDonations title="All Donations" />;
+}
+
+/** Server-paged, searchable donation list; `filter` limits it to one source, account, etc. */
+export function PagedDonations({ title, filter }: { title: string; filter?: { column: string; value: string } }) {
   const { q } = useSearch();
   const nav = useNavigate();
   const { isAdmin } = useAuth();
@@ -100,6 +105,7 @@ export function AllDonations() {
 
   const { data, error, loading, setData } = useQuery(async () => {
     let query = supabase.from('donations').select(DONATION_SELECT, { count: 'exact' }).order('created_at', { ascending: false });
+    if (filter) query = query.eq(filter.column, filter.value);
     if (type) query = query.eq('type', type);
     if (from) query = query.gte('created_at', new Date(`${from}T00:00:00`).toISOString());
     if (to) query = query.lt('created_at', new Date(new Date(`${to}T00:00:00`).getTime() + 864e5).toISOString());
@@ -114,7 +120,7 @@ export function AllDonations() {
     const { data, count, error } = await query.range(page * PAGE, page * PAGE + PAGE - 1);
     if (error) throw new Error(error.message);
     return { rows: data ?? [], count: count ?? 0 };
-  }, [debounced, page, type, from, to]);
+  }, [debounced, page, type, from, to, filter?.column, filter?.value]);
 
   const { open, editor } = useDonationEditor(row => setData(d => d && { ...d, rows: replaceRow(d.rows, row) }));
   const pages = Math.ceil((data?.count ?? 0) / PAGE);
@@ -122,7 +128,8 @@ export function AllDonations() {
   return (
     <>
       <DataTable
-        title="All Donations"
+        title={title}
+        exportName={filter ? `${title}-${filter.value}` : title}
         subtitle={`${(data?.count ?? 0).toLocaleString()} donations`}
         rows={data?.rows ?? []}
         loading={loading}
@@ -138,7 +145,7 @@ export function AllDonations() {
             </select>
             <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(0); }} title="From" />
             <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(0); }} title="To" />
-            {isAdmin && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
+            {isAdmin && !filter && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
           </>
         }
         footer={

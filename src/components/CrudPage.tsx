@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import DataTable, { type Column, type GroupBy } from './DataTable';
 import RecordForm, { type Field } from './RecordForm';
@@ -21,20 +22,25 @@ interface Props {
   defaults?: Row;
   pk?: string;
   extraActions?: ReactNode;
+  /** Read rows from this view (e.g. a summary with totals) instead of the table. */
+  view?: string;
+  /** Click a row to open this path (e.g. a detail page) instead of the edit form. */
+  openPath?: (row: Row) => string;
 }
 
 export default function CrudPage(p: Props) {
   const { isAdmin } = useAuth();
   const canEdit = p.canEdit ?? isAdmin;
   const [editing, setEditing] = useState<Row | null | undefined>(undefined);
+  const nav = useNavigate();
 
   const { data, error, loading, setData } = useQuery(
     () => fetchAll((a, b) => {
-      let q = supabase.from(p.table).select(p.select ?? '*');
+      let q = supabase.from(p.view ?? p.table).select(p.select ?? '*');
       if (p.order) q = q.order(p.order.column, { ascending: p.order.ascending ?? true });
       return q.range(a, b) as unknown as PromiseLike<{ data: Row[] | null; error: { message: string } | null }>;
     }),
-    [p.table, p.select],
+    [p.table, p.view, p.select],
   );
 
   const pk = p.pk ?? 'id';
@@ -42,7 +48,7 @@ export default function CrudPage(p: Props) {
     setEditing(undefined);
     // Re-read the row so embedded relations (campaign names etc.) are filled in.
     if (row._deleted) return setData(d => (d ?? []).filter(r => r[pk] !== row[pk]));
-    const { data: fresh } = await supabase.from(p.table).select(p.select ?? '*').eq(pk, row[pk]).single();
+    const { data: fresh } = await supabase.from(p.view ?? p.table).select(p.select ?? '*').eq(pk, row[pk]).single();
     const full = (fresh as Row | null) ?? row;
     setData(d => {
       const list = d ?? [];
@@ -59,7 +65,7 @@ export default function CrudPage(p: Props) {
         error={error}
         columns={p.columns}
         groupBy={p.groupBy}
-        onOpen={canEdit ? r => setEditing(r) : undefined}
+        onOpen={p.openPath ? r => nav(p.openPath!(r)) : canEdit ? r => setEditing(r) : undefined}
         actions={
           <>
             {p.extraActions}

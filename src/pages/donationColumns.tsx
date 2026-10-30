@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Column } from '../components/DataTable';
 import { campLabel } from '../components/CrudPage';
 import { StatusPill } from '../components/Pill';
+import AdminLink from '../components/AdminLink';
 import { dateTime, money, yn } from '../lib/format';
 import type { Row } from '../lib/supabase';
 
@@ -31,7 +32,14 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
   { key: 'fee', label: 'Fee', render: r => money(r.fee ?? r.manual_fee), value: r => r.fee ?? r.manual_fee, align: 'right' },
   { key: 'net_donation', label: 'Net', render: r => money(r.net_donation), align: 'right' },
   { key: 'collector', label: 'Collector', value: r => r.collectors?.full_name ?? r.collector_label },
-  { key: 'source', label: 'Source', value: r => r.sources?.name ?? r.source },
+  {
+    key: 'source', label: 'Source', value: r => r.sources?.name ?? r.source,
+    render: r => r.source && <AdminLink to={`/sources/${encodeURIComponent(r.source)}`}>{r.sources?.name ?? r.source}</AdminLink>,
+  },
+  {
+    key: 'account', label: 'Account', value: r => r.accounts?.name,
+    render: r => r.account_id && <AdminLink to={`/accounts/${encodeURIComponent(r.account_id)}`}>{r.accounts?.name ?? r.account_id}</AdminLink>,
+  },
   { key: 'delivered', label: 'Delivered', render: r => yn(r.delivered) },
   { key: 'batch_id', label: 'Batch ID' },
   { key: 'notes', label: 'Notes' },
