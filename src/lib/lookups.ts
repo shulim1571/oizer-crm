@@ -55,8 +55,14 @@ export const sourceOptions = () =>
 
 export const paymentMethodOptions = () =>
   cached('paymentMethods', async () =>
-    (await fetchAll((a, b) => supabase.from('payment_methods').select('name').eq('active', true).order('name').range(a, b)))
+    (await fetchAll((a, b) => supabase.from('payment_methods').select('name').eq('active', true).neq('category', 'Voucher').order('name').range(a, b)))
       .map(m => ({ value: m.name, label: m.name })),
+  );
+
+export const voucherIssuerOptions = () =>
+  cached('voucherIssuers', async () =>
+    (await fetchAll((a, b) => supabase.from('payment_methods').select('name').eq('active', true).eq('category', 'Voucher').order('name').range(a, b)))
+      .map(m => ({ value: m.name, label: m.name.replace(/^Voucher\s*—\s*/, '') })),
   );
 
 export const paymentMethodIdOptions = () =>

@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, HandCoins, History, Landmark, Layers, ListPlus, Lock, LogOut, Menu, Percent,
-  PlusCircle, Receipt, RefreshCw, Repeat, Search, ShieldCheck, UserCircle, Users, Wallet,
+  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, HandCoins, Handshake, History, Landmark, Layers, ListPlus, Lock, LogOut, Menu, Percent,
+  PlusCircle, Receipt, RefreshCw, Repeat, Ticket, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
@@ -43,6 +43,8 @@ const NAV: NavSection[] = [
       { to: '/donations/batch', label: 'Batch Entry', icon: <ListPlus size={I} />, admin: true },
       { to: '/donations/recent', label: 'Last 7 Days', icon: <HandCoins size={I} /> },
       { to: '/donations/all', label: 'All Transactions', icon: <CircleDollarSign size={I} /> },
+      { to: '/vouchers', label: 'Vouchers', icon: <Ticket size={I} />, admin: true },
+      { to: '/pledges', label: 'Pledges', icon: <Handshake size={I} /> },
       { to: '/expenses', label: 'Expenses', icon: <Receipt size={I} /> },
       { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} /> },
     ],

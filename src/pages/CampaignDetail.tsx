@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Clock, ExternalLink, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Star, StickyNote, TrendingUp,
+  ArrowLeft, Clock, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Star, StickyNote, TrendingUp,
 } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
@@ -17,8 +17,10 @@ import { campaignFields, donationFields, expenseFields, fundraiserDonationFields
 import { clearLookups } from '../lib/lookups';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
 import { STATUS_LABEL } from './Campaigns';
+import { NewPledgeButtons, PledgeDialog, pledgeColumns } from './Pledges';
+import { NewVoucherButton, VoucherDialog, voucherColumns } from './Vouchers';
 
-type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges';
+type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers';
 const CAMP = 'id, internal_name, campaign_name, external_name';
 
 export default function CampaignDetail() {
@@ -29,6 +31,8 @@ export default function CampaignDetail() {
   const [form, setForm] = useState<{ table: string; title: string; fields: Field[]; record?: Row | null; defaults?: Row } | null>(null);
   const [version, setVersion] = useState(0);
   const [canEnter, setCanEnter] = useState(false);
+  const [openPledge, setOpenPledge] = useState<string | null>(null);
+  const [openVoucher, setOpenVoucher] = useState<string | null>(null);
 
   // A fundraiser with the override can enter payments here, held for approval.
   useEffect(() => {
@@ -63,7 +67,9 @@ export default function CampaignDetail() {
       case 'tasks':
         return page((a, b) => supabase.from('tasks').select('*, donors(display_name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
       case 'pledges':
-        return page((a, b) => supabase.from('pledges').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
+        return page((a, b) => supabase.from('pledge_list').select('*').eq('campaign_id', id).order('date_pledged', { ascending: false }).range(a, b));
+      case 'vouchers':
+        return page((a, b) => supabase.from('voucher_list').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
     }
   }, [id, tab, version]);
 
@@ -127,14 +133,12 @@ export default function CampaignDetail() {
       edit: canEditTasks && { table: 'tasks', title: 'Edit Task', fields: taskFields },
     },
     pledges: {
-      columns: [
-        { key: 'donor_label', label: 'Donor', value: (r: Row) => r.donor_label || r.name },
-        { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
-        { key: 'source', label: 'Source' },
-        { key: 'phone', label: 'Phone' },
-        { key: 'notes', label: 'Notes' },
-        { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
-      ],
+      columns: pledgeColumns(true),
+      add: false as const,
+      edit: false as const,
+    },
+    vouchers: {
+      columns: voucherColumns(true),
       add: false as const,
       edit: false as const,
     },
@@ -195,6 +199,10 @@ export default function CampaignDetail() {
         <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} />
         {Number(c.post_dated_amount) > 0 && <Kpi label="Post-dated checks" value={money(c.post_dated_amount)} icon={<Clock size={18} />} tone="blue" sub="Not in the balance yet" />}
         {Number(c.awaiting_approval) > 0 && <Kpi label="Awaiting approval" value={money(c.awaiting_approval)} icon={<Clock size={18} />} tone="amber" sub="Not in the balance yet" />}
+        <Kpi label="Pledged (open)" value={money(c.pledged_open)} icon={<Handshake size={18} />} tone="blue"
+             sub={Number(c.pledge_scheduled_90) > 0 ? `Recurring: ${money(c.pledge_scheduled_30)} next 30 days, ${money(c.pledge_scheduled_90)} next 90` : 'Not in the balance'} />
+        <Kpi label="Total potential" value={money(Number(c.raised) + Number(c.pledged_open))} icon={<Target size={18} />} tone="violet" sub="Raised + pledged" />
+        {Number(c.awaiting_funds) > 0 && <Kpi label="Vouchers awaiting funds" value={money(c.awaiting_funds)} icon={<Ticket size={18} />} tone="amber" sub="Not in the balance yet" />}
         <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={18} />} tone="blue"
              sub={c.last_donation_at ? `last gift ${dateTime(c.last_donation_at)}` : undefined} />
       </div>
@@ -208,7 +216,7 @@ export default function CampaignDetail() {
       )}
 
       <div className="tabs">
-        {(['donations', 'expenses', 'transfers', 'tasks', 'pledges'] as Tab[]).map(t => (
+        {(['donations', 'expenses', 'transfers', 'tasks', 'pledges', 'vouchers'] as Tab[]).map(t => (
           <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>
         ))}
       </div>
@@ -220,13 +228,21 @@ export default function CampaignDetail() {
         loading={rows.loading}
         error={rows.error}
         columns={tabConfig.columns}
-        onOpen={tabConfig.edit ? r => setForm({ ...tabConfig.edit as { table: string; title: string; fields: Field[] }, record: r }) : undefined}
-        actions={tabConfig.add && (
-          <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
-            <Plus size={16} /> Add
-          </button>
-        )}
+        onOpen={tab === 'pledges' ? r => setOpenPledge(r.id) : tab === 'vouchers' ? r => setOpenVoucher(r.id)
+          : tabConfig.edit ? r => setForm({ ...tabConfig.edit as { table: string; title: string; fields: Field[] }, record: r }) : undefined}
+        actions={
+          tab === 'pledges' ? canWork && c.status !== 'closed' && <NewPledgeButtons campaignId={id} onSaved={() => setVersion(v => v + 1)} />
+          : tab === 'vouchers' ? isAdmin && c.status !== 'closed' && <NewVoucherButton campaignId={id} onSaved={() => setVersion(v => v + 1)} />
+          : tabConfig.add && (
+            <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
+              <Plus size={16} /> Add
+            </button>
+          )
+        }
       />
+
+      {openPledge && <PledgeDialog id={openPledge} onClose={() => setOpenPledge(null)} onChanged={() => setVersion(v => v + 1)} />}
+      {openVoucher && <VoucherDialog id={openVoucher} onClose={() => setOpenVoucher(null)} onChanged={() => setVersion(v => v + 1)} />}
 
       {form && (
         <RecordForm

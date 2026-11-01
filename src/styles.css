@@ -145,6 +145,20 @@ input:focus, select:focus, textarea:focus {
 .batch-grid input:not([type='checkbox']) { width: 100%; min-width: 90px; }
 .batch-grid td { vertical-align: top; }
 .batch-grid td:first-child { min-width: 220px; }
+.modal-wide { max-width: 860px; width: calc(100vw - 32px); }
+.dialog-foot { height: 18px; }
+.dialog-section { display: flex; justify-content: space-between; align-items: baseline; margin: 18px 0 8px; font-size: 14px; }
+.dialog-section h3 { margin: 0; font-size: 14px; }
+.dialog-table { border: 1px solid var(--line); border-radius: 10px; }
+.record-facts { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; margin: 0 0 12px; }
+.record-facts dt { color: var(--muted); }
+.record-facts dd { margin: 0; }
+.pre-line { white-space: pre-line; }
+.panel-box { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin: 10px 0; }
+.panel-box .form-actions { margin-top: 10px; }
+.progress { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin-bottom: 6px; }
+.progress > div { height: 100%; background: var(--accent); }
+.inline-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
 .session-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .splash { display: grid; place-items: center; height: 100%; color: var(--muted); }
 .splash .logo { animation: pulse 1.2s ease-in-out infinite; }

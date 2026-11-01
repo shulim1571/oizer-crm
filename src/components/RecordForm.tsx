@@ -91,7 +91,7 @@ export default function RecordForm(p: Props) {
     }
     setSaving(true);
     setError(null);
-    const payload: Row = {};
+    const payload: Row = isNew ? { ...p.defaults } : {};
     for (const f of p.fields) {
       let v = values[f.name];
       if (v === '' || v === undefined) v = null;

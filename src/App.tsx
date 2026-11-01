@@ -15,6 +15,8 @@ import PlatformPage from './pages/Platform';
 import GuestPage from './pages/Guest';
 import BatchEntry from './pages/BatchEntry';
 import FeesPage from './pages/Fees';
+import { PledgesPage } from './pages/Pledges';
+import { VouchersPage } from './pages/Vouchers';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
   AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage, TransfersPage,
@@ -112,6 +114,8 @@ export default function App() {
         <Route path="donations/new" element={<AdminOnly><NewDonation /></AdminOnly>} />
         <Route path="donations/recent" element={<RecentDonations />} />
         <Route path="donations/all" element={<AllDonations />} />
+        <Route path="pledges" element={<PledgesPage />} />
+        <Route path="vouchers" element={<AdminOnly><VouchersPage /></AdminOnly>} />
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="transfers" element={<TransfersPage />} />
         <Route path="sources" element={<AdminOnly><SourcesPage /></AdminOnly>} />

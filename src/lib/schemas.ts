@@ -1,6 +1,6 @@
 import type { Field } from '../components/RecordForm';
 import {
-  CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, EXPENSE_METHODS, paymentMethodOptions, TASK_STATUSES, accountOptions, campaignOptions,
+  CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, EXPENSE_METHODS, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
   collectorOptions, donorOptions, managerOptions, sourceOptions,
 } from './lookups';
 
@@ -68,6 +68,55 @@ export const fundraiserDonationFields: Field[] = [
   { name: 'name', label: 'Donor name' },
   { name: 'phone', label: 'Phone' },
   { name: 'check_number', label: 'Check #' },
+  { name: 'notes', label: 'Notes', type: 'textarea' },
+];
+
+const pledgeWho: Field[] = [
+  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, help: 'Payments match automatically only when a donor is linked' },
+  { name: 'name', label: 'Name, if not linked' },
+  { name: 'phone', label: 'Phone' },
+];
+
+export const pledgeFields: Field[] = [
+  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
+  ...pledgeWho,
+  { name: 'amount', label: 'Pledge amount', type: 'number', required: true },
+  { name: 'date_pledged', label: 'Date pledged', type: 'date', required: true },
+  { name: 'expected_date', label: 'Expected payment date', type: 'date' },
+  { name: 'notes', label: 'Notes', type: 'textarea' },
+];
+
+const FREQUENCIES = ['weekly', 'monthly', 'quarterly', 'annually'].map(v => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }));
+
+export const recurringPledgeFields: Field[] = [
+  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
+  ...pledgeWho,
+  { name: 'installment_amount', label: 'Installment amount', type: 'number', required: true },
+  { name: 'frequency', label: 'Frequency', type: 'select', options: FREQUENCIES, required: true },
+  { name: 'start_date', label: 'First installment', type: 'date', required: true },
+  { name: 'installment_count', label: 'Number of installments', type: 'number', help: 'Leave empty for open-ended' },
+  { name: 'date_pledged', label: 'Date pledged', type: 'date', required: true },
+  { name: 'notes', label: 'Notes', type: 'textarea' },
+];
+
+export const pledgeEditFields: Field[] = pledgeFields;
+/** The schedule itself changes through Change schedule, so it's kept in step with its installments. */
+export const recurringPledgeEditFields: Field[] = [...pledgeWho, { name: 'date_pledged', label: 'Date pledged', type: 'date', required: true }, { name: 'notes', label: 'Notes', type: 'textarea' }];
+
+export const voucherFields: Field[] = [
+  { name: 'issuer', label: 'Voucher issuer', type: 'select', options: voucherIssuerOptions, required: true },
+  { name: 'issuer_number', label: 'Issuer voucher / batch #' },
+  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
+  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions },
+  { name: 'name', label: 'Donor name, if not linked' },
+  { name: 'face_value', label: 'Face value', type: 'number', required: true },
+  { name: 'fee_type', label: 'Fee type', type: 'select', options: [['flat', 'Flat $'], ['percent', '% rate'], ['none', 'None']].map(([value, label]) => ({ value, label })), help: "Leave empty to use the issuer's rate from Methods & Fees. Set once: it can't change after funds arrive." },
+  { name: 'fee_percent', label: '% rate', type: 'number' },
+  { name: 'fee_flat', label: 'Flat $ per funding', type: 'number' },
+  { name: 'submission', label: 'Submission', type: 'select', options: [['online', 'Submitted online'], ['mailed', 'Mailed in']].map(([value, label]) => ({ value, label })), required: true },
+  { name: 'account_number', label: 'Account #', help: 'Only for a damaged voucher that is mailed in' },
+  { name: 'date_received', label: 'Date received', type: 'date', required: true },
+  { name: 'expected_date', label: 'Expected funding date', type: 'date' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 
