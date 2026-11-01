@@ -13,7 +13,16 @@ export const supabase = createClient(url, key, { auth: { flowType: 'pkce' } });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Row = Record<string, any>;
 
-type PageQuery = (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>;
+/** Records something the database can't see for itself. Never blocks or fails the action it describes. */
+export async function logActivity(action: 'logout' | 'export', detail?: Row) {
+  try {
+    await supabase.rpc('log_activity', { p_action: action, p_detail: detail ?? null });
+  } catch {
+    // Logging must not get in the way of signing out or exporting.
+  }
+}
+
+type PageQuery =(from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>;
 
 /**
  * PostgREST caps responses at 1000 rows; page through until everything is loaded.

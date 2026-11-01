@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { supabase, type Row } from './supabase';
+import { logActivity, supabase, type Row } from './supabase';
 
 type Role = 'admin' | 'manager' | 'pending';
 interface AuthState {
@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     refresh: () => loadProfile(session),
     signOut: async () => {
+      await logActivity('logout');
       await supabase.auth.signOut();
     },
   };

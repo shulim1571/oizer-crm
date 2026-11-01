@@ -9,6 +9,7 @@ import CampaignDetail from './pages/CampaignDetail';
 import { AllDonations, NewDonation, RecentDonations } from './pages/Donations';
 import { DonorDetail, DonorsPage } from './pages/Donors';
 import UsersPage from './pages/Users';
+import ActivityPage from './pages/Activity';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
   AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage, TransfersPage,
@@ -73,6 +74,7 @@ export default function App() {
         <Route path="donors/:id" element={<DonorDetail />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="users" element={<AdminOnly><UsersPage /></AdminOnly>} />
+        <Route path="activity" element={<AdminOnly><ActivityPage /></AdminOnly>} />
         <Route path="*" element={<Navigate to="/campaigns/active" replace />} />
       </Route>
     </Routes>

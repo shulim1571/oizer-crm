@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
-  ArrowLeftRight, Building2, CircleDollarSign, ClipboardCheck, Contact, HandCoins, Landmark, Layers, LogOut, Menu,
+  ArrowLeftRight, Building2, CircleDollarSign, ClipboardCheck, Contact, HandCoins, History, Landmark, Layers, LogOut, Menu,
   PlusCircle, Receipt, RefreshCw, Repeat, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -47,6 +47,7 @@ const NAV: NavSection[] = [
       { to: '/sources', label: 'Sources', icon: <Wallet size={I} />, admin: true },
       { to: '/accounts', label: 'Accounts', icon: <Building2 size={I} />, admin: true },
       { to: '/users', label: 'Users & Access', icon: <ShieldCheck size={I} />, admin: true },
+      { to: '/activity', label: 'Activity Log', icon: <History size={I} />, admin: true },
     ],
   },
 ];

@@ -65,3 +65,29 @@ so confirmation and password-reset emails link back to it.
 - Schema, RLS policies and views: `supabase/migrations/`.
 - IDs keep the AppSheet Row IDs (campaign IDs are the campaign numbers).
 - Donor data lives only in Supabase; nothing from the spreadsheet is committed here.
+- **Deleting never removes data.** Deletes on business tables mark the row with `deleted_at`, and it disappears from
+  every screen and total. `restore_record(table, id)` brings it back (admins only; no screen for it yet).
+- **Activity Log** records every add, edit, delete, sign-in, sign-out and CSV export. Nobody can edit it through the
+  app or API, and triggers block changes even for the database owner.
+- **Balance snapshots:** run `select take_balance_snapshot('before-x')` ahead of a risky migration and
+  `select * from balance_drift('before-x')` after it. No rows back means no campaign's numbers moved.
+
+- **Scheduled jobs:** pg_cron calls `run_job(name)`, and every run is recorded in `job_runs`. New jobs go in `run_job`
+  plus a `cron.schedule` line.
+- **Health check:** the `health` Edge Function answers 200 when the database responds and the hourly heartbeat is
+  recent, otherwise 503. Callers must send the project's legacy anon key as a bearer token.
+
+## Staging
+
+`npm run dev:staging` runs the app against the staging Supabase project ("Oizer DRM", org Trubase Live), which holds no
+real data. Apply new migrations there first. `npm run dev` still uses `.env.local`, which points at the live project.
+
+## Tests
+
+```bash
+npm test
+```
+
+Runs every migration on an in-process Postgres (PGlite) with a small stand-in for Supabase Auth, then checks access
+rules, soft delete, the activity log and balance math. No Supabase project or network needed. Anything that depends
+on Supabase itself (real sign-ins, PostgREST, grants on a real project) still needs checking on staging.

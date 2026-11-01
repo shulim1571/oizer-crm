@@ -77,7 +77,7 @@ export default function RecordForm(p: Props) {
   }
 
   async function remove() {
-    if (!p.record || !confirm('Delete this record? This cannot be undone.')) return;
+    if (!p.record || !confirm('Delete this record? It will be hidden everywhere but kept on file.')) return;
     const { error } = await supabase.from(p.table).delete().eq(pk, p.record[pk]);
     if (error) return setError(error.message);
     clearLookups();

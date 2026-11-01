@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Download, X } from 'lucide-react';
-import type { Row } from '../lib/supabase';
+import { logActivity, type Row } from '../lib/supabase';
 import { download, money, toCsv } from '../lib/format';
 import { useSearch } from './Layout';
 
@@ -97,6 +97,7 @@ export default function DataTable(p: Props) {
     const cols = p.columns.map(c => ({ key: c.key, label: c.label }));
     const data = visible.map(r => Object.fromEntries(p.columns.map(c => [c.key, val(c, r)])));
     download(`${p.exportName ?? p.title}.csv`, toCsv(data, cols));
+    void logActivity('export', { table: p.exportName ?? p.title, rows: data.length });
   };
 
   const pick = (g: string | null) => { setGroup(g); setLimit(PAGE); };
