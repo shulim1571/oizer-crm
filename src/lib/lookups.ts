@@ -16,17 +16,17 @@ export const clearLookups = () => cache.clear();
 
 export const campaignOptions = () =>
   cached('campaigns', async () =>
-    (await fetchAll((a, b) => supabase.from('campaigns').select('id, campaign_name, friendly_name, real_name, archived_at').order('id').range(a, b)))
+    (await fetchAll((a, b) => supabase.from('campaigns').select('id, campaign_name, external_name, internal_name, status').neq('status', 'closed').order('id').range(a, b)))
       .map(c => ({
         value: c.id,
-        label: `${c.id} - ${c.real_name || c.campaign_name || c.friendly_name || ''}${c.archived_at ? ' (archived)' : ''}`,
+        label: `${c.id} - ${c.internal_name || c.campaign_name || c.external_name || ''}${c.status === 'archived' ? ' (archived)' : c.status === 'draft' ? ' (draft)' : ''}`,
       })),
   );
 
 export const managerOptions = () =>
   cached('managers', async () =>
-    (await fetchAll((a, b) => supabase.from('managers').select('id, full_name').order('full_name').range(a, b)))
-      .map(m => ({ value: m.id, label: m.full_name || m.id })),
+    (await fetchAll((a, b) => supabase.from('managers').select('id, full_name, status').neq('status', 'deactivated').order('full_name').range(a, b)))
+      .map(m => ({ value: m.id, label: `${m.full_name || m.id}${m.status === 'suspended' ? ' (suspended)' : ''}` })),
   );
 
 export const collectorOptions = () =>
@@ -59,5 +59,10 @@ export const PAYMENT_METHODS = [
 ].map(v => ({ value: v, label: v }));
 
 export const EXPENSE_METHODS = ['Check', 'Zelle', 'Account Transfer', 'Credit Card', 'Cash', 'Wire', 'other'].map(v => ({ value: v, label: v }));
-export const DONATION_TYPES = ['Payment', 'Batch', 'Collect', 'Voided'].map(v => ({ value: v, label: v }));
+export const DONATION_TYPES = ['Payment', 'Batch'].map(v => ({ value: v, label: v }));
+export const DONATION_STATUSES = [
+  ['completed', 'Completed'], ['pending', 'Pending'], ['collect', 'To collect'], ['voided', 'Voided'],
+  ['refunded', 'Refunded'], ['returned', 'Returned'], ['failed', 'Failed'],
+].map(([value, label]) => ({ value, label }));
+export const CAMPAIGN_STATUSES = [['draft', 'Draft'], ['active', 'Active']].map(([value, label]) => ({ value, label }));
 export const TASK_STATUSES = ['Pending', 'In Progress', 'Done'].map(v => ({ value: v, label: v }));

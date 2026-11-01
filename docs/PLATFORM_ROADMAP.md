@@ -4,27 +4,37 @@ Plan for growing the Oizer CRM into the multi-tenant platform described in the C
 spec (v1.0, June 2026). The spec itself is not committed here because it contains credentials (see
 [Before anything else](#before-anything-else)).
 
-Status: Phases 0 and 1 are on the staging project ("Oizer DRM" in the Trubase Live org), which holds only test data.
-Neither is on the live `oizer-crm` project. Later phases haven't started.
+Status: Phases 0, 1 and 2 are on the staging project ("Oizer DRM" in the Trubase Live org), which holds only test data.
+None of them is on the live `oizer-crm` project. Later phases haven't started.
 
 Still open for Phase 1:
-- Switch on the account lockout in the staging dashboard: Authentication > Hooks > Password verification, pointing at
-  `public.hook_password_verification_attempt`. Until then nothing is counted and nobody is locked out.
+- Supabase's built-in email only reaches the project's team members, a few messages an hour. Inviting anyone else needs
+  a custom email provider, which Phase 7 sets up and which sign-ups need sooner on the live project.
 - Per-organization subdomains need the move off GitHub Pages (decision 2). Organizations can already be reached by a
   mapped hostname or `?org=slug`.
 - Feature switches are stored per organization, but no screen uses them until those features exist.
 
 Limits to know about:
+- The account lockout covers sign-ins through the app. Someone calling Supabase's sign-in API directly with the public key
+  isn't counted, though Supabase's own rate limits still apply. Moving to the Team plan and its password hook would close that.
 - A Platform Owner's export ban only hides the button. Anyone who can read data can copy it, so the guarantee is that
   every session is logged in that organization's activity log.
+
+### Email links (every project)
+In Authentication > URL Configuration, set the Site URL to the app's address and add each organization's address to the
+Redirect URLs. In Authentication > Emails, change the link in these templates so links work in any browser and mail
+scanners can't use them up:
+- Reset password: `<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery">Reset password</a>`
+- Confirm sign up: `<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup">Confirm your email</a>`
 
 ### Going live with Phases 0 and 1
 1. Back up the live database and run `select take_balance_snapshot('before-phase-1')`.
 2. Apply the migrations in order, then deploy the app straight away. The migration removes `profiles.role`, so the
    current live app stops working until the new one is up. Plan a few quiet minutes.
+   `smueller@trubase.org` becomes Platform Owner and Oizer's Super Admin, and `smueller@bpjcc.org` stays a regular admin.
 3. Check that `select * from balance_drift('before-phase-1')` returns no rows. The migrations also stop themselves if
    any balance changes.
-4. Switch on the lockout hook on the live project.
+4. Deploy the `sign-in` and `health` Edge Functions to the live project, `sign-in` with JWT verification off. Do this before the new app goes up, or nobody can sign in.
 
 ## Where we are today
 
@@ -59,7 +69,7 @@ These change the build, so they need an answer before the phase noted.
 | 2 | The spec names AWS/GCP/Azure, Redis and S3. | Stay on Supabase (Postgres, Auth, Storage, Edge Functions) and move the front end to Cloudflare Pages, which the spec requires in front of payment pages anyway. GitHub Pages cannot do per-org subdomains or custom headers. Confirm Supabase's uptime terms meet the 99.9% requirement. | Phase 1 |
 | 3 | A separate staging Supabase project, which is an added cost. | Required. Multi-tenant RLS must not be developed against live donor data. | Phase 0 |
 | 4 | Which legal entity holds vendor contracts. The spec leaves the Platform Owner undecided but also names "Success Systems". | Decide before signing USAePay, Twilio, Plaid and email contracts. | Phase 7 |
-| 5 | `Exchange` campaigns and `Collect` donations exist today but not in the spec. | Keep both as Oizer data until their purpose is confirmed. | Phase 2 |
+| 5 | `Exchange` campaigns and `Collect` donations exist today but not in the spec. | Both kept: 26 Exchange campaigns stay flagged, and 41 Collect donations became the status `collect`. Tell us if either should change. | Phase 2 |
 | 6 | Today's `Batch` donations look like vouchers (batch/voucher number, funded, pending). The spec's "Batch Entry" means something different. | Migrate them to voucher records, after checking a sample with whoever enters them. | Phase 4 |
 
 ## Spec conflicts and the default used
@@ -99,7 +109,11 @@ account lockout. Oizer becomes the first tenant.
 **Done when:** isolation tests pass on every table with two orgs, and all Oizer balances match the Phase 0 snapshot.
 
 ### Phase 2: Roles and the transaction model (L)
-Managers become fundraisers; `sub_manager_ids` becomes a campaign team table with Primary, Secondary and Guest.
+Built on staging. Screens say Fundraiser; in the database they stay `managers`, with `manager_id` as the Primary and
+`sub_manager_ids` as the Secondaries. A team table can wait for Phase 5, when primaries request team changes. Guests
+are listed by email in `campaign_guests`. Permission overrides are stored and manageable, and take effect as each
+feature they apply to is built. Fundraisers entering pledges and adding donors arrives with those screens in Phases 4
+and 5, and hiding transfer details from them with Phase 4.
 Super Admin, delegation, permission overrides, suspend and deactivate. Transaction statuses replace `type`.
 Campaign statuses (Draft, Active, Archived, Closed) with auto-reactivation. Internal and external names, permanent
 IDs, Featured.

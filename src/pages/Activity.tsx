@@ -1,4 +1,5 @@
 import DataTable from '../components/DataTable';
+import { ROLE_LABEL } from '../components/Layout';
 import { supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { dateTime } from '../lib/format';
@@ -41,7 +42,7 @@ export default function ActivityPage() {
       columns={[
         { key: 'created_at', label: 'When', render: r => dateTime(r.created_at), value: r => r.created_at, width: 170 },
         { key: 'user_email', label: 'User', width: 200 },
-        { key: 'user_role', label: 'Role' },
+        { key: 'user_role', label: 'Role', value: r => ROLE_LABEL[r.user_role] ?? (r.user_role === 'platform_owner' ? 'Platform Owner' : r.user_role) },
         { key: 'action', label: 'Action', value: r => ACTIONS[r.action] ?? r.action },
         { key: 'table_name', label: 'Record type' },
         { key: 'record_id', label: 'Record' },

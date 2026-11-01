@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
-  ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, HandCoins, History, Landmark, Layers, LogOut, Menu,
+  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, HandCoins, History, Landmark, Layers, Lock, LogOut, Menu,
   PlusCircle, Receipt, RefreshCw, Repeat, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -13,6 +13,10 @@ export function OrgLogo({ org }: { org: Org | null }) {
     ? <img className="logo" src={org.logo_url} alt="" />
     : <div className="logo">{(org?.name?.[0] ?? 'C').toUpperCase()}</div>;
 }
+
+export const ROLE_LABEL: Record<string, string> = {
+  super_admin: 'Super Admin', admin: 'Admin', manager: 'Fundraiser', guest: 'Community Guest', pending: 'Pending',
+};
 
 const SearchContext = createContext<{ q: string; setQ: (v: string) => void }>({ q: '', setQ: () => {} });
 export const useSearch = () => useContext(SearchContext);
@@ -27,6 +31,8 @@ const NAV: NavSection[] = [
     items: [
       { to: '/campaigns/active', label: 'Active Campaigns', icon: <Landmark size={I} /> },
       { to: '/campaigns/all', label: 'All Campaigns', icon: <Layers size={I} /> },
+      { to: '/campaigns/archived', label: 'Archived', icon: <Archive size={I} /> },
+      { to: '/campaigns/closed', label: 'Closed', icon: <Lock size={I} /> },
       { to: '/campaigns/exchange', label: 'Exchange', icon: <Repeat size={I} />, admin: true },
     ],
   },
@@ -45,7 +51,7 @@ const NAV: NavSection[] = [
     items: [
       { to: '/donors', label: 'Donors', icon: <Contact size={I} /> },
       { to: '/tasks', label: 'Tasks', icon: <ClipboardCheck size={I} /> },
-      { to: '/managers', label: 'Managers', icon: <UserCircle size={I} />, admin: true },
+      { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true },
       { to: '/collectors', label: 'Collectors', icon: <Users size={I} />, admin: true },
     ],
   },
@@ -68,7 +74,7 @@ const NAV: NavSection[] = [
 ];
 
 export default function Layout() {
-  const { isAdmin, isPlatformOwner, inPlatformSession, org, role, profile, signOut } = useAuth();
+  const { isAdmin, canWork, isPlatformOwner, inPlatformSession, org, role, profile, signOut } = useAuth();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [tick, setTick] = useState(0);
@@ -106,7 +112,7 @@ export default function Layout() {
             <div className="logo-text">{org?.name ?? 'Campaign CRM'}{org && <small>Campaign CRM</small>}</div>
           </div>
           {NAV.map(section => {
-            const items = section.items.filter(n => (n.platform ? isPlatformOwner : role && role !== 'pending' && (!n.admin || isAdmin)));
+            const items = section.items.filter(n => (n.platform ? isPlatformOwner : canWork && (!n.admin || isAdmin)));
             if (!items.length) return null;
             return (
               <div key={section.title}>
@@ -124,7 +130,7 @@ export default function Layout() {
               <span className="avatar">{(email[0] ?? '?').toUpperCase()}</span>
               <div className="me-text">
                 <div className="me-email" title={email}>{email}</div>
-                <div className="me-role">{inPlatformSession ? 'Platform Owner' : role ?? (isPlatformOwner ? 'Platform Owner' : '')}</div>
+                <div className="me-role">{inPlatformSession ? 'Platform Owner' : ROLE_LABEL[role ?? ''] ?? (isPlatformOwner ? 'Platform Owner' : '')}</div>
               </div>
               <button className="icon-btn" title="Sign out" onClick={signOut}><LogOut size={17} /></button>
             </div>

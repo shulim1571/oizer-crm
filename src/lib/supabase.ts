@@ -34,6 +34,14 @@ export async function logActivity(action: 'logout' | 'export', detail?: Row) {
   }
 }
 
+/** Signs in through the sign-in function, which enforces the account lockout. */
+export async function signInWithPassword(email: string, password: string): Promise<{ error: { message: string } | null }> {
+  const { data, error } = await supabase.functions.invoke('sign-in', { body: { email, password } });
+  if (error) return { error: { message: 'Sign-in is unavailable right now. Please try again.' } };
+  if (data.error) return { error: { message: data.error } };
+  return supabase.auth.setSession(data.session);
+}
+
 type PageQuery =(from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>;
 
 /**

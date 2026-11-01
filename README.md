@@ -8,7 +8,7 @@ Donor and campaign CRM for Oizer, replacing the AppSheet app. React + Vite front
 | --- | --- | --- |
 | Active / All Campaigns (grouped by manager, Raised · Fees · Expenses · Balance · Pending) | all campaigns, add/edit | only campaigns where they are manager or sub-manager |
 | Campaign detail (KPIs + donations, expenses, transfers, tasks, pledges) | add/edit everything | read-only, can add/edit tasks |
-| Donation last 7 days (grouped by type) / All Donations (server-side search & paging) | add/edit/delete | their campaigns, read-only |
+| Donation last 7 days (grouped by type and status) / All Donations (server-side search & paging) | add/edit/delete | their campaigns, read-only |
 | New Donation | ✓ | — |
 | Expense, Transfer | add/edit | their campaigns, read-only |
 | Donor list + donor profile (lifetime giving, by campaign, by year, history, follow-up tasks) | add/edit | donors who gave to their campaigns |
@@ -20,13 +20,13 @@ Every table has search (top bar), sortable columns and CSV download.
 
 ### Campaign math (matches AppSheet)
 
-- **Raised** = Σ amount of `Payment` donations + Σ `funded` on `Batch` donations + transfers in
-- **Fees** = Σ fee (non-voided)
+- **Raised** = Σ amount of completed `Payment` donations + Σ `funded` on completed `Batch` donations + transfers in
+- **Fees** = Σ fee on completed, to-collect, refunded and returned donations
 - **Expenses** = Σ expenses + transfers out
 - **Balance** = Raised − Fees − Expenses
 - **Pending Balance** = Σ batch_pending
 
-`Collect` and `Voided` donations don't count toward Raised. See the `campaign_summary` view in
+Only `completed` donations count toward Raised. A voided or failed gift never happened; a refunded or returned one did, so its fee stays spent. See the `campaign_summary` view in
 [`supabase/migrations`](supabase/migrations).
 
 ## Organizations
@@ -44,16 +44,24 @@ Every business record belongs to one organization, and organizations can't see e
 
 Supabase Auth (email + password). One login can belong to several organizations, with a role in each (`org_members`):
 
-1. Email listed in **Users & Access → Admin emails** → **admin** there.
-2. Email matches a **Manager** record's email → **manager** there, linked to that manager record.
-3. Signed up on an organization's page with neither → **pending** (sees nothing) until an admin assigns a role.
+1. Email listed in **Users & Access → Admin emails** → **admin** there. The first one is the organization's **Super
+   Admin**, who alone manages admins and overrides unless they delegate it.
+2. Email matches a **Fundraiser** record's email → **manager** there, linked to that record. In the database fundraisers
+   are `managers`: `manager_id` is the Primary Fundraiser and `sub_manager_ids` the Secondaries.
+3. Email listed under **Community Guests** → **guest**: read-only on that campaign, through functions only.
+4. Signed up on an organization's page with none of these → **pending** (sees nothing) until an admin assigns a role.
+
+Suspending or deactivating cuts access immediately and leaves campaigns running.
 
 Admins can change roles and link a login to one or more manager records on the Users & Access page.
 All of this is enforced in Postgres with row-level security, not just hidden in the UI.
 
-Five wrong passwords in a row lock an account for an hour once the password verification hook is switched on in the
-Supabase dashboard (Authentication > Hooks → `public.hook_password_verification_attempt`). Resetting the password or an
-admin's **Unlock** on Users & Access clears it.
+`smueller@trubase.org` is the Platform Owner and Oizer's Super Admin.
+
+Five wrong passwords in a row lock an account for an hour. The app signs in through the `sign-in` Edge Function, which
+enforces this (deploy it with JWT verification off). Resetting the password or an admin's **Unlock** on Users & Access
+clears it. Supabase's password hook would do this at a lower level, but needs the Team plan, so someone calling
+Supabase's sign-in API directly isn't counted.
 
 ## Running locally
 

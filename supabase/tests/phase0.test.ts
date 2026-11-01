@@ -118,7 +118,7 @@ describe('soft delete', () => {
     await as(db, ADMIN, tx => tx.query(`delete from public.campaigns where id = '1001'`));
     expect(ids(await rows(db, MANAGER_1, 'select id from public.campaigns'))).toEqual(['1003']);
     expect(ids(await rows(db, ADMIN, `select id from public.campaign_summary`))).toEqual(['1002', '1003']);
-    await expect(rows(db, ADMIN, `insert into public.campaigns (id) values ('1001')`)).rejects.toThrow(/duplicate key/);
+    await expect(rows(db, ADMIN, `insert into public.campaigns (id, internal_name) values ('1001', 'x')`)).rejects.toThrow(/duplicate key/);
   });
 
   it('does not count a deleted manager as a match for a new sign-up', async () => {
@@ -139,7 +139,7 @@ describe('activity log', () => {
     await as(db, ADMIN, tx => tx.query(`update public.donations set amount = 1100 where id = 'p1'`));
     const [e] = (await log(db, `table_name = 'donations' and record_id = 'p1' and action = 'update'`)).rows;
     expect(e.user_email).toBe('office@example.org');
-    expect(e.user_role).toBe('admin');
+    expect(e.user_role).toBe('super_admin');
     expect(e.campaign_id).toBe('1001');
     expect(Object.keys(e.changes)).toEqual(['amount']);
     expect(e.changes.amount).toEqual({ old: 1000.0, new: 1100 });

@@ -10,7 +10,7 @@ import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
 import { donationFields } from '../lib/schemas';
-import { DONATION_SELECT, donationColumns } from './donationColumns';
+import { DONATION_KINDS, DONATION_SELECT, donationColumns, donationKind, isLive } from './donationColumns';
 
 function useDonationEditor(onChange: (row: Row) => void) {
   const { isAdmin } = useAuth();
@@ -56,7 +56,7 @@ export function RecentDonations() {
         loading={loading}
         error={error}
         columns={donationColumns()}
-        groupBy={{ label: 'Type', value: r => r.type, badge: sumBadge('amount') }}
+        groupBy={{ label: 'Type', value: donationKind, badge: sumBadge('amount') }}
         onOpen={open ?? undefined}
         summary={data && <WeekSummary rows={data} />}
         actions={isAdmin && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
@@ -67,7 +67,7 @@ export function RecentDonations() {
 }
 
 function WeekSummary({ rows }: { rows: Row[] }) {
-  const live = rows.filter(r => r.type !== 'Voided');
+  const live = rows.filter(isLive);
   const total = live.reduce((s, r) => s + Number(r.amount ?? 0), 0);
   const fees = live.reduce((s, r) => s + Number(r.fee ?? 0), 0);
   const campaigns = new Set(live.map(r => r.campaign_id)).size;
@@ -106,7 +106,9 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
   const { data, error, loading, setData } = useQuery(async () => {
     let query = supabase.from('donations').select(DONATION_SELECT, { count: 'exact' }).order('created_at', { ascending: false });
     if (filter) query = query.eq(filter.column, filter.value);
-    if (type) query = query.eq('type', type);
+    const kind = DONATION_KINDS[type];
+    if (kind) query = query.eq('status', kind.status);
+    if (kind?.type) query = query.eq('type', kind.type);
     if (from) query = query.gte('created_at', new Date(`${from}T00:00:00`).toISOString());
     if (to) query = query.lt('created_at', new Date(new Date(`${to}T00:00:00`).getTime() + 864e5).toISOString());
     const s = debounced.trim().replace(/[,()*]/g, ' ');
@@ -141,7 +143,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
           <>
             <select value={type} onChange={e => { setType(e.target.value); setPage(0); }}>
               <option value="">All types</option>
-              {['Payment', 'Batch', 'Collect', 'Voided'].map(t => <option key={t}>{t}</option>)}
+              {Object.keys(DONATION_KINDS).map(t => <option key={t}>{t}</option>)}
             </select>
             <input type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(0); }} title="From" />
             <input type="date" value={to} onChange={e => { setTo(e.target.value); setPage(0); }} title="To" />
@@ -185,7 +187,7 @@ export function NewDonation() {
         table="donations"
         title="Donation details"
         fields={donationFields}
-        defaults={{ type: 'Payment', source: 'Manual', account_id: defaultAccountId, created_at: new Date().toISOString() }}
+        defaults={{ type: 'Payment', status: 'completed', source: 'Manual', account_id: defaultAccountId, created_at: new Date().toISOString() }}
         onClose={() => nav(-1)}
         onSaved={row => { setLast(row); setKey(k => k + 1); }}
       />

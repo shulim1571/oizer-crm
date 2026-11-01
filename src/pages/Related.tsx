@@ -7,12 +7,13 @@ import DataTable from '../components/DataTable';
 import Kpi from '../components/Kpi';
 import RecordForm, { type Field } from '../components/RecordForm';
 import { campLabel } from '../components/CrudPage';
-import { Balance, Pill } from '../components/Pill';
+import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { date, dateTime, money, yn } from '../lib/format';
 import { accountFields, personFields, sourceFields } from '../lib/schemas';
-import { campaignColumns } from './Campaigns';
+import { STATUS_LABEL, campaignColumns } from './Campaigns';
+import FundraiserControls from './FundraiserControls';
 import { PagedDonations } from './Donations';
 
 /** Loads one row from a summary view; reload after edits. */
@@ -88,7 +89,7 @@ export function AccountDetail() {
   const [tab, setTab] = useState<'donations' | 'expenses'>('donations');
   const a = useSummary('account_summary', id, version);
   const expenses = useQuery(
-    () => fetchAll((x, y) => supabase.from('expenses').select('*, campaigns(id, real_name, campaign_name)')
+    () => fetchAll((x, y) => supabase.from('expenses').select('*, campaigns(id, internal_name, campaign_name)')
       .eq('account_id', id).order('created_at', { ascending: false }).range(x, y)),
     [id, version],
   );
@@ -142,6 +143,8 @@ export function AccountDetail() {
   );
 }
 
+const STATUS: Record<string, string> = { active: 'Active', suspended: 'Suspended', deactivated: 'Deactivated' };
+
 export function ManagerDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
@@ -150,7 +153,7 @@ export function ManagerDetail() {
   const m = useSummary('manager_summary', id, version);
   const campaigns = useQuery(
     () => fetchAll((x, y) => supabase.from('campaign_summary').select('*')
-      .or(`manager_id.eq.${id},sub_manager_ids.cs.{${id}}`).order('real_name').range(x, y)),
+      .or(`manager_id.eq.${id},sub_manager_ids.cs.{${id}}`).order('internal_name').range(x, y)),
     [id, version],
   );
 
@@ -161,7 +164,8 @@ export function ManagerDetail() {
   return (
     <div className="detail">
       <DetailHead title={d.full_name || '(no name)'} initial={(d.full_name || '?')[0]} onEdit={() => setEditing(true)}
-                  sub={<span>Campaign manager</span>} />
+                  sub={<span>Fundraiser <StatusPill value={STATUS[d.status]} />{d.status !== 'active' && d.status_reason && <> · {d.status_reason}</>}</span>} />
+      <FundraiserControls manager={d} onChange={() => setVersion(v => v + 1)} />
       <div className="kpis">
         <Kpi label="Campaigns" value={d.campaign_count} icon={<Landmark size={18} />} tone="violet" sub={`${d.active_count} active`} />
         <Kpi label="Raised" value={money(d.raised)} icon={<TrendingUp size={18} />} tone="green" />
@@ -176,7 +180,7 @@ export function ManagerDetail() {
       )}
       <DataTable
         title="Campaigns"
-        exportName={`manager-${d.full_name}-campaigns`}
+        exportName={`fundraiser-${d.full_name}-campaigns`}
         rows={campaigns.data ?? []}
         loading={campaigns.loading}
         error={campaigns.error}
@@ -185,18 +189,18 @@ export function ManagerDetail() {
           ...campaignColumns.filter(c => c.key !== 'manager_name'),
           {
             key: 'role', label: 'Role',
-            value: r => (r.manager_id === id ? 'Manager' : 'Sub-manager'),
-            render: r => (r.manager_id === id ? <Pill tone="violet">Manager</Pill> : <Pill tone="blue">Sub-manager</Pill>),
+            value: r => (r.manager_id === id ? 'Primary' : 'Secondary'),
+            render: r => (r.manager_id === id ? <Pill tone="violet">Primary</Pill> : <Pill tone="blue">Secondary</Pill>),
           },
           {
             key: 'status', label: 'Status',
-            value: r => (r.archived_at ? 'Archived' : 'Active'),
-            render: r => <Pill tone={r.archived_at ? '' : 'green'}>{r.archived_at ? 'Archived' : 'Active'}</Pill>,
+            value: r => STATUS_LABEL[r.status],
+            render: r => <StatusPill value={STATUS_LABEL[r.status]} />,
           },
         ]}
       />
       {editing && (
-        <Editor table="managers" title="Edit manager" fields={personFields} record={d}
+        <Editor table="managers" title="Edit fundraiser" fields={personFields} record={d}
                 onDone={r => { setEditing(false); if (r._deleted) nav('/managers'); else setVersion(v => v + 1); }} />
       )}
     </div>

@@ -93,4 +93,4 @@ export default function CrudPage(p: Props) {
 }
 
 export const campLabel = (c: Row | null | undefined) =>
-  c ? `${c.real_name || c.campaign_name || c.friendly_name || ''} - ${c.id}` : '';
+  c ? `${c.internal_name || c.campaign_name || c.external_name || ''} - ${c.id}` : '';

@@ -7,7 +7,7 @@ import {
   accountFields, expenseFields, personFields, sourceFields, taskFields, transferFields,
 } from '../lib/schemas';
 
-const CAMP = 'id, real_name, campaign_name, friendly_name';
+const CAMP = 'id, internal_name, campaign_name, external_name';
 
 export function ExpensesPage() {
   const { defaultAccountId } = useAuth();
@@ -111,16 +111,19 @@ const personColumns = [
   { key: 'created_at', label: 'Created', render: (r: Record<string, unknown>) => dateTime(r.created_at) },
 ];
 
+const FUNDRAISER_STATUS: Record<string, string> = { active: 'Active', suspended: 'Suspended', deactivated: 'Deactivated' };
+
 export function ManagersPage() {
   return (
     <CrudPage
-      title="Managers" noun="Manager"
+      title="Fundraisers" noun="Fundraiser"
       table="managers"
       view="manager_summary"
       order={{ column: 'full_name' }}
       openPath={r => `/managers/${encodeURIComponent(r.id)}`}
       columns={[
         personColumns[0],
+        { key: 'status', label: 'Status', value: r => FUNDRAISER_STATUS[r.status], render: r => <StatusPill value={FUNDRAISER_STATUS[r.status]} /> },
         { key: 'campaign_count', label: 'Campaigns', render: r => `${r.campaign_count} (${r.active_count} active)`, value: r => r.campaign_count },
         { key: 'raised', label: 'Raised', render: r => money(r.raised), align: 'right' },
         { key: 'balance', label: 'Balance', render: r => <Balance value={r.balance} />, align: 'right' },
@@ -136,14 +139,14 @@ export function CollectorsPage() {
 }
 
 export function TasksPage() {
-  const { role } = useAuth();
+  const { canWork } = useAuth();
   return (
     <CrudPage
       title="Tasks" noun="Task"
       table="tasks"
       select={`*, campaigns(${CAMP}), donors(display_name)`}
       order={{ column: 'created_at', ascending: false }}
-      canEdit={role === 'admin' || role === 'manager'}
+      canEdit={canWork}
       defaults={{ status: 'Pending' }}
       groupBy={{ label: "Status", value: r => r.status }}
       columns={[

@@ -16,12 +16,12 @@ async function withOtherOrg(db: PGlite) {
     insert into auth.users (id, email) values
       ('${OTHER_ADMIN}', 'admin@other.org'), ('${BOTH}', 'both@example.org'), ('${OWNER}', 'owner@example.org');
     insert into public.org_members (org_id, user_id, role) values
-      ('${OTHER}', '${OTHER_ADMIN}', 'admin'), ('${OTHER}', '${BOTH}', 'manager'), ('${OIZER}', '${BOTH}', 'admin');
+      ('${OTHER}', '${OTHER_ADMIN}', 'super_admin'), ('${OTHER}', '${BOTH}', 'manager'), ('${OIZER}', '${BOTH}', 'admin');
     insert into public.platform_owners (user_id) values ('${OWNER}');
     insert into public.managers (org_id, id, first_name) values ('${OTHER}', 'm1', 'Their manager');
     insert into public.donors (org_id, id, first_name, last_name) values ('${OTHER}', 'd1', 'Their', 'Donor');
     insert into public.sources (org_id, id, name) values ('${OTHER}', 's1', 'Their machine');
-    insert into public.campaigns (org_id, id, real_name, manager_id) values ('${OTHER}', '1001', 'Their campaign', 'm1');
+    insert into public.campaigns (org_id, id, internal_name, manager_id) values ('${OTHER}', '1001', 'Their campaign', 'm1');
     insert into public.donations (org_id, id, campaign_id, donor_id, amount, fee) values
       ('${OTHER}', 'p1', '1001', 'd1', 77.00, 1.00);
     insert into public.user_managers (org_id, user_id, manager_id) values ('${OTHER}', '${BOTH}', 'm1');
@@ -42,7 +42,7 @@ describe('migrating Oizer into the first organization', () => {
     expect(members).toEqual([
       { user_id: '00000000-0000-0000-0000-000000000001', role: 'manager' },
       { user_id: '00000000-0000-0000-0000-000000000002', role: 'manager' },
-      { user_id: ADMIN, role: 'admin' },
+      { user_id: ADMIN, role: 'super_admin' },
       { user_id: PENDING, role: 'pending' },
     ]);
   });
@@ -256,7 +256,7 @@ describe('the Platform Owner', () => {
   it('can create an organization that starts empty, with its admin ready', async () => {
     const [{ id }] = await rows<{ id: string }>(db, OWNER, `select public.platform_create_org('New Shul', 'new-shul', 'one@example.org', 'pay.newshul.org') as id`);
     const access = (await rows<{ a: { role: string } }>(db, MANAGER_1, `select public.my_access() as a`, [], id))[0].a;
-    expect(access.role).toBe('admin');
+    expect(access.role).toBe('super_admin');
     expect(await rows(db, MANAGER_1, 'select id from public.campaigns', [], id)).toEqual([]);
     expect((await rows(db, MANAGER_1, 'select key from public.settings', [], id)).length).toBe(7);
     expect(ids(await rows(db, MANAGER_1, 'select id from public.sources', [], id))).toEqual(['Manual']);
@@ -293,50 +293,67 @@ describe('finding the organization from the URL', () => {
 describe('account lockout', () => {
   let db: PGlite;
   beforeEach(async () => { db = await seededDb(); await withOtherOrg(db); });
-  const attempt = async (valid: boolean, user = MANAGER_1) => (await db.query<{ r: { decision: string; message?: string } }>(
-    `select public.hook_password_verification_attempt($1) as r`, [JSON.stringify({ user_id: user, valid })])).rows[0].r;
+  const EMAIL = 'one@example.org';
+  const fail = async (email = EMAIL) => (await rows<{ locked: boolean }>(db, 'service_role', `select public.record_login_attempt($1, false) as locked`, [email]))[0].locked;
+  const succeed = () => rows(db, 'service_role', `select public.record_login_attempt($1, true)`, [EMAIL]);
+  const locked = async () => (await rows<{ l: boolean }>(db, 'service_role', `select public.login_locked($1) as l`, [EMAIL]))[0].l;
 
   it('locks on the fifth wrong password in a row, and logs it', async () => {
-    for (let i = 0; i < 4; i++) expect((await attempt(false)).decision).toBe('continue');
-    const fifth = await attempt(false);
-    expect(fifth.decision).toBe('reject');
-    expect(fifth.message).toMatch(/Too many failed attempts/);
-    expect((await attempt(true)).decision).toBe('reject');
+    for (let i = 0; i < 4; i++) expect(await fail()).toBe(false);
+    expect(await locked()).toBe(false);
+    expect(await fail()).toBe(true);
+    expect(await locked()).toBe(true);
     const log = (await db.query<{ action: string; n: number }>(`select action, count(*)::int as n from public.activity_log where action in ('login_failed','account_locked') group by action order by action`)).rows;
     expect(log).toEqual([{ action: 'account_locked', n: 1 }, { action: 'login_failed', n: 5 }]);
   });
 
-  it('resets the count on a correct password', async () => {
-    for (let i = 0; i < 4; i++) await attempt(false);
-    expect((await attempt(true)).decision).toBe('continue');
-    for (let i = 0; i < 4; i++) expect((await attempt(false)).decision).toBe('continue');
+  it('ignores case in the email', async () => {
+    for (let i = 0; i < 5; i++) await fail('ONE@Example.org');
+    expect(await locked()).toBe(true);
   });
 
-  it('lets people back in after an hour', async () => {
-    for (let i = 0; i < 5; i++) await attempt(false);
+  it('resets the count on a correct password', async () => {
+    for (let i = 0; i < 4; i++) await fail();
+    await succeed();
+    for (let i = 0; i < 4; i++) expect(await fail()).toBe(false);
+    expect(await locked()).toBe(false);
+  });
+
+  it('ignores emails with no account', async () => {
+    for (let i = 0; i < 6; i++) expect(await fail('nobody-here@example.org')).toBe(false);
+    expect((await db.query(`select 1 from public.login_attempts`)).rows).toEqual([]);
+  });
+
+  it('lets people back in after an hour, with a fresh count', async () => {
+    for (let i = 0; i < 5; i++) await fail();
     await db.exec(`update public.login_attempts set locked_until = now() - interval '1 minute'`);
-    expect((await attempt(true)).decision).toBe('continue');
+    expect(await locked()).toBe(false);
+    expect(await fail()).toBe(false);
+    expect((await db.query<{ failed_count: number }>(`select failed_count from public.login_attempts`)).rows[0].failed_count).toBe(1);
   });
 
   it('is cleared by resetting the password', async () => {
-    for (let i = 0; i < 5; i++) await attempt(false);
+    for (let i = 0; i < 5; i++) await fail();
     await db.query(`update auth.users set encrypted_password = 'new' where id = $1`, [MANAGER_1]);
-    expect((await attempt(true)).decision).toBe('continue');
+    expect(await locked()).toBe(false);
   });
 
   it('can be unlocked by an admin of their organization only', async () => {
-    for (let i = 0; i < 5; i++) await attempt(false);
+    for (let i = 0; i < 5; i++) await fail();
     expect(await rows(db, ADMIN, `select user_id from public.locked_accounts()`)).toEqual([{ user_id: MANAGER_1 }]);
     expect(await rows(db, OTHER_ADMIN, `select user_id from public.locked_accounts()`)).toEqual([]);
     await expect(rows(db, OTHER_ADMIN, `select public.unlock_account('${MANAGER_1}')`)).rejects.toThrow(/Only an admin/);
     await expect(rows(db, MANAGER_1, `select public.unlock_account('${MANAGER_1}')`)).rejects.toThrow(/Only an admin/);
     await as(db, ADMIN, tx => tx.query(`select public.unlock_account('${MANAGER_1}')`));
-    expect((await attempt(true)).decision).toBe('continue');
+    expect(await locked()).toBe(false);
   });
 
-  it('keeps attempts and the hook away from the API', async () => {
+  it('keeps attempts and these functions away from the API', async () => {
     await expect(rows(db, ADMIN, `select * from public.login_attempts`)).rejects.toThrow(/permission denied/);
-    await expect(rows(db, ADMIN, `select public.hook_password_verification_attempt('{}')`)).rejects.toThrow(/permission denied/);
+    for (const actor of [ADMIN, 'anon']) {
+      await expect(rows(db, actor, `select public.record_login_attempt('${EMAIL}', true)`)).rejects.toThrow(/permission denied/);
+      await expect(rows(db, actor, `select public.login_locked('${EMAIL}')`)).rejects.toThrow(/permission denied/);
+    }
     await expect(rows(db, 'anon', `select * from public.locked_accounts()`)).rejects.toThrow(/permission denied/);
   });
 });

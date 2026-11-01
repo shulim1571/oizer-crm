@@ -68,7 +68,7 @@ create table public.platform_owners (
   created_at timestamptz not null default now()
 );
 insert into public.platform_owners (user_id)
-select user_id from public.profiles where lower(email) = 'smueller@bpjcc.org';
+select user_id from public.profiles where lower(email) = 'smueller@trubase.org';
 
 -- A Platform Owner can only reach into an organization through one of these, and opening one is
 -- written to that organization's own activity log.

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Clock, ExternalLink, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, StickyNote, TrendingUp,
+Star,
 } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
@@ -14,15 +15,17 @@ import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { date, dateTime, money, pct, yn } from '../lib/format';
 import { campaignFields, donationFields, expenseFields, taskFields, transferFields } from '../lib/schemas';
+import { clearLookups } from '../lib/lookups';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
+import { STATUS_LABEL } from './Campaigns';
 
 type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges';
-const CAMP = 'id, real_name, campaign_name, friendly_name';
+const CAMP = 'id, internal_name, campaign_name, external_name';
 
 export default function CampaignDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
-  const { isAdmin, role, defaultAccountId } = useAuth();
+  const { isAdmin, canWork, permissions, defaultAccountId } = useAuth();
   const [tab, setTab] = useState<Tab>('donations');
   const [form, setForm] = useState<{ table: string; title: string; fields: Field[]; record?: Row | null; defaults?: Row } | null>(null);
   const [version, setVersion] = useState(0);
@@ -63,12 +66,19 @@ export default function CampaignDetail() {
   if (!c) return <div className="view"><p className="pad">Campaign not found or you don't have access. <Link to="/campaigns/active">Back</Link></p></div>;
 
   const saved = () => { setForm(null); setVersion(v => v + 1); };
-  const canEditTasks = role === 'admin' || role === 'manager';
+  const canEditTasks = canWork;
+  const setStatus = async (status: string, question: string) => {
+    if (!confirm(question)) return;
+    const { error } = await supabase.from('campaigns').update({ status }).eq('id', id);
+    if (error) return alert(error.message);
+    clearLookups();
+    setVersion(v => v + 1);
+  };
 
   const tabConfig = {
     donations: {
       columns: donationColumns({ hideCampaign: true }),
-      add: isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', source: 'Manual', account_id: defaultAccountId, created_at: new Date().toISOString() } },
+      add: isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', account_id: defaultAccountId, created_at: new Date().toISOString() } },
       edit: isAdmin && { table: 'donations', title: 'Edit Donation', fields: donationFields },
     },
     expenses: {
@@ -128,23 +138,40 @@ export default function CampaignDetail() {
     <div className="detail">
       <div className="detail-head">
         <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={18} /></button>
-        <div className="hero-avatar">{(c.real_name || c.campaign_name || '#')[0]}</div>
+        <div className="hero-avatar">{(c.internal_name || c.campaign_name || '#')[0]}</div>
         <div>
           <h1>
-            {c.real_name || c.campaign_name}
+            {c.featured && <Star size={18} className="featured" />}
+            {c.internal_name || c.campaign_name}
             <span className="id-tag">#{c.id}</span>
-            <StatusPill value={c.archived_at ? 'Archived' : 'Active'} />
+            <StatusPill value={STATUS_LABEL[c.status]} />
           </h1>
           <div className="sub">
-            {c.friendly_name && <span>{c.friendly_name}</span>}
-            {c.manager_name && <span>· Managed by <b><AdminLink to={`/managers/${encodeURIComponent(c.manager_id)}`}>{c.manager_name}</AdminLink></b></span>}
+            {c.external_name && <span>{c.external_name}</span>}
+            {c.manager_name && <span>· Primary: <b><AdminLink to={`/managers/${encodeURIComponent(c.manager_id)}`}>{c.manager_name}</AdminLink></b></span>}
             {c.sub_managers.length > 0 && <span>· with {c.sub_managers.map((m: Row) => m.full_name).join(', ')}</span>}
             {c.archived_at && <span>· archived {date(c.archived_at)}</span>}
+            {c.closed_at && <span>· closed {date(c.closed_at)}</span>}
           </div>
         </div>
         <div className="spacer" />
         {c.payment_link && (
           <a className="btn" href={c.payment_link} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>
+        )}
+        {isAdmin && c.status === 'draft' && (
+          <button className="btn" onClick={() => setStatus('active', 'Publish this campaign?')}>Publish</button>
+        )}
+        {isAdmin && c.status === 'active' && (
+          <button className="btn" onClick={() => setStatus('archived', 'Archive this campaign? It leaves the active list, but a new donation brings it back.')}>Archive</button>
+        )}
+        {isAdmin && c.status === 'archived' && (
+          <button className="btn" onClick={() => setStatus('active', 'Reactivate this campaign?')}>Reactivate</button>
+        )}
+        {isAdmin && c.status !== 'closed' && (
+          <button className="btn danger" onClick={() => setStatus('closed', 'This will lock this campaign. No new transactions can be entered. Only the Super Admin can reopen it.')}>Close</button>
+        )}
+        {c.status === 'closed' && permissions.includes('reopen_campaigns') && (
+          <button className="btn" onClick={() => setStatus('active', 'Reopen this closed campaign?')}>Reopen</button>
         )}
         {isAdmin && (
           <button className="btn" onClick={() => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c })}>

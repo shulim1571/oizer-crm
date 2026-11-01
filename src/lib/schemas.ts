@@ -1,28 +1,33 @@
 import type { Field } from '../components/RecordForm';
 import {
-  DONATION_TYPES, EXPENSE_METHODS, PAYMENT_METHODS, TASK_STATUSES, accountOptions, campaignOptions,
+  CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, EXPENSE_METHODS, PAYMENT_METHODS, TASK_STATUSES, accountOptions, campaignOptions,
   collectorOptions, donorOptions, managerOptions, sourceOptions,
 } from './lookups';
 
 export const campaignFields: Field[] = [
-  { name: 'id', label: 'Campaign ID', required: true, help: 'Campaign number, e.g. 3290' },
-  { name: 'real_name', label: 'Real Name' },
-  { name: 'friendly_name', label: 'Friendly Name' },
-  { name: 'campaign_name', label: 'Campaign Name' },
-  { name: 'manager_id', label: 'Manager', type: 'search', options: managerOptions },
-  { name: 'sub_manager_ids', label: 'Sub Managers', type: 'multi', options: managerOptions },
+  { name: 'internal_name', label: 'Internal Name', required: true, help: 'Only seen inside the portal' },
+  { name: 'external_name', label: 'External Name', help: 'What donors see. Uses the internal name if left empty.' },
+  { name: 'campaign_name', label: 'Other Name' },
+  { name: 'manager_id', label: 'Primary Fundraiser', type: 'search', options: managerOptions },
+  { name: 'sub_manager_ids', label: 'Secondary Fundraisers', type: 'multi', options: managerOptions },
   { name: 'email', label: 'Email', type: 'email' },
   { name: 'phone', label: 'Phone' },
   { name: 'payment_link', label: 'Payment Link' },
   { name: 'pin', label: 'Pin' },
   { name: 'exchange', label: 'Exchange', type: 'checkbox' },
-  { name: 'archived_at', label: 'Archived on', type: 'datetime', help: 'Leave empty to keep the campaign active' },
+  { name: 'featured', label: 'Featured', type: 'checkbox' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
+];
+
+export const newCampaignFields: Field[] = [
+  ...campaignFields,
+  { name: 'status', label: 'Status', type: 'select', options: CAMPAIGN_STATUSES, required: true },
 ];
 
 export const donationFields: Field[] = [
   { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
   { name: 'type', label: 'Type', type: 'select', options: DONATION_TYPES, required: true },
+  { name: 'status', label: 'Status', type: 'select', options: DONATION_STATUSES, required: true },
   { name: 'amount', label: 'Amount', type: 'number', required: true },
   { name: 'payment_method', label: 'Payment Method', type: 'select', options: PAYMENT_METHODS, freeText: true },
   { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions },
@@ -88,7 +93,7 @@ export const personFields: Field[] = [
   { name: 'first_name', label: 'First Name', required: true },
   { name: 'last_name', label: 'Last Name' },
   { name: 'phone', label: 'Phone' },
-  { name: 'email', label: 'Email', type: 'email', help: 'For managers, this email is how their login is matched' },
+  { name: 'email', label: 'Email', type: 'email', help: 'For fundraisers, this email is how their login is matched' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 

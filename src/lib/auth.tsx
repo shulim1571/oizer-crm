@@ -3,11 +3,13 @@ import type { Session } from '@supabase/supabase-js';
 import { logActivity, supabase, type Row } from './supabase';
 import { applyOrg, leavePlatformOrg, platformOrg, resolveOrg, type Org } from './org';
 
-type Role = 'admin' | 'manager' | 'pending';
+type Role = 'super_admin' | 'admin' | 'manager' | 'guest' | 'pending';
 
 interface Access {
   org_id: string | null;
   role: Role | null;
+  status: string | null;
+  permissions: string[];
   is_platform_owner: boolean;
   in_platform_session: boolean;
   orgs: { id: string; slug: string; name: string; role: Role }[];
@@ -18,7 +20,14 @@ interface AuthState {
   profile: Row | null;
   org: Org | null;
   role: Role | null;
+  /** Active, suspended or deactivated in this organization. */
+  memberStatus: string | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  /** Admins and fundraisers: the people who use the portal, as opposed to guests. */
+  canWork: boolean;
+  /** Super-admin powers this login holds. */
+  permissions: string[];
   isPlatformOwner: boolean;
   inPlatformSession: boolean;
   /** Organizations this login belongs to, for when the URL doesn't lead to one of them. */
@@ -94,7 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     org,
     role,
-    isAdmin: role === 'admin',
+    memberStatus: access?.status ?? null,
+    isAdmin: role === 'admin' || role === 'super_admin',
+    isSuperAdmin: role === 'super_admin',
+    canWork: role === 'admin' || role === 'super_admin' || role === 'manager',
+    permissions: access?.permissions ?? [],
     isPlatformOwner: access?.is_platform_owner ?? false,
     inPlatformSession: access?.in_platform_session ?? false,
     orgs: access?.orgs ?? [],

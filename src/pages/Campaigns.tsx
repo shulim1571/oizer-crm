@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Plus, Receipt, Scale, TrendingUp } from 'lucide-react';
+import { Clock, Plus, Receipt, Scale, Star, TrendingUp } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import Kpi from '../components/Kpi';
@@ -10,21 +10,21 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { money, pct } from '../lib/format';
-import { campaignFields } from '../lib/schemas';
+import { newCampaignFields } from '../lib/schemas';
 
 export const campaignColumns: Column[] = [
   {
-    key: 'real_name', label: 'Campaign', width: 200,
+    key: 'internal_name', label: 'Campaign', width: 200,
     render: r => (
       <div>
-        <div>{r.real_name || r.campaign_name}</div>
-        {r.friendly_name && r.friendly_name !== r.real_name && <div className="muted small">{r.friendly_name}</div>}
+        <div>{r.featured && <Star size={14} className="featured" />} {r.internal_name || r.campaign_name}</div>
+        {r.external_name && r.external_name !== r.internal_name && <div className="muted small">{r.external_name}</div>}
       </div>
     ),
   },
   { key: 'id', label: 'ID', value: r => Number(r.id) || r.id, render: r => <span className="id-tag">{r.id}</span> },
   {
-    key: 'manager_name', label: 'Manager', width: 140,
+    key: 'manager_name', label: 'Primary Fundraiser', width: 140,
     render: r => r.manager_id && <AdminLink to={`/managers/${encodeURIComponent(r.manager_id)}`}>{r.manager_name}</AdminLink>,
   },
   { key: 'raised', label: 'Raised', render: r => money(r.raised), align: 'right' },
@@ -36,8 +36,10 @@ export const campaignColumns: Column[] = [
   { key: 'pin', label: 'Pin' },
 ];
 
-type Mode = 'active' | 'all' | 'exchange';
-const TITLES: Record<Mode, string> = { active: 'Active Campaigns', all: 'All Campaigns', exchange: 'Exchange' };
+export const STATUS_LABEL: Record<string, string> = { draft: 'Draft', active: 'Active', archived: 'Archived', closed: 'Closed' };
+
+type Mode = 'active' | 'all' | 'archived' | 'closed' | 'exchange';
+const TITLES: Record<Mode, string> = { active: 'Active Campaigns', all: 'All Campaigns', archived: 'Archived Campaigns', closed: 'Closed Campaigns', exchange: 'Exchange' };
 
 export default function Campaigns({ mode }: { mode: Mode }) {
   const { isAdmin } = useAuth();
@@ -46,8 +48,8 @@ export default function Campaigns({ mode }: { mode: Mode }) {
 
   const { data, error, loading } = useQuery(
     () => fetchAll((a, b) => {
-      let q = supabase.from('campaign_summary').select('*').order('real_name');
-      if (mode === 'active') q = q.is('archived_at', null);
+      let q = supabase.from('campaign_summary').select('*').order('featured', { ascending: false }).order('internal_name');
+      if (mode === 'active' || mode === 'archived' || mode === 'closed') q = q.eq('status', mode);
       if (mode === 'exchange') q = q.eq('exchange', true);
       return q.range(a, b);
     }),
@@ -57,8 +59,8 @@ export default function Campaigns({ mode }: { mode: Mode }) {
   const columns = mode === 'all'
     ? [...campaignColumns, {
         key: 'status', label: 'Status',
-        value: (r: Row) => (r.archived_at ? 'Archived' : 'Active'),
-        render: (r: Row) => <StatusPill value={r.archived_at ? 'Archived' : 'Active'} />,
+        value: (r: Row) => STATUS_LABEL[r.status],
+        render: (r: Row) => <StatusPill value={STATUS_LABEL[r.status]} />,
       }]
     : campaignColumns;
 
@@ -70,7 +72,7 @@ export default function Campaigns({ mode }: { mode: Mode }) {
         loading={loading}
         error={error}
         columns={columns}
-        groupBy={{ label: 'Manager', value: r => r.manager_name ?? '' }}
+        groupBy={{ label: 'Fundraiser', value: r => r.manager_name ?? '' }}
         onOpen={r => nav(`/campaigns/${encodeURIComponent(r.id)}`)}
         summary={data && <Totals rows={data} />}
         actions={isAdmin && (
@@ -81,7 +83,8 @@ export default function Campaigns({ mode }: { mode: Mode }) {
         <RecordForm
           table="campaigns"
           title="New Campaign"
-          fields={campaignFields}
+          fields={newCampaignFields}
+          defaults={{ status: 'active' }}
           onClose={() => setAdding(false)}
           onSaved={r => nav(`/campaigns/${encodeURIComponent(r.id)}`)}
         />

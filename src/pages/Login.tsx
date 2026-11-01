@@ -1,7 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
+import type { EmailOtpType } from '@supabase/supabase-js';
 import { OrgLogo } from '../components/Layout';
 import { useAuth } from '../lib/auth';
-import { supabase } from '../lib/supabase';
+import { signInWithPassword, supabase } from '../lib/supabase';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
@@ -35,13 +36,57 @@ export function AuthShell({ children }: { children: ReactNode }) {
   );
 }
 
-export default function Login() {
+/** What an emailed link came back with: a token to use, or Supabase's reason for refusing it. */
+export function readEmailLink() {
+  const params = new URLSearchParams(window.location.search);
+  const error = params.get('error_description');
+  if (error) window.history.replaceState(null, '', window.location.pathname);
+  return { tokenHash: params.get('token_hash'), type: params.get('type') as EmailOtpType | null, error };
+}
+
+/**
+ * Email links carry a token we redeem here instead of the usual sign-in code, for two reasons: it
+ * works in any browser, not only the one that asked for the email, and it needs a click, so mail
+ * scanners that open every link can't use it up first.
+ */
+export function ConfirmEmailLink({ tokenHash, type, onDone }: { tokenHash: string; type: EmailOtpType; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const clear = () => {
+    window.history.replaceState(null, '', window.location.pathname);
+    onDone();
+  };
+  return (
+    <AuthShell>
+      <div className="auth-card">
+        <h1>{type === 'recovery' ? 'Reset your password' : 'Confirm your email'}</h1>
+        <p className="lead">Continue to finish this. The link works once.</p>
+        {err && <div className="error">{err}</div>}
+        {err
+          ? <button className="btn primary wide" onClick={clear}>Back to sign in</button>
+          : (
+            <button className="btn primary wide" disabled={busy} onClick={async () => {
+              setBusy(true);
+              const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+              setBusy(false);
+              if (error) setErr('That link has expired or was already used. Request a new one from the sign-in page.');
+              else clear();
+            }}>{busy ? 'Please wait…' : 'Continue'}</button>
+          )}
+      </div>
+    </AuthShell>
+  );
+}
+
+export default function Login({ linkError }: { linkError?: string | null }) {
   const { org } = useAuth();
-  const [mode, setMode] = useState<Mode>('signin');
+  const [mode, setMode] = useState<Mode>(linkError ? 'reset' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(
+    linkError ? { ok: false, text: 'That link has expired or was already used. Enter your email to get a new one.' } : null,
+  );
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -51,11 +96,12 @@ export default function Login() {
     const redirectTo = window.location.origin + import.meta.env.BASE_URL;
     let error;
     if (mode === 'signin') {
-      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+      ({ error } = await signInWithPassword(email, password));
     } else if (mode === 'signup') {
       const res = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo, data: { org_slug: org?.slug } } });
       error = res.error;
-      if (!error && !res.data.session) setMsg({ ok: true, text: 'Check your email to confirm your address, then sign in.' });
+      // Supabase answers the same way for an email that already has a login, and sends nothing.
+      if (!error && !res.data.session) setMsg({ ok: true, text: 'Check your email to confirm your address, then sign in. If no email arrives, you may already have a login: sign in, or use Forgot password.' });
     } else {
       ({ error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo }));
       if (!error) setMsg({ ok: true, text: 'If that email has a login, a reset link is on its way.' });
@@ -95,7 +141,7 @@ export default function Login() {
           {mode === 'signin' && <button type="button" className="link" onClick={() => setMode('reset')}>Forgot password?</button>}
         </div>
         {mode === 'signup' && (
-          <p className="muted small">Campaign managers are matched by email automatically. Other emails wait for an admin to grant access.</p>
+          <p className="muted small">Fundraisers are matched by email automatically. Other emails wait for an admin to grant access.</p>
         )}
       </form>
     </AuthShell>

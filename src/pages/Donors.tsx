@@ -10,7 +10,7 @@ import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { date, dateTime, money } from '../lib/format';
 import { donorFields, taskFields } from '../lib/schemas';
-import { DONATION_SELECT, donationColumns } from './donationColumns';
+import { DONATION_SELECT, donationColumns, isLive } from './donationColumns';
 
 export function DonorsPage() {
   const nav = useNavigate();
@@ -65,7 +65,7 @@ export function DonorsPage() {
 export function DonorDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
-  const { isAdmin, role } = useAuth();
+  const { isAdmin, canWork } = useAuth();
   const [editing, setEditing] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
   const [version, setVersion] = useState(0);
@@ -81,14 +81,14 @@ export function DonorDetail() {
   [id, version]);
 
   const tasks = useQuery(async () => {
-    const { data } = await supabase.from('tasks').select('*, campaigns(id, real_name, campaign_name)').eq('donor_id', id).order('created_at', { ascending: false });
+    const { data } = await supabase.from('tasks').select('*, campaigns(id, internal_name, campaign_name)').eq('donor_id', id).order('created_at', { ascending: false });
     return data ?? [];
   }, [id, version]);
 
   const byCampaign = useMemo(() => {
     const m = new Map<string, { label: string; total: number; count: number }>();
     for (const g of gifts.data ?? []) {
-      if (g.type === 'Voided') continue;
+      if (!isLive(g)) continue;
       const k = g.campaign_id ?? '';
       const e = m.get(k) ?? { label: campLabel(g.campaigns) || '(none)', total: 0, count: 0 };
       e.total += Number(g.amount);
@@ -101,7 +101,7 @@ export function DonorDetail() {
   const byYear = useMemo(() => {
     const m = new Map<string, number>();
     for (const g of gifts.data ?? []) {
-      if (g.type === 'Voided') continue;
+      if (!isLive(g)) continue;
       const y = new Date(g.created_at).getFullYear().toString();
       m.set(y, (m.get(y) ?? 0) + Number(g.amount));
     }
@@ -125,7 +125,7 @@ export function DonorDetail() {
           </div>
         </div>
         <div className="spacer" />
-        {(role === 'admin' || role === 'manager') && (
+        {canWork && (
           <button className="btn" onClick={() => setAddingTask(true)}><Plus size={16} /> Follow-up task</button>
         )}
         {isAdmin && <button className="btn" onClick={() => setEditing(true)}><Pencil size={16} /> Edit</button>}
