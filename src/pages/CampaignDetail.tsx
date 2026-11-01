@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Clock, ExternalLink, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, StickyNote, TrendingUp,
-Star,
+  ArrowLeft, Clock, ExternalLink, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Star, StickyNote, TrendingUp,
 } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
@@ -14,7 +13,7 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, pct, yn } from '../lib/format';
-import { campaignFields, donationFields, expenseFields, taskFields, transferFields } from '../lib/schemas';
+import { campaignFields, donationFields, expenseFields, fundraiserDonationFields, taskFields, transferFields } from '../lib/schemas';
 import { clearLookups } from '../lib/lookups';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
 import { STATUS_LABEL } from './Campaigns';
@@ -29,6 +28,13 @@ export default function CampaignDetail() {
   const [tab, setTab] = useState<Tab>('donations');
   const [form, setForm] = useState<{ table: string; title: string; fields: Field[]; record?: Row | null; defaults?: Row } | null>(null);
   const [version, setVersion] = useState(0);
+  const [canEnter, setCanEnter] = useState(false);
+
+  // A fundraiser with the override can enter payments here, held for approval.
+  useEffect(() => {
+    if (isAdmin) return setCanEnter(true);
+    supabase.rpc('has_override', { p_permission: 'enter_manual_payments', p_campaign: id }).then(({ data }) => setCanEnter(!!data));
+  }, [id, isAdmin]);
 
   const summary = useQuery(
     async () => {
@@ -78,7 +84,7 @@ export default function CampaignDetail() {
   const tabConfig = {
     donations: {
       columns: donationColumns({ hideCampaign: true }),
-      add: isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', account_id: defaultAccountId, created_at: new Date().toISOString() } },
+      add: !isAdmin && canEnter ? { table: 'donations', title: 'New payment (held for approval)', fields: fundraiserDonationFields, defaults: { campaign_id: id, source: 'Manual' } } : isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', account_id: defaultAccountId, created_at: new Date().toISOString() } },
       edit: isAdmin && { table: 'donations', title: 'Edit Donation', fields: donationFields },
     },
     expenses: {
@@ -158,6 +164,7 @@ export default function CampaignDetail() {
         {c.payment_link && (
           <a className="btn" href={c.payment_link} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>
         )}
+        {canEnter && c.status !== 'closed' && <Link className="btn" to={`/campaigns/${encodeURIComponent(id)}/batch`}>Batch entry</Link>}
         {isAdmin && c.status === 'draft' && (
           <button className="btn" onClick={() => setStatus('active', 'Publish this campaign?')}>Publish</button>
         )}
@@ -186,6 +193,8 @@ export default function CampaignDetail() {
         <Kpi label="Fees" value={money(c.fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(c.fee_percent)} of raised`} />
         <Kpi label="Expenses" value={money(c.expenses)} icon={<Receipt size={18} />} tone="amber" />
         <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} />
+        {Number(c.post_dated_amount) > 0 && <Kpi label="Post-dated checks" value={money(c.post_dated_amount)} icon={<Clock size={18} />} tone="blue" sub="Not in the balance yet" />}
+        {Number(c.awaiting_approval) > 0 && <Kpi label="Awaiting approval" value={money(c.awaiting_approval)} icon={<Clock size={18} />} tone="amber" sub="Not in the balance yet" />}
         <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={18} />} tone="blue"
              sub={c.last_donation_at ? `last gift ${dateTime(c.last_donation_at)}` : undefined} />
       </div>

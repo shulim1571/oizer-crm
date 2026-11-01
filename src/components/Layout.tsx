@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, HandCoins, History, Landmark, Layers, Lock, LogOut, Menu,
+  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, HandCoins, History, Landmark, Layers, ListPlus, Lock, LogOut, Menu, Percent,
   PlusCircle, Receipt, RefreshCw, Repeat, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -40,6 +40,7 @@ const NAV: NavSection[] = [
     title: 'Money',
     items: [
       { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true },
+      { to: '/donations/batch', label: 'Batch Entry', icon: <ListPlus size={I} />, admin: true },
       { to: '/donations/recent', label: 'Last 7 Days', icon: <HandCoins size={I} /> },
       { to: '/donations/all', label: 'All Transactions', icon: <CircleDollarSign size={I} /> },
       { to: '/expenses', label: 'Expenses', icon: <Receipt size={I} /> },
@@ -59,6 +60,7 @@ const NAV: NavSection[] = [
     title: 'Settings',
     items: [
       { to: '/sources', label: 'Sources', icon: <Wallet size={I} />, admin: true },
+      { to: '/fees', label: 'Methods & Fees', icon: <Percent size={I} />, admin: true },
       { to: '/accounts', label: 'Accounts', icon: <Building2 size={I} />, admin: true },
       { to: '/users', label: 'Users & Access', icon: <ShieldCheck size={I} />, admin: true },
       { to: '/activity', label: 'Activity Log', icon: <History size={I} />, admin: true },

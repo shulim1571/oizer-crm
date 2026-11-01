@@ -10,7 +10,7 @@ export const DONATION_SELECT =
   '*, campaigns(id, internal_name, campaign_name, external_name), donors(id, display_name), collectors(full_name), sources(name), accounts(name)';
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending', collect: 'Collect', voided: 'Voided', refunded: 'Refunded', returned: 'Returned', failed: 'Failed',
+  pending: 'Pending', post_dated: 'Post-dated', collect: 'Collect', voided: 'Voided', refunded: 'Refunded', returned: 'Returned', failed: 'Failed', rejected: 'Rejected',
 };
 
 /** One word for a donation: its type once completed, otherwise what happened to it. */
@@ -42,7 +42,13 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
     },
   },
   { key: 'amount', label: 'Amount', render: r => <b className="num">{money(r.amount)}</b>, align: 'right', filter: { column: 'amount', type: 'number' } },
-  { key: 'type', label: 'Type', value: donationKind, render: r => <StatusPill value={donationKind(r)} /> },
+  { key: 'type', label: 'Type', value: donationKind, render: r => (
+    <>
+      <StatusPill value={donationKind(r)} />
+      {r.split_group_id && <> <StatusPill value="Split" /></>}
+      {r.possible_duplicate && <> <StatusPill value="Possible duplicate" /></>}
+    </>
+  ) },
   ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', width: 180, value: (r: Row) => campLabel(r.campaigns), filter: { column: 'campaign_internal', type: 'text' as const } }]),
   { key: 'payment_method', label: 'Method', filter: { column: 'payment_method', type: 'text' } },
   { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170, filter: { column: 'created_at', type: 'date' } },

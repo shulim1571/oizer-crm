@@ -5,6 +5,7 @@ import { clearLookups, type Option } from '../lib/lookups';
 import { fromLocalInput, toLocalInput } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import SearchSelect from './SearchSelect';
+import DonationActions from '../pages/DonationActions';
 
 export interface Field {
   name: string;
@@ -150,8 +151,9 @@ export default function RecordForm(p: Props) {
       </div>
       {(error || p.bulkError) && <div className="error">{error ?? p.bulkError}</div>}
       {p.onBulk && <p className="muted small">Only fields you fill in are changed. Everything else stays as it is on each transaction.</p>}
+      {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <DonationActions record={p.record!} onDone={p.onSaved} />}
       <div className="form-actions">
-        {!isNew && p.allowDelete && <button type="button" className="btn danger" onClick={remove}>Delete</button>}
+        {!isNew && p.allowDelete && p.table !== 'donations' && <button type="button" className="btn danger" onClick={remove}>Delete</button>}
         <div className="spacer" />
         {!p.inline && <button type="button" className="btn" onClick={p.onClose}>Cancel</button>}
         <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : p.onBulk ? 'Review changes' : 'Save'}</button>

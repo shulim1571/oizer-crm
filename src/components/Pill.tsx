@@ -11,7 +11,7 @@ const TONES: Record<string, Tone> = {
   Payment: 'green', Batch: 'blue', Collect: 'amber', Voided: 'red',
   Pending: 'amber', 'In Progress': 'blue', Done: 'green',
   Active: 'green', Archived: '', Draft: 'amber', Closed: 'red', Suspended: 'amber', Deactivated: 'red',
-  Refunded: 'amber', Returned: 'red', Failed: 'red',
+  Refunded: 'amber', Returned: 'red', Failed: 'red', Rejected: 'red', 'Post-dated': 'blue', 'Possible duplicate': 'amber', Split: 'violet',
   super_admin: 'violet', admin: 'violet', manager: 'blue', guest: '', pending: 'amber',
 };
 

@@ -53,16 +53,23 @@ export const sourceOptions = () =>
       .map(s => ({ value: s.id, label: s.name })),
   );
 
-export const PAYMENT_METHODS = [
-  'Matbia', 'Credit Card', 'Credit Card VISA', 'Credit Card MASTERCARD', 'Credit Card AMEX', 'Credit Card DISCOVER',
-  'OJC', 'OJC Voucher', 'Pledger Voucher', 'Donors Fund Voucher', 'Pledger Pledger', 'Check', 'Cash', 'Zelle', 'Wire', 'usaepay', 'Other',
-].map(v => ({ value: v, label: v }));
+export const paymentMethodOptions = () =>
+  cached('paymentMethods', async () =>
+    (await fetchAll((a, b) => supabase.from('payment_methods').select('name').eq('active', true).order('name').range(a, b)))
+      .map(m => ({ value: m.name, label: m.name })),
+  );
+
+export const paymentMethodIdOptions = () =>
+  cached('paymentMethodIds', async () =>
+    (await fetchAll((a, b) => supabase.from('payment_methods').select('id, name').order('name').range(a, b)))
+      .map(m => ({ value: m.id, label: m.name })),
+  );
 
 export const EXPENSE_METHODS = ['Check', 'Zelle', 'Account Transfer', 'Credit Card', 'Cash', 'Wire', 'other'].map(v => ({ value: v, label: v }));
 export const DONATION_TYPES = ['Payment', 'Batch'].map(v => ({ value: v, label: v }));
 export const DONATION_STATUSES = [
-  ['completed', 'Completed'], ['pending', 'Pending'], ['collect', 'To collect'], ['voided', 'Voided'],
-  ['refunded', 'Refunded'], ['returned', 'Returned'], ['failed', 'Failed'],
+  ['completed', 'Completed'], ['pending', 'Pending approval'], ['post_dated', 'Post-dated'], ['collect', 'To collect'], ['voided', 'Voided'],
+  ['refunded', 'Refunded'], ['returned', 'Returned'], ['failed', 'Failed'], ['rejected', 'Rejected'],
 ].map(([value, label]) => ({ value, label }));
 export const CAMPAIGN_STATUSES = [['draft', 'Draft'], ['active', 'Active']].map(([value, label]) => ({ value, label }));
 export const TASK_STATUSES = ['Pending', 'In Progress', 'Done'].map(v => ({ value: v, label: v }));

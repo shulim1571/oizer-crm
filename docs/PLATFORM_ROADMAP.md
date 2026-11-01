@@ -127,6 +127,9 @@ display, alternating rows, inline "+ Create New" in every picker, campaign ID ba
 totals, bulk edit, and bulk void or delete with typed confirmation.
 
 ### Phase 4: Money operations (XL)
+Being built in three parts. Part 1 is on staging: fees and methods, fundraiser entry with approval, batch entry, splits,
+refunds, returned and post-dated checks, duplicate flags and unattributed payments. Splitting works on a saved gift (save,
+then Split), by admins only. Part 2 is vouchers and pledges; part 3 is sub-campaigns, transfers, bank accounts and routing.
 Fee configuration with per-campaign overrides, manual entry with approval, batch entry, split donations, vouchers,
 pledges including recurring schedules and auto-matching, post-dated checks, NSF, refunds, deletes, duplicate
 detection, unattributed payments, sub-campaigns, transfers, bank accounts and routing rules.

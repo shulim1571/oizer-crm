@@ -1,6 +1,6 @@
 import type { Field } from '../components/RecordForm';
 import {
-  CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, EXPENSE_METHODS, PAYMENT_METHODS, TASK_STATUSES, accountOptions, campaignOptions,
+  CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, EXPENSE_METHODS, paymentMethodOptions, TASK_STATUSES, accountOptions, campaignOptions,
   collectorOptions, donorOptions, managerOptions, sourceOptions,
 } from './lookups';
 
@@ -38,7 +38,11 @@ export const donationFields: Field[] = [
   { name: 'type', label: 'Type', type: 'select', options: DONATION_TYPES, required: true },
   { name: 'status', label: 'Status', type: 'select', options: DONATION_STATUSES, required: true },
   { name: 'amount', label: 'Amount', type: 'number', required: true },
-  { name: 'payment_method', label: 'Payment Method', type: 'select', options: PAYMENT_METHODS, freeText: true },
+  { name: 'payment_method', label: 'Payment Method', type: 'select', options: paymentMethodOptions, freeText: true },
+  { name: 'check_number', label: 'Check #' },
+  { name: 'post_dated', label: 'Post-dated check', type: 'checkbox' },
+  { name: 'check_date', label: 'Check date', type: 'date', help: 'A later date keeps it out of the balance until then' },
+  { name: 'anonymous', label: 'Anonymous', type: 'checkbox' },
   { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, create: create.donor },
   { name: 'name', label: 'Name on payment' },
   { name: 'phone', label: 'Phone' },
@@ -46,7 +50,7 @@ export const donationFields: Field[] = [
   { name: 'collector_id', label: 'Collector', type: 'search', options: collectorOptions, create: create.collector },
   { name: 'source', label: 'Source', type: 'select', options: sourceOptions, create: create.source },
   { name: 'account_id', label: 'Account', type: 'select', options: accountOptions, create: create.account },
-  { name: 'fee', label: 'Fee', type: 'number' },
+  { name: 'fee', label: 'Fee', type: 'number', help: "Leave empty to use the method's fee. Enter 0 to waive it." },
   { name: 'manual_fee', label: 'Manual Fee', type: 'number' },
   { name: 'batch_id', label: 'Batch ID / Voucher #' },
   { name: 'funded', label: 'Funded', type: 'number', help: 'Batch rows: amount actually received' },
@@ -54,6 +58,16 @@ export const donationFields: Field[] = [
   { name: 'batch_pending', label: 'Batch Pending', type: 'number' },
   { name: 'delivered', label: 'Delivered', type: 'checkbox' },
   { name: 'created_at', label: 'Timestamp', type: 'datetime' },
+  { name: 'notes', label: 'Notes', type: 'textarea' },
+];
+
+/** What a fundraiser with the override fills in. It always waits for an admin. */
+export const fundraiserDonationFields: Field[] = [
+  { name: 'amount', label: 'Amount', type: 'number', required: true },
+  { name: 'payment_method', label: 'Payment Method', type: 'select', options: paymentMethodOptions, freeText: true, required: true },
+  { name: 'name', label: 'Donor name' },
+  { name: 'phone', label: 'Phone' },
+  { name: 'check_number', label: 'Check #' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 

@@ -13,6 +13,8 @@ import ActivityPage from './pages/Activity';
 import OrganizationPage from './pages/Organization';
 import PlatformPage from './pages/Platform';
 import GuestPage from './pages/Guest';
+import BatchEntry from './pages/BatchEntry';
+import FeesPage from './pages/Fees';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
   AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage, TransfersPage,
@@ -104,6 +106,9 @@ export default function App() {
         <Route path="campaigns/closed" element={<Campaigns mode="closed" />} />
         <Route path="campaigns/exchange" element={<AdminOnly><Campaigns mode="exchange" /></AdminOnly>} />
         <Route path="campaigns/:id" element={<CampaignDetail />} />
+        <Route path="campaigns/:id/batch" element={<BatchEntry />} />
+        <Route path="donations/batch" element={<AdminOnly><BatchEntry /></AdminOnly>} />
+        <Route path="fees" element={<AdminOnly><FeesPage /></AdminOnly>} />
         <Route path="donations/new" element={<AdminOnly><NewDonation /></AdminOnly>} />
         <Route path="donations/recent" element={<RecentDonations />} />
         <Route path="donations/all" element={<AllDonations />} />

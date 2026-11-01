@@ -82,6 +82,9 @@ function WeekSummary({ rows }: { rows: Row[] }) {
   );
 }
 
+const UNATTRIBUTED = 'Unattributed';
+const DUPLICATES = 'Possible duplicates';
+
 export function AllDonations() {
   return <PagedDonations title="All Transactions" />;
 }
@@ -149,6 +152,8 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     const kind = DONATION_KINDS[kindFilter];
     if (kind) s = s.eq('status', kind.status);
     if (kind?.type) s = s.eq('type', kind.type);
+    if (kindFilter === UNATTRIBUTED) s = s.is('campaign_id', null);
+    if (kindFilter === DUPLICATES) s = s.eq('possible_duplicate', true);
     const text = debounced.trim().replace(/[,()*]/g, ' ');
     if (text) {
       const like = `%${text}%`;
@@ -252,7 +257,10 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
             <select value={kindFilter} onChange={e => setKindFilter(e.target.value)} aria-label="Type">
               <option value="">All types</option>
               {Object.keys(DONATION_KINDS).map(t => <option key={t}>{t}</option>)}
+              <option>{UNATTRIBUTED}</option>
+              <option>{DUPLICATES}</option>
             </select>
+            {isAdmin && !filter && <button className="btn" onClick={() => nav('/donations/batch')}>Batch entry</button>}
             {isAdmin && !filter && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
           </>
         }
