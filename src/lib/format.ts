@@ -1,25 +1,25 @@
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 let timeZone = 'America/New_York';
-const dateTimeFormat = () => new Intl.DateTimeFormat('en-US', {
-  timeZone,
-  year: 'numeric', month: 'numeric', day: 'numeric',
-  hour: 'numeric', minute: '2-digit', second: '2-digit',
-});
-const dateFormat = () => new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: 'numeric', day: 'numeric' });
-let dt = dateTimeFormat();
+const dateFormat = () => new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: 'short', day: 'numeric' });
+const timeFormat = () => new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit' });
 let d = dateFormat();
+let t = timeFormat();
 
 /** Dates display in the organization's time zone. */
 export function setTimezone(zone: string) {
   timeZone = zone;
-  dt = dateTimeFormat();
   d = dateFormat();
+  t = timeFormat();
 }
 
 export const money = (v: unknown) => (v == null || v === '' ? '' : usd.format(Number(v)));
 export const pct = (v: unknown) => (v == null ? '' : `${(Number(v) * 100).toFixed(2)}%`);
-export const dateTime = (v: unknown) => (v ? dt.format(new Date(String(v))) : '');
-export const date = (v: unknown) => (v ? d.format(new Date(String(v))) : '');
+/** Always the date and time together, e.g. "Jul 1, 2026 · 2:41 PM". */
+export const dateTime = (v: unknown) => {
+  if (!v) return '';
+  const when = new Date(String(v));
+  return `${d.format(when)} · ${t.format(when)}`;
+};
 export const yn = (v: unknown) => (v === true ? 'Y' : v === false ? 'N' : '');
 
 /** Value for <input type="datetime-local"> in the organization's time zone. */

@@ -4,7 +4,7 @@ Plan for growing the Oizer CRM into the multi-tenant platform described in the C
 spec (v1.0, June 2026). The spec itself is not committed here because it contains credentials (see
 [Before anything else](#before-anything-else)).
 
-Status: Phases 0, 1 and 2 are on the staging project ("Oizer DRM" in the Trubase Live org), which holds only test data.
+Status: Phases 0, 1, 2 and 3 are on the staging project ("Oizer DRM" in the Trubase Live org), which holds only test data.
 None of them is on the live `oizer-crm` project. Later phases haven't started.
 
 Still open for Phase 1:
@@ -120,6 +120,8 @@ IDs, Featured.
 **Done when:** the role matrix is covered by tests and balances still match.
 
 ### Phase 3: Tables and navigation (M)
+Built on staging. A bulk void records the void here only; gateway voids arrive with Phase 8. Last-4 card search needs card
+data, which also arrives with Phase 8.
 Filter on any column, saved views and personal defaults, column picker, frozen columns, compact mode, date-with-time
 display, alternating rows, inline "+ Create New" in every picker, campaign ID bar, Global Transaction View with
 totals, bulk edit, and bulk void or delete with typed confirmation.

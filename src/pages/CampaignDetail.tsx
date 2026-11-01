@@ -13,7 +13,7 @@ import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
-import { date, dateTime, money, pct, yn } from '../lib/format';
+import { dateTime, money, pct, yn } from '../lib/format';
 import { campaignFields, donationFields, expenseFields, taskFields, transferFields } from '../lib/schemas';
 import { clearLookups } from '../lib/lookups';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
@@ -150,8 +150,8 @@ export default function CampaignDetail() {
             {c.external_name && <span>{c.external_name}</span>}
             {c.manager_name && <span>· Primary: <b><AdminLink to={`/managers/${encodeURIComponent(c.manager_id)}`}>{c.manager_name}</AdminLink></b></span>}
             {c.sub_managers.length > 0 && <span>· with {c.sub_managers.map((m: Row) => m.full_name).join(', ')}</span>}
-            {c.archived_at && <span>· archived {date(c.archived_at)}</span>}
-            {c.closed_at && <span>· closed {date(c.closed_at)}</span>}
+            {c.archived_at && <span>· archived {dateTime(c.archived_at)}</span>}
+            {c.closed_at && <span>· closed {dateTime(c.closed_at)}</span>}
           </div>
         </div>
         <div className="spacer" />
@@ -187,7 +187,7 @@ export default function CampaignDetail() {
         <Kpi label="Expenses" value={money(c.expenses)} icon={<Receipt size={18} />} tone="amber" />
         <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} />
         <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={18} />} tone="blue"
-             sub={c.last_donation_at ? `last gift ${date(c.last_donation_at)}` : undefined} />
+             sub={c.last_donation_at ? `last gift ${dateTime(c.last_donation_at)}` : undefined} />
       </div>
 
       {(c.email || c.phone || c.notes) && (

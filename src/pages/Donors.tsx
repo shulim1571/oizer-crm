@@ -8,7 +8,7 @@ import { campLabel } from '../components/CrudPage';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
-import { date, dateTime, money } from '../lib/format';
+import { dateTime, money } from '../lib/format';
 import { donorFields, taskFields } from '../lib/schemas';
 import { DONATION_SELECT, donationColumns, isLive } from './donationColumns';
 
@@ -49,7 +49,7 @@ export function DonorsPage() {
           { key: 'email', label: 'Email' },
           { key: 'address', label: 'Address' },
           { key: 'campaign_count', label: 'Campaigns', align: 'right' },
-          { key: 'last_gift_at', label: 'Last Gift', render: r => date(r.last_gift_at) },
+          { key: 'last_gift_at', label: 'Last Gift', render: r => dateTime(r.last_gift_at) },
           { key: 'matbia_id', label: 'Matbia ID' },
           { key: 'ojc_id', label: 'OJC ID' },
         ]}
@@ -121,7 +121,7 @@ export function DonorDetail() {
           <h1>{d.english_title ? `${d.english_title} ` : ''}{d.display_name}</h1>
           <div className="sub">
             {d.yiddish_name && d.yiddish_name !== d.display_name && <span className="hebrew">{d.yiddish_name}</span>}
-            <span>Donor since {date(d.first_gift_at ?? d.created_at)}</span>
+            <span>Donor since {dateTime(d.first_gift_at ?? d.created_at)}</span>
           </div>
         </div>
         <div className="spacer" />
@@ -136,7 +136,7 @@ export function DonorDetail() {
         <Kpi label="Gifts" value={d.gift_count} icon={<HandCoins size={18} />} tone="violet"
              sub={`avg ${money(d.gift_count ? d.total_given / d.gift_count : 0)}`} />
         <Kpi label="Campaigns" value={d.campaign_count ?? 0} icon={<Landmark size={18} />} tone="blue" />
-        <Kpi label="Last gift" value={date(d.last_gift_at) || '—'} icon={<CalendarDays size={18} />} tone="amber" small />
+        <Kpi label="Last gift" value={dateTime(d.last_gift_at) || '—'} icon={<CalendarDays size={18} />} tone="amber" small />
       </div>
 
       <div className="cards">

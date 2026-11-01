@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { supabase, type Row } from '../lib/supabase';
 import { clearLookups, type Option } from '../lib/lookups';
 import { fromLocalInput, toLocalInput } from '../lib/format';
+import { useAuth } from '../lib/auth';
 import SearchSelect from './SearchSelect';
 
 export interface Field {
@@ -14,6 +15,8 @@ export interface Field {
   /** Free-text select: allow values not in the list. */
   freeText?: boolean;
   help?: string;
+  /** How to make a new one from right here, without leaving this form. */
+  create?: () => { noun: string; table: string; fields: Field[]; defaults?: Row; pk?: string };
 }
 
 interface Props {
@@ -29,31 +32,62 @@ interface Props {
   /** Render inline instead of as a modal dialog. */
   inline?: boolean;
   allowDelete?: boolean;
+  /** Bulk edit: hands back only the fields filled in, instead of saving a record. */
+  onBulk?: (patch: Row) => void;
+  bulkError?: string | null;
 }
 
+const NEW_OPTION = '__create_new__';
+
 export default function RecordForm(p: Props) {
+  const { isAdmin } = useAuth();
   const pk = p.pk ?? 'id';
   const isNew = !p.record;
+  const [creating, setCreating] = useState<Field | null>(null);
   const [values, setValues] = useState<Row>(() => ({ ...p.defaults, ...p.record }));
   const [opts, setOpts] = useState<Record<string, Option[]>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    for (const f of p.fields) {
+  const loadOptions = (fields: Field[]) => {
+    for (const f of fields) {
       if (typeof f.options === 'function') {
         f.options().then(o => setOpts(prev => ({ ...prev, [f.name]: o }))).catch(e => setError(e.message));
       } else if (f.options) {
         setOpts(prev => ({ ...prev, [f.name]: f.options as Option[] }));
       }
     }
+  };
+
+  useEffect(() => {
+    loadOptions(p.fields);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const createFor = (f: Field) => (f.create && isAdmin ? { onCreate: () => setCreating(f), createLabel: f.create().noun } : {});
+
+  // The new record is selected, and everything already typed in this form stays as it was.
+  function created(f: Field, row: Row) {
+    setCreating(null);
+    clearLookups();
+    loadOptions(p.fields);
+    const id = row[f.create!().pk ?? 'id'];
+    if (f.type === 'multi') set(f.name, [...(values[f.name] ?? []), id]);
+    else set(f.name, id);
+  }
 
   const set = (k: string, v: unknown) => setValues(prev => ({ ...prev, [k]: v }));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (p.onBulk) {
+      const patch: Row = {};
+      for (const f of p.fields) {
+        const v = values[f.name];
+        if (v !== '' && v != null) patch[f.name] = f.type === 'number' ? Number(v) : v;
+      }
+      return p.onBulk(patch);
+    }
     setSaving(true);
     setError(null);
     const payload: Row = {};
@@ -84,6 +118,21 @@ export default function RecordForm(p: Props) {
     p.onSaved({ ...p.record, _deleted: true });
   }
 
+  const nested = creating && (() => {
+    const spec = creating.create!();
+    return (
+      <RecordForm
+        table={spec.table}
+        pk={spec.pk}
+        title={`New ${spec.noun}`}
+        fields={spec.fields}
+        defaults={spec.defaults}
+        onClose={() => setCreating(null)}
+        onSaved={row => created(creating, row)}
+      />
+    );
+  })();
+
   const body = (
     <form className="record-form" onSubmit={submit}>
       <div className="form-head">
@@ -99,12 +148,13 @@ export default function RecordForm(p: Props) {
           </label>
         ))}
       </div>
-      {error && <div className="error">{error}</div>}
+      {(error || p.bulkError) && <div className="error">{error ?? p.bulkError}</div>}
+      {p.onBulk && <p className="muted small">Only fields you fill in are changed. Everything else stays as it is on each transaction.</p>}
       <div className="form-actions">
         {!isNew && p.allowDelete && <button type="button" className="btn danger" onClick={remove}>Delete</button>}
         <div className="spacer" />
         {!p.inline && <button type="button" className="btn" onClick={p.onClose}>Cancel</button>}
-        <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+        <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : p.onBulk ? 'Review changes' : 'Save'}</button>
       </div>
     </form>
   );
@@ -123,7 +173,7 @@ export default function RecordForm(p: Props) {
       case 'date':
         return <input type="date" value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required} />;
       case 'search':
-        return <SearchSelect value={v ?? null} options={opts[f.name] ?? []} onChange={x => set(f.name, x)} required={f.required} />;
+        return <SearchSelect value={v ?? null} options={opts[f.name] ?? []} onChange={x => set(f.name, x)} required={f.required} {...createFor(f)} />;
       case 'select':
         if (f.freeText) {
           return (
@@ -134,9 +184,11 @@ export default function RecordForm(p: Props) {
           );
         }
         return (
-          <select value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required}>
+          <select value={v ?? ''} required={f.required}
+                  onChange={e => (e.target.value === NEW_OPTION ? setCreating(f) : set(f.name, e.target.value))}>
             <option value="">—</option>
             {(opts[f.name] ?? []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {f.create && isAdmin && <option value={NEW_OPTION}>+ Create new {f.create().noun}</option>}
           </select>
         );
       case 'multi': {
@@ -150,7 +202,7 @@ export default function RecordForm(p: Props) {
               </span>
             ))}
             <SearchSelect value={null} options={(opts[f.name] ?? []).filter(o => !arr.includes(o.value))}
-                          onChange={x => x && set(f.name, [...arr, x])} placeholder="Add…" />
+                          onChange={x => x && set(f.name, [...arr, x])} placeholder="Add…" {...createFor(f)} />
           </div>
         );
       }
@@ -159,10 +211,10 @@ export default function RecordForm(p: Props) {
     }
   }
 
-  if (p.inline) return <div className="card">{body}</div>;
+  if (p.inline) return <div className="card">{body}{nested}</div>;
   return (
     <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && p.onClose()}>
-      <div className="modal">{body}</div>
+      <div className="modal">{body}{nested}</div>
     </div>
   );
 }

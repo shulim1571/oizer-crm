@@ -10,7 +10,7 @@ import { campLabel } from '../components/CrudPage';
 import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
-import { date, dateTime, money, yn } from '../lib/format';
+import { dateTime, money, yn } from '../lib/format';
 import { accountFields, personFields, sourceFields } from '../lib/schemas';
 import { STATUS_LABEL, campaignColumns } from './Campaigns';
 import FundraiserControls from './FundraiserControls';
@@ -70,7 +70,7 @@ export function SourceDetail() {
         <Kpi label="Donations" value={Number(d.donation_count).toLocaleString()} icon={<HandCoins size={18} />} tone="violet"
              sub={`avg ${money(d.donation_count ? d.total_amount / d.donation_count : 0)}`} />
         <Kpi label="Fees" value={money(d.total_fees)} icon={<Percent size={18} />} tone="amber" />
-        <Kpi label="Last donation" value={date(d.last_donation_at) || '—'} icon={<CalendarDays size={18} />} tone="blue" small />
+        <Kpi label="Last donation" value={dateTime(d.last_donation_at) || '—'} icon={<CalendarDays size={18} />} tone="blue" small />
       </div>
       <PagedDonations title="Donations from this source" filter={{ column: 'source', value: d.id }} />
       {editing && (

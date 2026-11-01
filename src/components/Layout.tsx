@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, HandCoins, History, Landmark, Layers, Lock, LogOut, Menu,
   PlusCircle, Receipt, RefreshCw, Repeat, Search, ShieldCheck, UserCircle, Users, Wallet,
@@ -41,7 +41,7 @@ const NAV: NavSection[] = [
     items: [
       { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true },
       { to: '/donations/recent', label: 'Last 7 Days', icon: <HandCoins size={I} /> },
-      { to: '/donations/all', label: 'All Donations', icon: <CircleDollarSign size={I} /> },
+      { to: '/donations/all', label: 'All Transactions', icon: <CircleDollarSign size={I} /> },
       { to: '/expenses', label: 'Expenses', icon: <Receipt size={I} /> },
       { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} /> },
     ],
@@ -78,6 +78,8 @@ export default function Layout() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [tick, setTick] = useState(0);
+  const [campaignId, setCampaignId] = useState('');
+  const nav = useNavigate();
   const searchRef = useRef<HTMLInputElement>(null);
   const loc = useLocation();
 
@@ -146,6 +148,15 @@ export default function Layout() {
             <input ref={searchRef} value={q} onChange={e => setQ(e.target.value)} placeholder={`Search ${current?.label.toLowerCase() ?? ''}…`} />
             <span className="kbd">Ctrl K</span>
           </label>
+          {canWork && (
+            <form onSubmit={e => {
+              e.preventDefault();
+              if (campaignId.trim()) nav(`/campaigns/${encodeURIComponent(campaignId.trim())}`);
+              setCampaignId('');
+            }}>
+              <input className="id-jump" aria-label="Go to campaign ID" placeholder="Campaign ID" value={campaignId} onChange={e => setCampaignId(e.target.value)} />
+            </form>
+          )}
           <button className="icon-btn outlined" title="Refresh data" onClick={() => setTick(t => t + 1)}><RefreshCw size={16} /></button>
         </header>
 

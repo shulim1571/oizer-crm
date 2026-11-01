@@ -7,10 +7,13 @@ interface Props {
   onChange: (v: string | null) => void;
   placeholder?: string;
   required?: boolean;
+  /** Adds a "+ Create new" line that opens the full form for this kind of record. */
+  onCreate?: () => void;
+  createLabel?: string;
 }
 
 /** Type-to-filter dropdown for long lists (campaigns, donors). */
-export default function SearchSelect({ value, options, onChange, placeholder, required }: Props) {
+export default function SearchSelect({ value, options, onChange, placeholder, required, onCreate, createLabel }: Props) {
   const selected = options.find(o => o.value === value);
   const [text, setText] = useState(selected?.label ?? '');
   const [open, setOpen] = useState(false);
@@ -46,6 +49,9 @@ export default function SearchSelect({ value, options, onChange, placeholder, re
       />
       {open && (
         <ul className="ss-list">
+          {onCreate && (
+            <li className="ss-create" onMouseDown={e => { e.preventDefault(); setOpen(false); onCreate(); }}>+ Create new {createLabel}</li>
+          )}
           {!required && <li onMouseDown={() => { onChange(null); setText(''); setOpen(false); }} className="muted">— none —</li>}
           {matches.map(o => (
             <li key={o.value} className={o.value === value ? 'sel' : ''}

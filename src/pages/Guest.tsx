@@ -28,6 +28,7 @@ export default function GuestPage() {
 
   return (
     <DataTable
+      plain
       title={campaign?.name ?? 'Your campaigns'}
       subtitle={campaign && <>Raised {money(campaign.raised)} · Balance <Balance value={campaign.balance} /> · <StatusPill value={STATUS_LABEL[campaign.status]} /></>}
       rows={donations.data ?? []}

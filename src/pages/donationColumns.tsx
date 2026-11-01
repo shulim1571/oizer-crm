@@ -30,7 +30,7 @@ export const donorName = (r: Row) => r.donors?.display_name ?? r.donor_label?.re
 
 export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[] => [
   {
-    key: 'donor', label: 'Donor', width: 180, value: r => donorName(r) || r.name,
+    key: 'donor', label: 'Donor', width: 180, value: r => donorName(r) || r.name, filter: { column: 'donor_name', type: 'text' },
     render: r => {
       const main = donorName(r) || r.name || <span className="muted">Anonymous</span>;
       return (
@@ -41,24 +41,24 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
       );
     },
   },
-  { key: 'amount', label: 'Amount', render: r => <b className="num">{money(r.amount)}</b>, align: 'right' },
+  { key: 'amount', label: 'Amount', render: r => <b className="num">{money(r.amount)}</b>, align: 'right', filter: { column: 'amount', type: 'number' } },
   { key: 'type', label: 'Type', value: donationKind, render: r => <StatusPill value={donationKind(r)} /> },
-  ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', width: 180, value: (r: Row) => campLabel(r.campaigns) }]),
-  { key: 'payment_method', label: 'Method' },
-  { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170 },
-  { key: 'fee', label: 'Fee', render: r => money(r.fee ?? r.manual_fee), value: r => r.fee ?? r.manual_fee, align: 'right' },
-  { key: 'net_donation', label: 'Net', render: r => money(r.net_donation), align: 'right' },
-  { key: 'collector', label: 'Collector', value: r => r.collectors?.full_name ?? r.collector_label },
+  ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', width: 180, value: (r: Row) => campLabel(r.campaigns), filter: { column: 'campaign_internal', type: 'text' as const } }]),
+  { key: 'payment_method', label: 'Method', filter: { column: 'payment_method', type: 'text' } },
+  { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170, filter: { column: 'created_at', type: 'date' } },
+  { key: 'fee', label: 'Fee', render: r => money(r.fee ?? r.manual_fee), value: r => r.fee ?? r.manual_fee, align: 'right', filter: { column: 'fee', type: 'number' } },
+  { key: 'net_donation', label: 'Net', render: r => money(r.net_donation), align: 'right', filter: { column: 'net_donation', type: 'number' } },
+  { key: 'collector', label: 'Collector', value: r => r.collectors?.full_name ?? r.collector_label, filter: { column: 'collector_name', type: 'text' } },
   {
-    key: 'source', label: 'Source', value: r => r.sources?.name ?? r.source,
+    key: 'source', label: 'Source', value: r => r.sources?.name ?? r.source, filter: { column: 'source_name', type: 'text' },
     render: r => r.source && <AdminLink to={`/sources/${encodeURIComponent(r.source)}`}>{r.sources?.name ?? r.source}</AdminLink>,
   },
   {
-    key: 'account', label: 'Account', value: r => r.accounts?.name,
+    key: 'account', label: 'Account', value: r => r.accounts?.name, filter: { column: 'account_name', type: 'text' },
     render: r => r.account_id && <AdminLink to={`/accounts/${encodeURIComponent(r.account_id)}`}>{r.accounts?.name ?? r.account_id}</AdminLink>,
   },
   { key: 'delivered', label: 'Delivered', render: r => yn(r.delivered) },
-  { key: 'batch_id', label: 'Batch ID' },
-  { key: 'notes', label: 'Notes' },
-  { key: 'updated_at', label: 'Last Update', render: r => dateTime(r.updated_at), width: 170 },
+  { key: 'batch_id', label: 'Batch ID', filter: { column: 'batch_id', type: 'text' } },
+  { key: 'notes', label: 'Notes', filter: { column: 'notes', type: 'text' } },
+  { key: 'updated_at', label: 'Last Update', render: r => dateTime(r.updated_at), width: 170, filter: { column: 'updated_at', type: 'date' } },
 ];

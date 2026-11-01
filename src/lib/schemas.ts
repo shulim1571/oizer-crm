@@ -4,12 +4,21 @@ import {
   collectorOptions, donorOptions, managerOptions, sourceOptions,
 } from './lookups';
 
+const create = {
+  campaign: () => ({ noun: 'campaign', table: 'campaigns', fields: newCampaignFields, defaults: { status: 'active' } }),
+  fundraiser: () => ({ noun: 'fundraiser', table: 'managers', fields: personFields }),
+  donor: () => ({ noun: 'donor', table: 'donors', fields: donorFields }),
+  collector: () => ({ noun: 'collector', table: 'collectors', fields: personFields }),
+  source: () => ({ noun: 'source', table: 'sources', fields: sourceFields }),
+  account: () => ({ noun: 'account', table: 'accounts', fields: accountFields }),
+};
+
 export const campaignFields: Field[] = [
   { name: 'internal_name', label: 'Internal Name', required: true, help: 'Only seen inside the portal' },
   { name: 'external_name', label: 'External Name', help: 'What donors see. Uses the internal name if left empty.' },
   { name: 'campaign_name', label: 'Other Name' },
-  { name: 'manager_id', label: 'Primary Fundraiser', type: 'search', options: managerOptions },
-  { name: 'sub_manager_ids', label: 'Secondary Fundraisers', type: 'multi', options: managerOptions },
+  { name: 'manager_id', label: 'Primary Fundraiser', type: 'search', options: managerOptions, create: create.fundraiser },
+  { name: 'sub_manager_ids', label: 'Secondary Fundraisers', type: 'multi', options: managerOptions, create: create.fundraiser },
   { name: 'email', label: 'Email', type: 'email' },
   { name: 'phone', label: 'Phone' },
   { name: 'payment_link', label: 'Payment Link' },
@@ -25,18 +34,18 @@ export const newCampaignFields: Field[] = [
 ];
 
 export const donationFields: Field[] = [
-  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
+  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },
   { name: 'type', label: 'Type', type: 'select', options: DONATION_TYPES, required: true },
   { name: 'status', label: 'Status', type: 'select', options: DONATION_STATUSES, required: true },
   { name: 'amount', label: 'Amount', type: 'number', required: true },
   { name: 'payment_method', label: 'Payment Method', type: 'select', options: PAYMENT_METHODS, freeText: true },
-  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions },
+  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, create: create.donor },
   { name: 'name', label: 'Name on payment' },
   { name: 'phone', label: 'Phone' },
   { name: 'email', label: 'Email', type: 'email' },
-  { name: 'collector_id', label: 'Collector', type: 'search', options: collectorOptions },
-  { name: 'source', label: 'Source', type: 'select', options: sourceOptions },
-  { name: 'account_id', label: 'Account', type: 'select', options: accountOptions },
+  { name: 'collector_id', label: 'Collector', type: 'search', options: collectorOptions, create: create.collector },
+  { name: 'source', label: 'Source', type: 'select', options: sourceOptions, create: create.source },
+  { name: 'account_id', label: 'Account', type: 'select', options: accountOptions, create: create.account },
   { name: 'fee', label: 'Fee', type: 'number' },
   { name: 'manual_fee', label: 'Manual Fee', type: 'number' },
   { name: 'batch_id', label: 'Batch ID / Voucher #' },
@@ -49,11 +58,11 @@ export const donationFields: Field[] = [
 ];
 
 export const expenseFields: Field[] = [
-  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
+  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },
   { name: 'payee', label: 'To' },
   { name: 'amount', label: 'Amount', type: 'number', required: true },
   { name: 'method', label: 'Method', type: 'select', options: EXPENSE_METHODS, freeText: true },
-  { name: 'account_id', label: 'Account', type: 'select', options: accountOptions },
+  { name: 'account_id', label: 'Account', type: 'select', options: accountOptions, create: create.account },
   { name: 'check_number', label: 'Check Number' },
   { name: 'memo', label: 'Memo' },
   { name: 'description', label: 'Description' },
@@ -63,8 +72,8 @@ export const expenseFields: Field[] = [
 ];
 
 export const transferFields: Field[] = [
-  { name: 'from_campaign_id', label: 'From campaign', type: 'search', options: campaignOptions },
-  { name: 'to_campaign_id', label: 'To campaign', type: 'search', options: campaignOptions, required: true },
+  { name: 'from_campaign_id', label: 'From campaign', type: 'search', options: campaignOptions, create: create.campaign },
+  { name: 'to_campaign_id', label: 'To campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },
   { name: 'amount', label: 'Amount', type: 'number', required: true },
   { name: 'description', label: 'Description' },
   { name: 'created_at', label: 'Timestamp', type: 'datetime' },
@@ -111,8 +120,8 @@ export const accountFields: Field[] = [
 
 export const taskFields: Field[] = [
   { name: 'title', label: 'Task', required: true },
-  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
-  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions },
+  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },
+  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, create: create.donor },
   { name: 'assigned_to', label: 'Assigned to' },
   { name: 'status', label: 'Status', type: 'select', options: TASK_STATUSES, required: true },
   { name: 'due_date', label: 'Due', type: 'date' },

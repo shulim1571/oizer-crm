@@ -141,7 +141,7 @@ describe('activity log', () => {
     expect(e.user_email).toBe('office@example.org');
     expect(e.user_role).toBe('super_admin');
     expect(e.campaign_id).toBe('1001');
-    expect(Object.keys(e.changes)).toEqual(['amount']);
+    expect(Object.keys(e.changes).sort()).toEqual(['amount', 'net_donation']);
     expect(e.changes.amount).toEqual({ old: 1000.0, new: 1100 });
   });
 

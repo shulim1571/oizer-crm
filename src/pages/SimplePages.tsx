@@ -2,7 +2,7 @@ import CrudPage, { campLabel } from '../components/CrudPage';
 import AdminLink from '../components/AdminLink';
 import { Balance, StatusPill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { date, dateTime, money, yn } from '../lib/format';
+import { dateTime, money, yn } from '../lib/format';
 import {
   accountFields, expenseFields, personFields, sourceFields, taskFields, transferFields,
 } from '../lib/schemas';
@@ -75,7 +75,7 @@ export function SourcesPage() {
         { key: 'donation_count', label: 'Donations', render: r => Number(r.donation_count).toLocaleString(), align: 'right' },
         { key: 'total_amount', label: 'Received', render: r => <b className="num">{money(r.total_amount)}</b>, align: 'right' },
         { key: 'total_fees', label: 'Fees', render: r => money(r.total_fees), align: 'right' },
-        { key: 'last_donation_at', label: 'Last donation', render: r => date(r.last_donation_at) },
+        { key: 'last_donation_at', label: 'Last donation', render: r => dateTime(r.last_donation_at) },
       ]}
       fields={sourceFields}
     />
