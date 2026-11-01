@@ -29,16 +29,31 @@ Every table has search (top bar), sortable columns and CSV download.
 `Collect` and `Voided` donations don't count toward Raised. See the `campaign_summary` view in
 [`supabase/migrations`](supabase/migrations).
 
+## Organizations
+
+Every business record belongs to one organization, and organizations can't see each other. Oizer Umoshia is the first.
+
+- **Which organization:** the web address decides, through `org_domains`, or `?org=slug`. The app sends it with every
+  data request as `x-org-id`. The database honours that only for a member, so it selects but never grants.
+- **The wall:** a restrictive `org_wall` policy on every table, plus composite foreign keys so a record can't point at
+  another organization's record. Campaign IDs and source keys only need to be unique within an organization.
+- **Platform Owner:** sees a list of organizations with counts, and can add, suspend or enter one. Entering opens a
+  session that expires after 4 hours and appears in that organization's own activity log. Set through `platform_owners`.
+
 ## Logins & roles
 
-Supabase Auth (email + password). Access is decided when someone creates a login:
+Supabase Auth (email + password). One login can belong to several organizations, with a role in each (`org_members`):
 
-1. Email listed in **Users & Access → Admin emails** → **admin** (seeded with `smueller@bpjcc.org`).
-2. Email matches a **Manager** record's email → **manager**, linked to that manager record.
-3. Anything else → **pending** (sees nothing) until an admin assigns a role.
+1. Email listed in **Users & Access → Admin emails** → **admin** there.
+2. Email matches a **Manager** record's email → **manager** there, linked to that manager record.
+3. Signed up on an organization's page with neither → **pending** (sees nothing) until an admin assigns a role.
 
 Admins can change roles and link a login to one or more manager records on the Users & Access page.
 All of this is enforced in Postgres with row-level security, not just hidden in the UI.
+
+Five wrong passwords in a row lock an account for an hour once the password verification hook is switched on in the
+Supabase dashboard (Authentication > Hooks → `public.hook_password_verification_attempt`). Resetting the password or an
+admin's **Unlock** on Users & Access clears it.
 
 ## Running locally
 

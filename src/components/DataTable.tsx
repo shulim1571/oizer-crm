@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Download, X } from 'lucide-react';
 import { logActivity, type Row } from '../lib/supabase';
 import { download, money, toCsv } from '../lib/format';
+import { useAuth } from '../lib/auth';
 import { useSearch } from './Layout';
 
 export interface Column {
@@ -46,6 +47,7 @@ const EMPTY = '(none)';
 
 export default function DataTable(p: Props) {
   const { q } = useSearch();
+  const { inPlatformSession } = useAuth();
   const [sort, setSort] = useState(p.initialSort ?? null);
   const [group, setGroup] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE);
@@ -114,7 +116,7 @@ export default function DataTable(p: Props) {
         </div>
         <div className="view-actions">
           {p.actions}
-          <button className="btn" title="Download CSV" onClick={exportCsv}><Download size={16} /> Export</button>
+          {!inPlatformSession && <button className="btn" title="Download CSV" onClick={exportCsv}><Download size={16} /> Export</button>}
         </div>
       </div>
 

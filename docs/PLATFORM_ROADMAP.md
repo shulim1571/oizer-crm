@@ -4,8 +4,27 @@ Plan for growing the Oizer CRM into the multi-tenant platform described in the C
 spec (v1.0, June 2026). The spec itself is not committed here because it contains credentials (see
 [Before anything else](#before-anything-else)).
 
-Status: Phase 0 is on the staging project ("Oizer DRM" in the Trubase Live org), with no real data in it. It isn't on
-the live `oizer-crm` project. Still open: an admin signing in to check the Activity Log screen. Later phases haven't started.
+Status: Phases 0 and 1 are on the staging project ("Oizer DRM" in the Trubase Live org), which holds only test data.
+Neither is on the live `oizer-crm` project. Later phases haven't started.
+
+Still open for Phase 1:
+- Switch on the account lockout in the staging dashboard: Authentication > Hooks > Password verification, pointing at
+  `public.hook_password_verification_attempt`. Until then nothing is counted and nobody is locked out.
+- Per-organization subdomains need the move off GitHub Pages (decision 2). Organizations can already be reached by a
+  mapped hostname or `?org=slug`.
+- Feature switches are stored per organization, but no screen uses them until those features exist.
+
+Limits to know about:
+- A Platform Owner's export ban only hides the button. Anyone who can read data can copy it, so the guarantee is that
+  every session is logged in that organization's activity log.
+
+### Going live with Phases 0 and 1
+1. Back up the live database and run `select take_balance_snapshot('before-phase-1')`.
+2. Apply the migrations in order, then deploy the app straight away. The migration removes `profiles.role`, so the
+   current live app stops working until the new one is up. Plan a few quiet minutes.
+3. Check that `select * from balance_drift('before-phase-1')` returns no rows. The migrations also stop themselves if
+   any balance changes.
+4. Switch on the lockout hook on the live project.
 
 ## Where we are today
 
@@ -36,7 +55,7 @@ These change the build, so they need an answer before the phase noted.
 
 | # | Decision | Recommendation | Needed by |
 | --- | --- | --- | --- |
-| 1 | The spec lets one email hold separate accounts in different orgs. Supabase Auth keeps one user per email. | One login with a membership per org; the URL picks the org. People in two orgs share a password, which departs slightly from the spec. | Phase 1 |
+| 1 | The spec lets one email hold separate accounts in different orgs. Supabase Auth keeps one user per email. | Built this way: one login with a membership per org; the URL picks the org. People in two orgs share a password, which departs slightly from the spec. | Phase 1 |
 | 2 | The spec names AWS/GCP/Azure, Redis and S3. | Stay on Supabase (Postgres, Auth, Storage, Edge Functions) and move the front end to Cloudflare Pages, which the spec requires in front of payment pages anyway. GitHub Pages cannot do per-org subdomains or custom headers. Confirm Supabase's uptime terms meet the 99.9% requirement. | Phase 1 |
 | 3 | A separate staging Supabase project, which is an added cost. | Required. Multi-tenant RLS must not be developed against live donor data. | Phase 0 |
 | 4 | Which legal entity holds vendor contracts. The spec leaves the Platform Owner undecided but also names "Success Systems". | Decide before signing USAePay, Twilio, Plaid and email contracts. | Phase 7 |

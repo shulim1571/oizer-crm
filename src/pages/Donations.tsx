@@ -164,6 +164,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
 }
 
 export function NewDonation() {
+  const { defaultAccountId } = useAuth();
   const nav = useNavigate();
   const [last, setLast] = useState<Row | null>(null);
   const [key, setKey] = useState(0);
@@ -184,7 +185,7 @@ export function NewDonation() {
         table="donations"
         title="Donation details"
         fields={donationFields}
-        defaults={{ type: 'Payment', source: 'Manual', account_id: '8d4b5fbe', created_at: new Date().toISOString() }}
+        defaults={{ type: 'Payment', source: 'Manual', account_id: defaultAccountId, created_at: new Date().toISOString() }}
         onClose={() => nav(-1)}
         onSaved={row => { setLast(row); setKey(k => k + 1); }}
       />

@@ -101,6 +101,7 @@ input:focus, select:focus, textarea:focus {
 .hebrew { direction: rtl; text-align: left; }
 .error { background: var(--neg-soft); color: var(--neg); border-radius: var(--radius-sm); padding: 10px 14px; margin: 8px 0; }
 .notice { background: var(--accent-soft); color: var(--accent-text); border-radius: var(--radius-sm); padding: 10px 14px; margin: 8px 0; }
+.session-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .splash { display: grid; place-items: center; height: 100%; color: var(--muted); }
 .splash .logo { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .4; } }
@@ -366,6 +367,7 @@ ul.plain li { padding: 6px 0; }
   position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
 }
 .view.narrow .card { padding: 22px 24px 0; }
+.platform-form { display: grid; gap: 12px; max-width: 420px; }
 .inline-form { display: flex; gap: 8px; flex-wrap: wrap; }
 .inline-form input { flex: 1; min-width: 220px; max-width: 360px; }
 

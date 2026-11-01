@@ -3,17 +3,20 @@ import { join } from 'node:path';
 import { PGlite, type Transaction } from '@electric-sql/pglite';
 
 const DIR = join(__dirname, '..', 'migrations');
+const MULTI_TENANT = '20261102000000_multi_tenant.sql';
 
 export const ADMIN = '00000000-0000-0000-0000-00000000000a';
 export const MANAGER_1 = '00000000-0000-0000-0000-000000000001';
 export const MANAGER_2 = '00000000-0000-0000-0000-000000000002';
 export const PENDING = '00000000-0000-0000-0000-00000000000f';
+export const OIZER = '00000000-0000-4000-8000-000000000001';
 
 // The parts of a Supabase project our migrations rely on.
 const SUPABASE_STUB = `
   create role anon nologin;
   create role authenticated nologin;
   create role service_role nologin bypassrls;
+  create role supabase_auth_admin nologin;
   grant usage on schema public to anon, authenticated, service_role;
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
   alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
@@ -24,6 +27,7 @@ const SUPABASE_STUB = `
   create table auth.users (
     id uuid primary key default gen_random_uuid(),
     email text,
+    encrypted_password text,
     last_sign_in_at timestamptz,
     raw_user_meta_data jsonb default '{}'
   );
@@ -39,7 +43,7 @@ const SUPABASE_STUB = `
     $$ insert into cron.job values (name, schedule, command) returning 1::bigint $$;
 `;
 
-const migrationFiles = () => readdirSync(DIR).filter(f => f.endsWith('.sql')).sort();
+export const migrationFiles = () => readdirSync(DIR).filter(f => f.endsWith('.sql')).sort();
 
 /** Runs the named migrations, or all of them. Extensions aren't bundled here; pg_cron is stubbed above. */
 export async function migrate(db: PGlite, files = migrationFiles()) {
@@ -89,31 +93,42 @@ export async function freshDb() {
   return db;
 }
 
+/**
+ * The same path the live database takes: Oizer's data exists first, then the multi-tenant
+ * migration turns it into the first organization.
+ */
 export async function seededDb() {
   const db = await freshDb();
-  await migrate(db);
+  const files = migrationFiles();
+  const split = files.indexOf(MULTI_TENANT);
+  await migrate(db, files.slice(0, split));
   await seed(db);
+  await migrate(db, files.slice(split));
   return db;
 }
 
 type Actor = string | 'anon' | 'service_role';
 
-/** Runs fn as a Supabase client would: a role plus JWT claims, under row-level security. */
-export async function as<T>(db: PGlite, actor: Actor, fn: (tx: Transaction) => Promise<T>): Promise<T> {
+/**
+ * Runs fn as a Supabase client would: a role, JWT claims and request headers, under row-level
+ * security. `org` is what the app would send as x-org-id.
+ */
+export async function as<T>(db: PGlite, actor: Actor, fn: (tx: Transaction) => Promise<T>, org?: string): Promise<T> {
   const role = actor === 'anon' || actor === 'service_role' ? actor : 'authenticated';
   const claims = role === 'authenticated'
     ? JSON.stringify({ sub: actor, email: (await db.query<{ email: string }>('select email from auth.users where id = $1', [actor])).rows[0]?.email })
     : '';
   const result = await db.transaction(async tx => {
     await tx.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);
+    await tx.query(`select set_config('request.headers', $1, true)`, [JSON.stringify(org ? { 'x-org-id': org } : {})]);
     await tx.exec(`set local role ${role}`);
     return fn(tx);
   });
   return result as T;
 }
 
-export async function rows<R = Record<string, unknown>>(db: PGlite, actor: Actor, sql: string, params: unknown[] = []) {
-  return as(db, actor, async tx => (await tx.query<R>(sql, params)).rows);
+export async function rows<R = Record<string, unknown>>(db: PGlite, actor: Actor, sql: string, params: unknown[] = [], org?: string) {
+  return as(db, actor, async tx => (await tx.query<R>(sql, params)).rows, org);
 }
 
 export const ids = (r: { id?: unknown }[]) => r.map(x => x.id).sort();

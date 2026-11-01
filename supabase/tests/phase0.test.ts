@@ -125,8 +125,8 @@ describe('soft delete', () => {
     await as(db, ADMIN, tx => tx.query(`delete from public.managers where id = 'm1'`));
     await db.query(`delete from auth.users where email = 'one@example.org'`);
     await db.query(`insert into auth.users (email) values ('one@example.org')`);
-    const p = (await db.query<{ role: string }>(`select role from public.profiles where email = 'one@example.org'`)).rows[0];
-    expect(p.role).toBe('pending');
+    const members = (await db.query(`select m.role from public.org_members m join auth.users u on u.id = m.user_id where u.email = 'one@example.org'`)).rows;
+    expect(members).toEqual([]);
   });
 });
 
@@ -207,7 +207,7 @@ describe('activity log', () => {
   });
 
   it("doesn't let clients call the internal writer directly", async () => {
-    await expect(rows(db, ADMIN, `select public.write_activity('forged', null, null, null, null)`)).rejects.toThrow(/permission denied/);
+    await expect(rows(db, ADMIN, `select public.write_activity(null, 'forged', null, null, null, null)`)).rejects.toThrow(/permission denied/);
   });
 });
 
@@ -250,13 +250,15 @@ describe('scheduled jobs', () => {
     expect(await check()).toMatchObject({ database: true, jobs: false });
   });
 
-  it("can't be started or read over the API by anyone but admins reading history", async () => {
+  it("can't be started over the API, and history is for the Platform Owner only", async () => {
     await expect(rows(db, ADMIN, `select public.run_job('heartbeat')`)).rejects.toThrow(/permission denied/);
     await expect(rows(db, 'anon', `select public.health_check()`)).rejects.toThrow(/permission denied/);
     await expect(rows(db, MANAGER_1, `select public.health_check()`)).rejects.toThrow(/permission denied/);
     await db.query(`select public.run_job('heartbeat')`);
-    expect(await rows(db, ADMIN, `select 1 from public.job_runs`)).toHaveLength(1);
+    expect(await rows(db, ADMIN, `select 1 from public.job_runs`)).toEqual([]);
     expect(await rows(db, MANAGER_1, `select 1 from public.job_runs`)).toEqual([]);
+    await db.query(`insert into public.platform_owners (user_id) values ($1)`, [ADMIN]);
+    expect(await rows(db, ADMIN, `select 1 from public.job_runs`)).toHaveLength(1);
   });
 });
 

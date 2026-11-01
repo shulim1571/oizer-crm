@@ -10,6 +10,8 @@ import { AllDonations, NewDonation, RecentDonations } from './pages/Donations';
 import { DonorDetail, DonorsPage } from './pages/Donors';
 import UsersPage from './pages/Users';
 import ActivityPage from './pages/Activity';
+import OrganizationPage from './pages/Organization';
+import PlatformPage from './pages/Platform';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
   AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage, TransfersPage,
@@ -21,7 +23,7 @@ function AdminOnly({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const { session, profile, loading, signOut, refresh } = useAuth();
+  const { session, role, org, orgs, isPlatformOwner, loading, signOut, refresh } = useAuth();
   const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
@@ -34,12 +36,30 @@ export default function App() {
   if (loading) return <div className="splash"><div className="logo">O</div></div>;
   if (recovering) return <SetNewPassword onDone={() => setRecovering(false)} />;
   if (!session) return <Login />;
-  if (!profile || profile.role === 'pending') {
+  if (!role || role === 'pending') {
+    if (isPlatformOwner) {
+      return (
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="platform" element={<PlatformPage />} />
+            <Route path="*" element={<Navigate to="/platform" replace />} />
+          </Route>
+        </Routes>
+      );
+    }
     return (
       <AuthShell>
         <div className="auth-card">
           <h1>Waiting for access</h1>
-          <p className="lead">You're signed in as <b>{session.user.email}</b>, but an admin hasn't given this login access yet.</p>
+          <p className="lead">
+            You're signed in as <b>{session.user.email}</b>, but {role ? 'an admin hasn\'t given this login access yet'
+              : org ? `this login isn't part of ${org.name}` : 'this web address doesn\'t lead to one of your organizations'}.
+          </p>
+          {orgs.length > 0 && (
+            <div className="auth-links">
+              {orgs.map(o => <a key={o.id} className="btn" href={`?org=${encodeURIComponent(o.slug)}`}>Go to {o.name}</a>)}
+            </div>
+          )}
           <p className="muted">Ask the office to link your login to your campaigns, then refresh.</p>
           <div className="auth-links">
             <button className="btn" onClick={refresh}>Refresh</button>
@@ -75,6 +95,8 @@ export default function App() {
         <Route path="tasks" element={<TasksPage />} />
         <Route path="users" element={<AdminOnly><UsersPage /></AdminOnly>} />
         <Route path="activity" element={<AdminOnly><ActivityPage /></AdminOnly>} />
+        <Route path="organization" element={<AdminOnly><OrganizationPage /></AdminOnly>} />
+        {isPlatformOwner && <Route path="platform" element={<PlatformPage />} />}
         <Route path="*" element={<Navigate to="/campaigns/active" replace />} />
       </Route>
     </Routes>

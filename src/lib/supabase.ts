@@ -7,8 +7,20 @@ if (!url || !key) {
   throw new Error('Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY. Copy .env.example to .env.local.');
 }
 
+let requestOrg: string | null = null;
+export const setRequestOrg = (id: string | null) => { requestOrg = id; };
+
+// Tells the database which organization a data request is for. The database still checks the
+// signed-in user belongs to it, so this only ever selects, it never grants.
+const orgFetch: typeof fetch = (input, init) => {
+  if (!requestOrg || !String(input instanceof Request ? input.url : input).includes('/rest/v1/')) return fetch(input, init);
+  const headers = new Headers(init?.headers);
+  headers.set('x-org-id', requestOrg);
+  return fetch(input, { ...init, headers });
+};
+
 // PKCE puts the email-link code in ?code= so it doesn't collide with HashRouter's #/ routes.
-export const supabase = createClient(url, key, { auth: { flowType: 'pkce' } });
+export const supabase = createClient(url, key, { auth: { flowType: 'pkce' }, global: { fetch: orgFetch } });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Row = Record<string, any>;

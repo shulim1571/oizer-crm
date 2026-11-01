@@ -1,16 +1,24 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
+import { OrgLogo } from '../components/Layout';
+import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
+const passwordProblem = (p: string) =>
+  p.length >= 8 && /\d/.test(p) && /[^A-Za-z0-9]/.test(p)
+    ? null
+    : 'Use at least 8 characters, including a number and a special character.';
+
 /** Two-panel layout shared by the sign-in, password and waiting screens. */
 export function AuthShell({ children }: { children: ReactNode }) {
+  const { org } = useAuth();
   return (
     <div className="auth">
       <div className="auth-art">
         <div className="logo-row">
-          <div className="logo">O</div>
-          <div className="logo-text">Oizer<small style={{ color: 'rgba(255,255,255,.7)' }}>Campaign CRM</small></div>
+          <OrgLogo org={org} />
+          <div className="logo-text">{org?.name ?? 'Campaign CRM'}{org && <small style={{ color: 'rgba(255,255,255,.7)' }}>Campaign CRM</small>}</div>
         </div>
         <div>
           <h2>Every campaign, donor and dollar in one place.</h2>
@@ -28,6 +36,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
 }
 
 export default function Login() {
+  const { org } = useAuth();
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +45,7 @@ export default function Login() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (mode === 'signup' && passwordProblem(password)) return setMsg({ ok: false, text: passwordProblem(password)! });
     setBusy(true);
     setMsg(null);
     const redirectTo = window.location.origin + import.meta.env.BASE_URL;
@@ -43,7 +53,7 @@ export default function Login() {
     if (mode === 'signin') {
       ({ error } = await supabase.auth.signInWithPassword({ email, password }));
     } else if (mode === 'signup') {
-      const res = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } });
+      const res = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo, data: { org_slug: org?.slug } } });
       error = res.error;
       if (!error && !res.data.session) setMsg({ ok: true, text: 'Check your email to confirm your address, then sign in.' });
     } else {
@@ -99,6 +109,7 @@ export function SetNewPassword({ onDone }: { onDone: () => void }) {
     <AuthShell>
       <form className="auth-card" onSubmit={async e => {
         e.preventDefault();
+        if (passwordProblem(password)) return setErr(passwordProblem(password));
         const { error } = await supabase.auth.updateUser({ password });
         if (error) setErr(error.message); else onDone();
       }}>

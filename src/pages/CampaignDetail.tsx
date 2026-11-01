@@ -22,7 +22,7 @@ const CAMP = 'id, real_name, campaign_name, friendly_name';
 export default function CampaignDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
-  const { isAdmin, role } = useAuth();
+  const { isAdmin, role, defaultAccountId } = useAuth();
   const [tab, setTab] = useState<Tab>('donations');
   const [form, setForm] = useState<{ table: string; title: string; fields: Field[]; record?: Row | null; defaults?: Row } | null>(null);
   const [version, setVersion] = useState(0);
@@ -68,7 +68,7 @@ export default function CampaignDetail() {
   const tabConfig = {
     donations: {
       columns: donationColumns({ hideCampaign: true }),
-      add: isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', source: 'Manual', account_id: '8d4b5fbe', created_at: new Date().toISOString() } },
+      add: isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', source: 'Manual', account_id: defaultAccountId, created_at: new Date().toISOString() } },
       edit: isAdmin && { table: 'donations', title: 'Edit Donation', fields: donationFields },
     },
     expenses: {
@@ -83,7 +83,7 @@ export default function CampaignDetail() {
         { key: 'cleared', label: 'Cleared', render: (r: Row) => yn(r.cleared) },
         { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
       ],
-      add: isAdmin && { table: 'expenses', title: 'New Expense', fields: expenseFields, defaults: { campaign_id: id, account_id: '8d4b5fbe', created_at: new Date().toISOString() } },
+      add: isAdmin && { table: 'expenses', title: 'New Expense', fields: expenseFields, defaults: { campaign_id: id, account_id: defaultAccountId, created_at: new Date().toISOString() } },
       edit: isAdmin && { table: 'expenses', title: 'Edit Expense', fields: expenseFields },
     },
     transfers: {

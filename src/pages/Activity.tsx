@@ -8,6 +8,8 @@ const LIMIT = 2000;
 const ACTIONS: Record<string, string> = {
   insert: 'Added', update: 'Edited', delete: 'Deleted', soft_delete: 'Deleted', restore: 'Restored',
   login: 'Signed in', logout: 'Signed out', export: 'Exported',
+  login_failed: 'Failed sign-in', account_locked: 'Account locked', unlock_account: 'Unlocked account',
+  platform_enter: 'Platform Owner entered', platform_exit: 'Platform Owner left',
 };
 
 const show = (v: unknown) => (v == null || v === '' ? '(empty)' : typeof v === 'object' ? JSON.stringify(v) : String(v));
@@ -18,7 +20,7 @@ function describe(r: Row): string {
   const entries = Object.entries(r.changes as Row);
   if (r.action === 'update') return entries.map(([k, v]) => `${k}: ${show(v?.old)} → ${show(v?.new)}`).join('; ');
   if (r.action === 'soft_delete' || r.action === 'restore') return '';
-  return entries.map(([k, v]) => `${k}: ${show(v)}`).join('; ');
+  return entries.filter(([k]) => k !== 'org_id').map(([k, v]) => `${k}: ${show(v)}`).join('; ');
 }
 
 export default function ActivityPage() {

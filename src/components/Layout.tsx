@@ -1,15 +1,23 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
-  ArrowLeftRight, Building2, CircleDollarSign, ClipboardCheck, Contact, HandCoins, History, Landmark, Layers, LogOut, Menu,
+  ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, HandCoins, History, Landmark, Layers, LogOut, Menu,
   PlusCircle, Receipt, RefreshCw, Repeat, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { supabase } from '../lib/supabase';
+import { leavePlatformOrg, type Org } from '../lib/org';
+
+export function OrgLogo({ org }: { org: Org | null }) {
+  return org?.logo_url
+    ? <img className="logo" src={org.logo_url} alt="" />
+    : <div className="logo">{(org?.name?.[0] ?? 'C').toUpperCase()}</div>;
+}
 
 const SearchContext = createContext<{ q: string; setQ: (v: string) => void }>({ q: '', setQ: () => {} });
 export const useSearch = () => useContext(SearchContext);
 
-interface NavItem { to: string; label: string; icon: ReactNode; admin?: boolean }
+interface NavItem { to: string; label: string; icon: ReactNode; admin?: boolean; platform?: boolean }
 interface NavSection { title: string; items: NavItem[] }
 
 const I = 18;
@@ -48,12 +56,19 @@ const NAV: NavSection[] = [
       { to: '/accounts', label: 'Accounts', icon: <Building2 size={I} />, admin: true },
       { to: '/users', label: 'Users & Access', icon: <ShieldCheck size={I} />, admin: true },
       { to: '/activity', label: 'Activity Log', icon: <History size={I} />, admin: true },
+      { to: '/organization', label: 'Organization', icon: <Building size={I} />, admin: true },
+    ],
+  },
+  {
+    title: 'Platform',
+    items: [
+      { to: '/platform', label: 'Organizations', icon: <Globe size={I} />, platform: true },
     ],
   },
 ];
 
 export default function Layout() {
-  const { isAdmin, profile, signOut } = useAuth();
+  const { isAdmin, isPlatformOwner, inPlatformSession, org, role, profile, signOut } = useAuth();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
   const [tick, setTick] = useState(0);
@@ -87,11 +102,11 @@ export default function Layout() {
       <div className="app">
         <nav className={`sidebar ${open ? 'open' : ''}`}>
           <div className="logo-row">
-            <div className="logo">O</div>
-            <div className="logo-text">Oizer<small>Campaign CRM</small></div>
+            <OrgLogo org={org} />
+            <div className="logo-text">{org?.name ?? 'Campaign CRM'}{org && <small>Campaign CRM</small>}</div>
           </div>
           {NAV.map(section => {
-            const items = section.items.filter(n => !n.admin || isAdmin);
+            const items = section.items.filter(n => (n.platform ? isPlatformOwner : role && role !== 'pending' && (!n.admin || isAdmin)));
             if (!items.length) return null;
             return (
               <div key={section.title}>
@@ -109,7 +124,7 @@ export default function Layout() {
               <span className="avatar">{(email[0] ?? '?').toUpperCase()}</span>
               <div className="me-text">
                 <div className="me-email" title={email}>{email}</div>
-                <div className="me-role">{profile?.role}</div>
+                <div className="me-role">{inPlatformSession ? 'Platform Owner' : role ?? (isPlatformOwner ? 'Platform Owner' : '')}</div>
               </div>
               <button className="icon-btn" title="Sign out" onClick={signOut}><LogOut size={17} /></button>
             </div>
@@ -119,7 +134,7 @@ export default function Layout() {
 
         <header className="topbar">
           <button className="icon-btn menu-btn" onClick={() => setOpen(o => !o)} aria-label="Menu"><Menu size={20} /></button>
-          <div className="crumb">{current?.section ?? 'Oizer'} / <b>{current?.label ?? 'Details'}</b></div>
+          <div className="crumb">{current?.section ?? org?.name ?? 'CRM'} / <b>{current?.label ?? 'Details'}</b></div>
           <label className="search">
             <Search size={16} />
             <input ref={searchRef} value={q} onChange={e => setQ(e.target.value)} placeholder={`Search ${current?.label.toLowerCase() ?? ''}…`} />
@@ -129,6 +144,12 @@ export default function Layout() {
         </header>
 
         <main className="content">
+          {inPlatformSession && (
+            <div className="notice session-banner">
+              <span>You're inside <b>{org?.name}</b> as Platform Owner. Everything you do here appears in their activity log.</span>
+              <button className="btn" onClick={async () => { await supabase.rpc('platform_exit_org'); leavePlatformOrg(); }}>Exit</button>
+            </div>
+          )}
           <Outlet key={tick} />
         </main>
       </div>

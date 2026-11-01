@@ -10,6 +10,7 @@ import {
 const CAMP = 'id, real_name, campaign_name, friendly_name';
 
 export function ExpensesPage() {
+  const { defaultAccountId } = useAuth();
   return (
     <CrudPage
       title="Expenses" noun="Expense"
@@ -33,7 +34,7 @@ export function ExpensesPage() {
         { key: 'created_at', label: 'Timestamp', render: r => dateTime(r.created_at), width: 170 },
       ]}
       fields={expenseFields}
-      defaults={{ account_id: '8d4b5fbe' }}
+      defaults={{ account_id: defaultAccountId }}
     />
   );
 }
