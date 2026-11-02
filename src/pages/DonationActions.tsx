@@ -69,7 +69,7 @@ export default function DonationActions({ record, onDone }: { record: Row; onDon
 }
 
 /** Rendered outside the edit form, so its inputs can't submit that form. */
-function SplitDialog({ record, onClose, onSplit }: {
+export function SplitDialog({ record, onClose, onSplit }: {
   record: Row;
   onClose: () => void;
   onSplit: (p: PromiseLike<{ error: { message: string } | null }>) => void;

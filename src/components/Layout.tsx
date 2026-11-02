@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, HandCoins, Handshake, History, Landmark, Layers, ListPlus, Lock, LogOut, Menu, Percent,
+  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, ListChecks, ListPlus, Lock, LogOut, Menu, Percent,
   PlusCircle, Receipt, RefreshCw, Repeat, Ticket, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { useTaskCount } from '../pages/TaskSheet';
 import { supabase } from '../lib/supabase';
 import { leavePlatformOrg, type Org } from '../lib/org';
 
@@ -53,6 +54,8 @@ const NAV: NavSection[] = [
     title: 'People',
     items: [
       { to: '/donors', label: 'Donors', icon: <Contact size={I} /> },
+      { to: '/task-sheet', label: 'Task Sheet', icon: <ListChecks size={I} />, admin: true },
+      { to: '/requests', label: 'Campaign Requests', icon: <FilePlus size={I} /> },
       { to: '/tasks', label: 'Tasks', icon: <ClipboardCheck size={I} /> },
       { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true },
       { to: '/collectors', label: 'Collectors', icon: <Users size={I} />, admin: true },
@@ -86,6 +89,8 @@ export default function Layout() {
   const nav = useNavigate();
   const searchRef = useRef<HTMLInputElement>(null);
   const loc = useLocation();
+  // Counted again on every page change, so it follows what's just been dealt with.
+  const taskCount = useTaskCount(isAdmin, loc.pathname + loc.key);
 
   useEffect(() => {
     setQ('');
@@ -126,6 +131,7 @@ export default function Layout() {
                 {items.map(n => (
                   <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'active' : '')}>
                     {n.icon}<span>{n.label}</span>
+                    {n.to === '/task-sheet' && taskCount > 0 && <span className="nav-count">{taskCount}</span>}
                   </NavLink>
                 ))}
               </div>

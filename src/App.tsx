@@ -18,6 +18,8 @@ import FeesPage from './pages/Fees';
 import { PledgesPage } from './pages/Pledges';
 import { VouchersPage } from './pages/Vouchers';
 import { TransfersPage } from './pages/Transfers';
+import TaskSheetPage from './pages/TaskSheet';
+import RequestsPage from './pages/Requests';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
   AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage,
@@ -129,6 +131,8 @@ export default function App() {
         <Route path="donors" element={<DonorsPage />} />
         <Route path="donors/:id" element={<DonorDetail />} />
         <Route path="tasks" element={<TasksPage />} />
+        <Route path="task-sheet" element={<AdminOnly><TaskSheetPage /></AdminOnly>} />
+        <Route path="requests" element={<RequestsPage />} />
         <Route path="users" element={<AdminOnly><UsersPage /></AdminOnly>} />
         <Route path="activity" element={<AdminOnly><ActivityPage /></AdminOnly>} />
         <Route path="organization" element={<AdminOnly><OrganizationPage /></AdminOnly>} />

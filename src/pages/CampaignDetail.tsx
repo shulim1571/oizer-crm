@@ -20,6 +20,7 @@ import { NewPledgeButtons, PledgeDialog, pledgeColumns } from './Pledges';
 import { NewVoucherButton, VoucherDialog, voucherColumns } from './Vouchers';
 import { ChangeModeDialog, SubCampaignsTab, modeLabel } from './SubCampaigns';
 import { TRANSFER_SELECT, TransferDialog, transferColumns } from './Transfers';
+import { RequestTeamDialog } from './Requests';
 
 type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers' | 'sub-campaigns';
 
@@ -36,6 +37,7 @@ export default function CampaignDetail() {
   const [openVoucher, setOpenVoucher] = useState<string | null>(null);
   const [transferStart, setTransferStart] = useState<Row | null>(null);
   const [changingMode, setChangingMode] = useState(false);
+  const [requestingTeam, setRequestingTeam] = useState(false);
 
   // A fundraiser with the override can enter payments here, held for approval.
   useEffect(() => {
@@ -201,6 +203,7 @@ export default function CampaignDetail() {
         {c.status === 'closed' && permissions.includes('reopen_campaigns') && (
           <button className="btn" onClick={() => setStatus('active', 'Reopen this closed campaign?')}>Reopen</button>
         )}
+        {!isAdmin && isPrimary && <button className="btn" onClick={() => setRequestingTeam(true)}>Request team member</button>}
         {isAdmin && c.parent_campaign_id && (
           <button className="btn" onClick={() => setChangingMode(true)}>Change balance mode</button>
         )}
@@ -267,6 +270,7 @@ export default function CampaignDetail() {
       />}
 
       {transferStart && <TransferDialog start={transferStart} onClose={() => setTransferStart(null)} onDone={() => { setTransferStart(null); setVersion(v => v + 1); }} />}
+      {requestingTeam && <RequestTeamDialog campaignId={id} onClose={() => setRequestingTeam(false)} />}
       {changingMode && <ChangeModeDialog campaign={c} onClose={() => setChangingMode(false)} onDone={() => { setChangingMode(false); setVersion(v => v + 1); }} />}
       {openPledge && <PledgeDialog id={openPledge} onClose={() => setOpenPledge(null)} onChanged={() => setVersion(v => v + 1)} />}
       {openVoucher && <VoucherDialog id={openVoucher} onClose={() => setOpenVoucher(null)} onChanged={() => setVersion(v => v + 1)} />}
