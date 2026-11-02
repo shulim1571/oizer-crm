@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Plus, X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import { campLabel } from '../components/CrudPage';
+import DateNote from '../components/DateNote';
 import RecordForm from '../components/RecordForm';
 import SearchSelect from '../components/SearchSelect';
 import { StatusPill } from '../components/Pill';
@@ -201,7 +202,7 @@ function NewCallListDialog({ onClose, onDone }: { onClose: () => void; onDone: (
         <div className="fields">
           <label className="field"><span>Name *</span><input value={title} placeholder="After the dinner" onChange={e => setTitle(e.target.value)} /></label>
           <label className="field"><span>Campaign</span><SearchSelect value={campaign} options={campaigns} onChange={setCampaign} placeholder="Optional, narrows the donors…" /></label>
-          <label className="field"><span>Due</span><input type="date" value={due} onChange={e => setDue(e.target.value)} /></label>
+          <label className="field"><span>Due</span><input type="date" value={due} onChange={e => setDue(e.target.value)} /><DateNote date={due} /></label>
           {isAdmin && <label className="field"><span>For fundraiser</span><SearchSelect value={owner} options={managers} onChange={setOwner} placeholder="Optional…" /></label>}
         </div>
         <label className="field"><span>Donors ({picked.size} chosen)</span><input value={search} placeholder="Search donors…" onChange={e => setSearch(e.target.value)} /></label>

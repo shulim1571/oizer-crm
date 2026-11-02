@@ -4,6 +4,7 @@ import { supabase, type Row } from '../lib/supabase';
 import { clearLookups, type Option } from '../lib/lookups';
 import { fromLocalInput, toLocalInput } from '../lib/format';
 import { useAuth } from '../lib/auth';
+import DateNote from './DateNote';
 import SearchSelect from './SearchSelect';
 import DonationActions from '../pages/DonationActions';
 
@@ -173,7 +174,7 @@ export default function RecordForm(p: Props) {
       case 'datetime':
         return <input type="datetime-local" value={v ? toLocalInput(v) : ''} onChange={e => set(f.name, e.target.value ? fromLocalInput(e.target.value) : null)} required={f.required} />;
       case 'date':
-        return <input type="date" value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required} />;
+        return <><input type="date" value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required} /><DateNote date={v} /></>;
       case 'search':
         return <SearchSelect value={v ?? null} options={opts[f.name] ?? []} onChange={x => set(f.name, x)} required={f.required} {...createFor(f)} />;
       case 'select':

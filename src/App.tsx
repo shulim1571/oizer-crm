@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import { useAuth } from './lib/auth';
@@ -24,10 +24,14 @@ import TasksPage from './pages/Tasks';
 import { TemplatesPage } from './pages/Templates';
 import DashboardPage, { BalanceSummaryPage } from './pages/Dashboard';
 import { DuplicatesPage } from './pages/DonorExtras';
+import { MachineRegistryPage, MachineReportPage, MachinesPage } from './pages/Machines';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
   AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage,
 } from './pages/SimplePages';
+
+// The Hebrew calendar is large, so it loads only for the people who open this page.
+const CalendarPage = lazy(() => import('./pages/Calendar'));
 
 // Read once at startup: reading it clears an error from the address bar.
 const arrivedWith = readEmailLink();
@@ -112,6 +116,10 @@ export default function App() {
         <Route index element={<Navigate to={isAdmin ? '/task-sheet' : '/dashboard'} replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="balance-summary" element={<AdminOnly><BalanceSummaryPage /></AdminOnly>} />
+        <Route path="calendar" element={<AdminOnly><Suspense fallback={null}><CalendarPage /></Suspense></AdminOnly>} />
+        <Route path="machines" element={<MachinesPage />} />
+        <Route path="machine-report" element={<AdminOnly><MachineReportPage /></AdminOnly>} />
+        <Route path="machine-registry" element={<AdminOnly><MachineRegistryPage /></AdminOnly>} />
         <Route path="donors/duplicates" element={<AdminOnly><DuplicatesPage /></AdminOnly>} />
         <Route path="campaigns/active" element={<Campaigns mode="active" />} />
         <Route path="campaigns/all" element={<Campaigns mode="all" />} />

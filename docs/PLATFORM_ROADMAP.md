@@ -143,7 +143,8 @@ Being built in parts. Part 1 is on staging: the Admin Task Sheet, campaign reque
 types whose features exist so far; payout, delivery failure, receipt, machine, recurring and reconciliation items arrive with
 those phases, and its emails with Phase 7. Part 2 is on staging too: templates, private fundraiser tasks and call lists. Template page settings take effect with the
 payment pages in Phase 8, and due-today reminders with Phase 7. Part 3 is on staging too: donor lookup, the contact log, duplicates and merging, both dashboards and the balance summary.
-Part 4 is the Jewish calendar with Shabbos and Yom Tov warnings, and the machine registry, assignment history and booking.
+Part 4 is on staging too: the Jewish calendar with Shabbos and Yom Tov warnings, and the machine registry, assignment history and booking. That completes the phase's screens.
+Booking notifications arrive with Phase 7, payouts on the calendar with Phase 6, webhook routing with Phase 9, and phone booking with Phase 10.
 Admin Task Sheet with all task types, campaign requests and templates, fundraiser tasks and call lists, donor contact
 log, donor merge, duplicate flags, dashboards and balance summary, inactive-campaign flags, Jewish calendar with
 Shabbos and Yom Tov warnings, machine registry, assignment history and booking.
@@ -227,7 +228,8 @@ domains, "Powered by" footer.
 | `donations.type` | Transaction status and method; see decisions 5 and 6 |
 | `expenses` | Payouts, keeping their history and check numbers |
 | `accounts` | Bank accounts |
-| `sources` | Donary machines with numeric nicknames, plus source tags |
+| `sources` | Donary machines with numeric nicknames, plus source tags. Sources named like `Oizer #6` with a `DP_` ID become machines automatically, unassigned; the rest stay sources |
+| `transfers` with no source campaign | Stay as they are. These 35 are campaign balances brought over before the first program, so really unrecorded donations (confirmed by the office, November 2026) |
 | `collectors` | Stays; used on cash entry |
 | Yiddish name fields | Hebrew title, name and suffix |
 | `pledges`, `tasks`, `transfers` | Extended in place |

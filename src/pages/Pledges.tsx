@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
+import DateNote from '../components/DateNote';
 import RecordForm from '../components/RecordForm';
 import SearchSelect from '../components/SearchSelect';
 import { StatusPill } from '../components/Pill';
@@ -378,7 +379,7 @@ function ReschedulePanel({ pledge: p, onDone, onCancel }: { pledge: Row; onDone:
             {FREQUENCIES.map(f => <option key={f} value={f}>{label(f)}</option>)}
           </select>
         </label>
-        <label className="field"><span>First new date *</span><input type="date" value={start} onChange={e => setStart(e.target.value)} /></label>
+        <label className="field"><span>First new date *</span><input type="date" value={start} onChange={e => setStart(e.target.value)} /><DateNote date={start} /></label>
         <label className="field"><span>Installments left</span><input type="number" min="1" placeholder="Open-ended" value={count} onChange={e => setCount(e.target.value)} /></label>
       </div>
       {error && <div className="error">{error}</div>}

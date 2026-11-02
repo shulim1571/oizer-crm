@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent,
-  PlusCircle, Receipt, RefreshCw, Repeat, Scale, Ticket, Search, ShieldCheck, UserCircle, Users, Wallet,
+  Archive, ArrowLeftRight, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent,
+  PlusCircle, Receipt, RefreshCw, Repeat, Scale, Smartphone, Ticket, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
@@ -31,6 +31,7 @@ const NAV: NavSection[] = [
     title: 'Home',
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={I} /> },
+      { to: '/calendar', label: 'Jewish Calendar', icon: <CalendarDays size={I} />, admin: true },
     ],
   },
   {
@@ -57,6 +58,13 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    title: 'Machines',
+    items: [
+      { to: '/machines', label: 'Machine Bookings', icon: <CreditCard size={I} /> },
+      { to: '/machine-report', label: 'Booking Reports', icon: <ChartColumn size={I} />, admin: true },
+    ],
+  },
+  {
     title: 'People',
     items: [
       { to: '/donors', label: 'Donors', icon: <Contact size={I} /> },
@@ -71,6 +79,7 @@ const NAV: NavSection[] = [
   {
     title: 'Settings',
     items: [
+      { to: '/machine-registry', label: 'Donary Machines', icon: <Smartphone size={I} />, admin: true },
       { to: '/sources', label: 'Sources', icon: <Wallet size={I} />, admin: true },
       { to: '/templates', label: 'Campaign Templates', icon: <LayoutTemplate size={I} />, admin: true },
       { to: '/fees', label: 'Methods & Fees', icon: <Percent size={I} />, admin: true },

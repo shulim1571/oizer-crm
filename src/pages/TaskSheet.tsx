@@ -9,6 +9,7 @@ import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { SplitDialog } from './DonationActions';
+import { BookingActions } from './Machines';
 import { Overlay, PledgeDialog } from './Pledges';
 import { RequestDecision } from './Requests';
 import { VoucherDialog } from './Vouchers';
@@ -27,6 +28,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   stale_check: { label: 'Stale Check', tone: 'amber' },
   inactive_campaign: { label: 'Inactive Campaign', tone: '' },
   bank_reassign: { label: 'Bank Account Reassignment Needed', tone: 'red' },
+  machine_booking: { label: 'Machine Request', tone: 'blue' },
 };
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
@@ -207,10 +209,23 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
           {dismiss('Keep active', 'Keep it active? This comes back only if it goes quiet again after new activity. Add a note if useful:')}
         </div>
       )}
+      {item.task_type === 'machine_booking' && <MachineRequest item={item} onAct={act} />}
       {item.task_type === 'bank_reassign' && (
         <p className="muted">Open the campaign and choose another bank account, or clear it to use the default. This leaves the sheet once that's done.</p>
       )}
     </Overlay>
+  );
+}
+
+function MachineRequest({ item, onAct }: { item: Row; onAct: (call: PromiseLike<{ error: { message: string } | null }>, action: string, note?: string | null) => void }) {
+  const q = useQuery(async () => (await supabase.from('machine_booking_list').select('*').eq('id', item.record_id).maybeSingle()).data as Row | null, [item.record_id]);
+  const b = q.data as Row | null;
+  if (!b) return null;
+  return (
+    <>
+      <p className="muted small">Number {b.queue_position} in line that day{b.notes ? ` · ${b.notes}` : ''}. <Link to="/calendar">See the calendar</Link></p>
+      <BookingActions booking={b} onAct={onAct} />
+    </>
   );
 }
 
