@@ -16,10 +16,10 @@ export const clearLookups = () => cache.clear();
 
 export const campaignOptions = () =>
   cached('campaigns', async () =>
-    (await fetchAll((a, b) => supabase.from('campaigns').select('id, campaign_name, external_name, internal_name, status').neq('status', 'closed').order('id').range(a, b)))
+    (await fetchAll((a, b) => supabase.from('campaigns').select('id, campaign_name, external_name, internal_name, status, parent_campaign_id').neq('status', 'closed').order('id').range(a, b)))
       .map(c => ({
         value: c.id,
-        label: `${c.id} - ${c.internal_name || c.campaign_name || c.external_name || ''}${c.status === 'archived' ? ' (archived)' : c.status === 'draft' ? ' (draft)' : ''}`,
+        label: `${c.id} - ${c.internal_name || c.campaign_name || c.external_name || ''}${c.parent_campaign_id ? ` (under ${c.parent_campaign_id})` : ''}${c.status === 'archived' ? ' (archived)' : c.status === 'draft' ? ' (draft)' : ''}`,
       })),
   );
 

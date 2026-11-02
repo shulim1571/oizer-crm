@@ -46,7 +46,7 @@ const NAV: NavSection[] = [
       { to: '/vouchers', label: 'Vouchers', icon: <Ticket size={I} />, admin: true },
       { to: '/pledges', label: 'Pledges', icon: <Handshake size={I} /> },
       { to: '/expenses', label: 'Expenses', icon: <Receipt size={I} /> },
-      { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} /> },
+      { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} />, admin: true },
     ],
   },
   {

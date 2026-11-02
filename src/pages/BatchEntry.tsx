@@ -36,6 +36,9 @@ export default function BatchEntry() {
   const focusNew = useRef(false);
   const table = useRef<HTMLTableSectionElement>(null);
 
+  // Going from one campaign's batch page to another's keeps this screen mounted.
+  useEffect(() => { if (id) setCampaign(id); }, [id]);
+
   useEffect(() => {
     campaignOptions().then(setCampaigns);
     donorOptions().then(setDonors);

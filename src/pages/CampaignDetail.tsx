@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
-import { campLabel } from '../components/CrudPage';
 import Kpi from '../components/Kpi';
 import AdminLink from '../components/AdminLink';
 import { Balance, Pill, StatusPill } from '../components/Pill';
@@ -13,15 +12,16 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, pct, yn } from '../lib/format';
-import { campaignFields, donationFields, expenseFields, fundraiserDonationFields, taskFields, transferFields } from '../lib/schemas';
+import { campaignFields, donationFields, expenseFields, fundraiserDonationFields, taskFields, transferEditFields } from '../lib/schemas';
 import { clearLookups } from '../lib/lookups';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
 import { STATUS_LABEL } from './Campaigns';
 import { NewPledgeButtons, PledgeDialog, pledgeColumns } from './Pledges';
 import { NewVoucherButton, VoucherDialog, voucherColumns } from './Vouchers';
+import { ChangeModeDialog, SubCampaignsTab, modeLabel } from './SubCampaigns';
+import { TRANSFER_SELECT, TransferDialog, transferColumns } from './Transfers';
 
-type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers';
-const CAMP = 'id, internal_name, campaign_name, external_name';
+type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers' | 'sub-campaigns';
 
 export default function CampaignDetail() {
   const { id = '' } = useParams();
@@ -31,13 +31,21 @@ export default function CampaignDetail() {
   const [form, setForm] = useState<{ table: string; title: string; fields: Field[]; record?: Row | null; defaults?: Row } | null>(null);
   const [version, setVersion] = useState(0);
   const [canEnter, setCanEnter] = useState(false);
+  const [isPrimary, setIsPrimary] = useState(false);
   const [openPledge, setOpenPledge] = useState<string | null>(null);
   const [openVoucher, setOpenVoucher] = useState<string | null>(null);
+  const [transferStart, setTransferStart] = useState<Row | null>(null);
+  const [changingMode, setChangingMode] = useState(false);
 
   // A fundraiser with the override can enter payments here, held for approval.
   useEffect(() => {
     if (isAdmin) return setCanEnter(true);
     supabase.rpc('has_override', { p_permission: 'enter_manual_payments', p_campaign: id }).then(({ data }) => setCanEnter(!!data));
+  }, [id, isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) return setIsPrimary(true);
+    supabase.rpc('is_primary_on', { p_campaign: id }).then(({ data }) => setIsPrimary(!!data));
   }, [id, isAdmin]);
 
   const summary = useQuery(
@@ -62,12 +70,14 @@ export default function CampaignDetail() {
         return page((a, b) => supabase.from('expenses').select('*, accounts(name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
       case 'transfers':
         return page((a, b) => supabase.from('transfers')
-          .select(`*, from:campaigns!transfers_from_campaign_id_fkey(${CAMP}), to:campaigns!transfers_to_campaign_id_fkey(${CAMP})`)
+          .select(TRANSFER_SELECT)
           .or(`from_campaign_id.eq.${id},to_campaign_id.eq.${id}`).order('created_at', { ascending: false }).range(a, b));
       case 'tasks':
         return page((a, b) => supabase.from('tasks').select('*, donors(display_name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
       case 'pledges':
         return page((a, b) => supabase.from('pledge_list').select('*').eq('campaign_id', id).order('date_pledged', { ascending: false }).range(a, b));
+      case 'sub-campaigns':
+        return [];
       case 'vouchers':
         return page((a, b) => supabase.from('voucher_list').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
     }
@@ -78,6 +88,10 @@ export default function CampaignDetail() {
   if (!c) return <div className="view"><p className="pad">Campaign not found or you don't have access. <Link to="/campaigns/active">Back</Link></p></div>;
 
   const saved = () => { setForm(null); setVersion(v => v + 1); };
+  const combines = Number(c.combined_raised) !== Number(c.raised);
+  const canAddSub = c.status !== 'closed' && isPrimary;
+  // Fundraisers have no view of transfers, and a sub-campaign fundraiser's page stays on their own numbers.
+  const tabs: Tab[] = ['donations', 'expenses', ...(isAdmin ? ['transfers' as Tab] : []), 'tasks', 'pledges', 'vouchers', 'sub-campaigns'];
   const canEditTasks = canWork;
   const setStatus = async (status: string, question: string) => {
     if (!confirm(question)) return;
@@ -90,7 +104,7 @@ export default function CampaignDetail() {
   const tabConfig = {
     donations: {
       columns: donationColumns({ hideCampaign: true }),
-      add: !isAdmin && canEnter ? { table: 'donations', title: 'New payment (held for approval)', fields: fundraiserDonationFields, defaults: { campaign_id: id, source: 'Manual' } } : isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', account_id: defaultAccountId, created_at: new Date().toISOString() } },
+      add: !isAdmin && canEnter ? { table: 'donations', title: 'New payment (held for approval)', fields: fundraiserDonationFields, defaults: { campaign_id: id, source: 'Manual' } } : isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() } },
       edit: isAdmin && { table: 'donations', title: 'Edit Donation', fields: donationFields },
     },
     expenses: {
@@ -110,15 +124,16 @@ export default function CampaignDetail() {
     },
     transfers: {
       columns: [
-        { key: 'direction', label: 'Direction', value: (r: Row) => (r.to_campaign_id === id ? 'In' : 'Out'), render: (r: Row) => (r.to_campaign_id === id ? <Pill tone="green">In</Pill> : <Pill tone="amber">Out</Pill>) },
-        { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
-        { key: 'from', label: 'From', value: (r: Row) => campLabel(r.from) },
-        { key: 'to', label: 'To', value: (r: Row) => campLabel(r.to) },
-        { key: 'description', label: 'Description' },
-        { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
+        { key: 'direction', label: 'Direction', value: (r: Row) => (r.to_campaign_id === id ? 'Transfer In' : 'Transfer Out'), render: (r: Row) => (r.to_campaign_id === id ? <Pill tone="green">Transfer In</Pill> : <Pill tone="amber">Transfer Out</Pill>) },
+        ...transferColumns(r => setTransferStart({ from_campaign_id: r.to_campaign_id, to_campaign_id: r.from_campaign_id, amount: r.amount, description: `Reverses transfer ${r.id}` })),
       ],
-      add: isAdmin && { table: 'transfers', title: 'New Transfer', fields: transferFields, defaults: { from_campaign_id: id, created_at: new Date().toISOString() } },
-      edit: isAdmin && { table: 'transfers', title: 'Edit Transfer', fields: transferFields },
+      add: false as const,
+      edit: isAdmin && { table: 'transfers', title: 'Edit memo', fields: transferEditFields },
+    },
+    'sub-campaigns': {
+      columns: [],
+      add: false as const,
+      edit: false as const,
     },
     tasks: {
       columns: [
@@ -155,8 +170,10 @@ export default function CampaignDetail() {
             {c.internal_name || c.campaign_name}
             <span className="id-tag">#{c.id}</span>
             <StatusPill value={STATUS_LABEL[c.status]} />
+            {c.parent_campaign_id && <Pill tone={c.balance_mode === 'shared' ? 'blue' : 'violet'}>{modeLabel(c.balance_mode)}</Pill>}
           </h1>
           <div className="sub">
+            {c.parent_campaign_id && <span>Sub-campaign of <Link to={`/campaigns/${encodeURIComponent(c.parent_campaign_id)}`}>#{c.parent_campaign_id}</Link> ·</span>}
             {c.external_name && <span>{c.external_name}</span>}
             {c.manager_name && <span>· Primary: <b><AdminLink to={`/managers/${encodeURIComponent(c.manager_id)}`}>{c.manager_name}</AdminLink></b></span>}
             {c.sub_managers.length > 0 && <span>· with {c.sub_managers.map((m: Row) => m.full_name).join(', ')}</span>}
@@ -184,6 +201,9 @@ export default function CampaignDetail() {
         {c.status === 'closed' && permissions.includes('reopen_campaigns') && (
           <button className="btn" onClick={() => setStatus('active', 'Reopen this closed campaign?')}>Reopen</button>
         )}
+        {isAdmin && c.parent_campaign_id && (
+          <button className="btn" onClick={() => setChangingMode(true)}>Change balance mode</button>
+        )}
         {isAdmin && (
           <button className="btn" onClick={() => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c })}>
             <Pencil size={16} /> Edit
@@ -192,11 +212,13 @@ export default function CampaignDetail() {
       </div>
 
       <div className="kpis">
-        <Kpi label="Raised" value={money(c.raised)} icon={<TrendingUp size={18} />} tone="green"
-             sub={`${Number(c.donation_count).toLocaleString()} donations`} />
-        <Kpi label="Fees" value={money(c.fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(c.fee_percent)} of raised`} />
-        <Kpi label="Expenses" value={money(c.expenses)} icon={<Receipt size={18} />} tone="amber" />
-        <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} />
+        <Kpi label={combines ? 'Raised, with shared sub-campaigns' : 'Raised'} value={money(c.combined_raised)} icon={<TrendingUp size={18} />} tone="green"
+             sub={[combines && `${money(c.raised)} directly`, `${Number(c.combined_donations).toLocaleString()} donations`, c.goal != null && Number(c.goal) > 0 && `${pct(Number(c.combined_raised) / Number(c.goal))} of ${money(c.goal)} goal`].filter(Boolean).join(' · ')} />
+        <Kpi label="Fees" value={money(c.combined_fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(Number(c.combined_raised) ? Number(c.combined_fees) / Number(c.combined_raised) : 0)} of raised`} />
+        <Kpi label="Expenses" value={money(c.combined_expenses)} icon={<Receipt size={18} />} tone="amber" />
+        {c.balance_mode === 'shared'
+          ? <Kpi label="Balance" value={<span className="muted">Shared</span>} icon={<Scale size={18} />} tone="blue" sub="Counted in the parent's balance" />
+          : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} sub={Number(c.sub_count) > 0 ? `${c.sub_count} sub-campaign${Number(c.sub_count) === 1 ? '' : 's'}; independent ones count separately` : undefined} />}
         {Number(c.post_dated_amount) > 0 && <Kpi label="Post-dated checks" value={money(c.post_dated_amount)} icon={<Clock size={18} />} tone="blue" sub="Not in the balance yet" />}
         {Number(c.awaiting_approval) > 0 && <Kpi label="Awaiting approval" value={money(c.awaiting_approval)} icon={<Clock size={18} />} tone="amber" sub="Not in the balance yet" />}
         <Kpi label="Pledged (open)" value={money(c.pledged_open)} icon={<Handshake size={18} />} tone="blue"
@@ -216,12 +238,12 @@ export default function CampaignDetail() {
       )}
 
       <div className="tabs">
-        {(['donations', 'expenses', 'transfers', 'tasks', 'pledges', 'vouchers'] as Tab[]).map(t => (
+        {tabs.map(t => (
           <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>
         ))}
       </div>
 
-      <DataTable
+      {tab === 'sub-campaigns' ? <SubCampaignsTab parent={c} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
         title={tab[0].toUpperCase() + tab.slice(1)}
         exportName={`${c.id}-${tab}`}
         rows={(rows.data as Row[]) ?? []}
@@ -231,7 +253,10 @@ export default function CampaignDetail() {
         onOpen={tab === 'pledges' ? r => setOpenPledge(r.id) : tab === 'vouchers' ? r => setOpenVoucher(r.id)
           : tabConfig.edit ? r => setForm({ ...tabConfig.edit as { table: string; title: string; fields: Field[] }, record: r }) : undefined}
         actions={
-          tab === 'pledges' ? canWork && c.status !== 'closed' && <NewPledgeButtons campaignId={id} onSaved={() => setVersion(v => v + 1)} />
+          tab === 'transfers' ? isAdmin && c.status === 'active' && c.balance_mode !== 'shared' && (
+            <button className="btn primary" onClick={() => setTransferStart({ from_campaign_id: id })}><Plus size={16} /> New transfer</button>
+          )
+          : tab === 'pledges' ? canWork && c.status !== 'closed' && <NewPledgeButtons campaignId={id} onSaved={() => setVersion(v => v + 1)} />
           : tab === 'vouchers' ? isAdmin && c.status !== 'closed' && <NewVoucherButton campaignId={id} onSaved={() => setVersion(v => v + 1)} />
           : tabConfig.add && (
             <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
@@ -239,8 +264,10 @@ export default function CampaignDetail() {
             </button>
           )
         }
-      />
+      />}
 
+      {transferStart && <TransferDialog start={transferStart} onClose={() => setTransferStart(null)} onDone={() => { setTransferStart(null); setVersion(v => v + 1); }} />}
+      {changingMode && <ChangeModeDialog campaign={c} onClose={() => setChangingMode(false)} onDone={() => { setChangingMode(false); setVersion(v => v + 1); }} />}
       {openPledge && <PledgeDialog id={openPledge} onClose={() => setOpenPledge(null)} onChanged={() => setVersion(v => v + 1)} />}
       {openVoucher && <VoucherDialog id={openVoucher} onClose={() => setOpenVoucher(null)} onChanged={() => setVersion(v => v + 1)} />}
 

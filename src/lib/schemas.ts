@@ -21,6 +21,8 @@ export const campaignFields: Field[] = [
   { name: 'sub_manager_ids', label: 'Secondary Fundraisers', type: 'multi', options: managerOptions, create: create.fundraiser },
   { name: 'email', label: 'Email', type: 'email' },
   { name: 'phone', label: 'Phone' },
+  { name: 'goal', label: 'Goal', type: 'number' },
+  { name: 'account_id', label: 'Bank account', type: 'select', options: accountOptions, help: 'Leave empty to use the payment method\'s account, then the default. Sub-campaigns follow this.' },
   { name: 'payment_link', label: 'Payment Link' },
   { name: 'pin', label: 'Pin' },
   { name: 'exchange', label: 'Exchange', type: 'checkbox' },
@@ -49,7 +51,7 @@ export const donationFields: Field[] = [
   { name: 'email', label: 'Email', type: 'email' },
   { name: 'collector_id', label: 'Collector', type: 'search', options: collectorOptions, create: create.collector },
   { name: 'source', label: 'Source', type: 'select', options: sourceOptions, create: create.source },
-  { name: 'account_id', label: 'Account', type: 'select', options: accountOptions, create: create.account },
+  { name: 'account_id', label: 'Account', type: 'select', options: accountOptions, create: create.account, help: 'Leave empty to route it automatically' },
   { name: 'fee', label: 'Fee', type: 'number', help: "Leave empty to use the method's fee. Enter 0 to waive it." },
   { name: 'manual_fee', label: 'Manual Fee', type: 'number' },
   { name: 'batch_id', label: 'Batch ID / Voucher #' },
@@ -140,6 +142,12 @@ export const transferFields: Field[] = [
   { name: 'amount', label: 'Amount', type: 'number', required: true },
   { name: 'description', label: 'Description' },
   { name: 'created_at', label: 'Timestamp', type: 'datetime' },
+  { name: 'notes', label: 'Notes', type: 'textarea' },
+];
+
+/** A posted transfer's money can't change, only be reversed. */
+export const transferEditFields: Field[] = [
+  { name: 'description', label: 'Memo' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 

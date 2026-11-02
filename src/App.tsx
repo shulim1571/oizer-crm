@@ -17,9 +17,10 @@ import BatchEntry from './pages/BatchEntry';
 import FeesPage from './pages/Fees';
 import { PledgesPage } from './pages/Pledges';
 import { VouchersPage } from './pages/Vouchers';
+import { TransfersPage } from './pages/Transfers';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
-  AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage, TransfersPage,
+  AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage,
 } from './pages/SimplePages';
 
 // Read once at startup: reading it clears an error from the address bar.
@@ -117,7 +118,7 @@ export default function App() {
         <Route path="pledges" element={<PledgesPage />} />
         <Route path="vouchers" element={<AdminOnly><VouchersPage /></AdminOnly>} />
         <Route path="expenses" element={<ExpensesPage />} />
-        <Route path="transfers" element={<TransfersPage />} />
+        <Route path="transfers" element={<AdminOnly><TransfersPage /></AdminOnly>} />
         <Route path="sources" element={<AdminOnly><SourcesPage /></AdminOnly>} />
         <Route path="sources/:id" element={<AdminOnly><SourceDetail /></AdminOnly>} />
         <Route path="accounts" element={<AdminOnly><AccountsPage /></AdminOnly>} />

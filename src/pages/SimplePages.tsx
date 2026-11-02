@@ -1,10 +1,12 @@
 import CrudPage, { campLabel } from '../components/CrudPage';
 import AdminLink from '../components/AdminLink';
-import { Balance, StatusPill } from '../components/Pill';
+import { useState } from 'react';
+import { Balance, Pill, StatusPill } from '../components/Pill';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, yn } from '../lib/format';
 import {
-  accountFields, expenseFields, personFields, sourceFields, taskFields, transferFields,
+  accountFields, expenseFields, personFields, sourceFields, taskFields,
 } from '../lib/schemas';
 
 const CAMP = 'id, internal_name, campaign_name, external_name';
@@ -39,27 +41,6 @@ export function ExpensesPage() {
   );
 }
 
-export function TransfersPage() {
-  return (
-    <CrudPage
-      title="Transfers" noun="Transfer"
-      table="transfers"
-      select={`*, from:campaigns!transfers_from_campaign_id_fkey(${CAMP}), to:campaigns!transfers_to_campaign_id_fkey(${CAMP})`}
-      order={{ column: 'created_at', ascending: false }}
-      columns={[
-        { key: 'amount', label: 'Amount', render: r => money(r.amount), align: 'right' },
-        { key: 'from', label: 'From', value: r => campLabel(r.from), render: r => campLabel(r.from) },
-        { key: 'to', label: 'To', value: r => campLabel(r.to), render: r => campLabel(r.to) },
-        { key: 'description', label: 'Description' },
-        { key: 'notes', label: 'Notes' },
-        { key: 'created_by', label: 'Created By' },
-        { key: 'created_at', label: 'Timestamp', render: r => dateTime(r.created_at) },
-      ]}
-      fields={transferFields}
-    />
-  );
-}
-
 export function SourcesPage() {
   return (
     <CrudPage
@@ -83,7 +64,18 @@ export function SourcesPage() {
 }
 
 export function AccountsPage() {
+  const { defaultAccountId, permissions, refresh } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  async function makeDefault(id: string, name: string) {
+    if (!confirm(`Make ${name} the default bank account? Payments go here unless their campaign or payment method says otherwise.`)) return;
+    setError(null);
+    const { error: e } = await supabase.rpc('set_default_account', { p_account: id });
+    if (e) return setError(e.message);
+    await refresh();
+  }
   return (
+    <>
+    {error && <div className="error">{error}</div>}
     <CrudPage
       title="Accounts" noun="Account"
       table="accounts"
@@ -91,7 +83,18 @@ export function AccountsPage() {
       order={{ column: 'name' }}
       openPath={r => `/accounts/${encodeURIComponent(r.id)}`}
       columns={[
-        { key: 'name', label: 'Account' },
+        {
+          key: 'name', label: 'Account',
+          render: r => (
+            <>
+              {r.name}
+              {r.id === defaultAccountId && <> <Pill tone="green">Default</Pill></>}
+              {r.id !== defaultAccountId && permissions.includes('change_default_bank') && (
+                <> <button type="button" className="link" onClick={e => { e.stopPropagation(); void makeDefault(r.id, r.name); }}>Set default</button></>
+              )}
+            </>
+          ),
+        },
         { key: 'donations_total', label: 'Donations in', render: r => money(r.donations_total), align: 'right' },
         { key: 'expenses_total', label: 'Expenses out', render: r => money(r.expenses_total), align: 'right' },
         { key: 'uncleared_total', label: 'Uncleared checks', render: r => money(r.uncleared_total), align: 'right' },
@@ -100,6 +103,7 @@ export function AccountsPage() {
       ]}
       fields={accountFields}
     />
+    </>
   );
 }
 

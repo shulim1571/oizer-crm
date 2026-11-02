@@ -1,7 +1,7 @@
 import CrudPage, { campLabel } from '../components/CrudPage';
 import type { Field } from '../components/RecordForm';
 import { useAuth } from '../lib/auth';
-import { campaignOptions, paymentMethodIdOptions } from '../lib/lookups';
+import { accountOptions, campaignOptions, paymentMethodIdOptions } from '../lib/lookups';
 import type { Row } from '../lib/supabase';
 
 const FEE_TYPES = [['none', 'None'], ['flat', 'Flat $'], ['percent', '% rate'], ['percent_flat', '% rate + flat $']].map(([value, label]) => ({ value, label }));
@@ -17,6 +17,7 @@ const methodFields: Field[] = [
   { name: 'name', label: 'Method', required: true },
   { name: 'category', label: 'Category', type: 'select', options: CATEGORIES, required: true },
   ...feeFields,
+  { name: 'account_id', label: 'Bank account', type: 'select', options: accountOptions, help: 'Payments by this method go here unless their campaign has its own. Empty means the default.' },
   { name: 'receipt_allowed', label: 'Receipts allowed', type: 'checkbox' },
   { name: 'active', label: 'Active', type: 'checkbox', help: 'Inactive methods stop being offered; past records keep them.' },
 ];
