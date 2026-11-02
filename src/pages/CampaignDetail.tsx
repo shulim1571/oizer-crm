@@ -23,6 +23,8 @@ import { TRANSFER_SELECT, TransferDialog, transferColumns } from './Transfers';
 import { RequestTeamDialog } from './Requests';
 import { CampaignSettingsTab } from './Templates';
 import { PayoutStatusPill, RequestPayoutDialog, payoutStatus } from './Payouts';
+import { CampaignReportDialog, DonorListDialog } from './Reports';
+import { ContactImportDialog } from './Imports';
 
 type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers' | 'sub-campaigns' | 'settings';
 
@@ -41,6 +43,7 @@ export default function CampaignDetail() {
   const [changingMode, setChangingMode] = useState(false);
   const [requestingTeam, setRequestingTeam] = useState(false);
   const [requesting, setRequesting] = useState(false);
+  const [reporting, setReporting] = useState<'report' | 'donors' | 'contacts' | null>(null);
   const [canRequestPayout, setCanRequestPayout] = useState(false);
 
   // A fundraiser with the override can enter payments here, held for approval.
@@ -224,6 +227,9 @@ export default function CampaignDetail() {
           <button className="btn" onClick={() => setStatus('active', 'Reopen this closed campaign?')}>Reopen</button>
         )}
         {!isAdmin && isPrimary && <button className="btn" onClick={() => setRequestingTeam(true)}>Request team member</button>}
+        {canWork && <button className="btn" onClick={() => setReporting('report')}>Report</button>}
+        {canWork && <button className="btn" onClick={() => setReporting('donors')}>Donor list</button>}
+        {canWork && c.status !== 'closed' && <button className="btn" onClick={() => setReporting('contacts')}>Import contacts</button>}
         {isAdmin && c.parent_campaign_id && (
           <button className="btn" onClick={() => setChangingMode(true)}>Change balance mode</button>
         )}
@@ -292,6 +298,9 @@ export default function CampaignDetail() {
 
       {transferStart && <TransferDialog start={transferStart} onClose={() => setTransferStart(null)} onDone={() => { setTransferStart(null); setVersion(v => v + 1); }} />}
       {requesting && <RequestPayoutDialog campaignId={id} onClose={() => setRequesting(false)} onSaved={() => { setRequesting(false); alert('Your payout request was sent to the office. You can follow it under Payout Requests.'); }} />}
+      {reporting === 'report' && <CampaignReportDialog campaign={c} onClose={() => setReporting(null)} />}
+      {reporting === 'donors' && <DonorListDialog campaign={c} onClose={() => setReporting(null)} />}
+      {reporting === 'contacts' && <ContactImportDialog campaignId={id} onClose={() => setReporting(null)} />}
       {requestingTeam && <RequestTeamDialog campaignId={id} onClose={() => setRequestingTeam(false)} />}
       {changingMode && <ChangeModeDialog campaign={c} onClose={() => setChangingMode(false)} onDone={() => { setChangingMode(false); setVersion(v => v + 1); }} />}
       {openPledge && <PledgeDialog id={openPledge} onClose={() => setOpenPledge(null)} onChanged={() => setVersion(v => v + 1)} />}

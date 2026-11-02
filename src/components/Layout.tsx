@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Archive, ArrowLeftRight, Banknote, BookUser, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, FileCheck, FileText, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent, Printer,
-  PlusCircle, Receipt, RefreshCw, Repeat, Scale, Send, Smartphone, Ticket, Search, ShieldCheck, UserCircle, Users, Wallet,
+  Archive, ArrowLeftRight, Banknote, BookOpen, BookUser, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, FileCheck, FileText, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent, PieChart, Printer,
+  PlusCircle, Receipt, RefreshCw, Repeat, Scale, Send, Smartphone, Ticket, Search, ShieldCheck, Upload, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
@@ -32,6 +32,7 @@ const NAV: NavSection[] = [
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={I} /> },
       { to: '/calendar', label: 'Jewish Calendar', icon: <CalendarDays size={I} />, admin: true },
+      { to: '/source-report', label: 'Source Report', icon: <PieChart size={I} /> },
     ],
   },
   {
@@ -77,6 +78,7 @@ const NAV: NavSection[] = [
       { to: '/tasks', label: 'Tasks', icon: <ClipboardCheck size={I} /> },
       { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true },
       { to: '/balance-summary', label: 'Balance Summary', icon: <Scale size={I} />, admin: true },
+      { to: '/fundraiser-directory', label: 'Fundraiser Directory', icon: <BookOpen size={I} />, admin: true },
       { to: '/collectors', label: 'Collectors', icon: <Users size={I} />, admin: true },
     ],
   },
@@ -90,6 +92,7 @@ const NAV: NavSection[] = [
       { to: '/receipt-text', label: 'Receipt Text', icon: <FileText size={I} />, admin: true },
       { to: '/payout-methods', label: 'Payout Methods', icon: <Banknote size={I} />, admin: true },
       { to: '/accounts', label: 'Accounts', icon: <Building2 size={I} />, admin: true },
+      { to: '/data-import', label: 'Data Import', icon: <Upload size={I} />, admin: true },
       { to: '/users', label: 'Users & Access', icon: <ShieldCheck size={I} />, admin: true },
       { to: '/activity', label: 'Activity Log', icon: <History size={I} />, admin: true },
       { to: '/organization', label: 'Organization', icon: <Building size={I} />, admin: true },

@@ -161,8 +161,12 @@ staging too: receipts with permanent R-YYYY-NNNNN numbers, frozen when issued; r
 donation, campaign, fundraiser, default) with Hebrew right to left; partial amounts; Void & Correct; receipts voided
 automatically when a donation changes, with a Task Sheet item to reissue; one receipt for a split donation; bulk
 receipting by date range; year-end statements with a permanent log. Receipts and statements print from the browser
-(save as PDF); sending them by email or SMS, auto-receipts and PDF attachments arrive with Phase 7. Part 4 is reports,
-exports and bulk imports. Payout emails arrive with Phase 7 and phone requests with Phase 10.
+(save as PDF); sending them by email or SMS, auto-receipts and PDF attachments arrive with Phase 7. Part 4 is on staging
+too, which completes the phase: every table exports to Excel and CSV and prints (save as PDF) with headings on each page;
+the source report; campaign reports and donor lists from a campaign's page; the fundraiser directory; and bulk imports
+(campaigns with opening balances, donors, donation history, pledges, fundraisers, and campaign contact lists) with a
+preview, a permanent log, Task Sheet conflicts, and reversal within 24 hours. Background exports with an emailed link,
+and welcome emails for imported fundraisers, arrive with Phase 7. Payout emails arrive with Phase 7 and phone requests with Phase 10.
 On live, each payee name already used becomes a profile (about 1,040; some differ only by punctuation and can be merged).
 Payees and Do Not Pay, payout requests with encrypted bank details, scheduled payouts, check PDF with MICR line,
 check register, receipts with the override cascade and permanent numbering, year-end statements, campaign reports,

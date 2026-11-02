@@ -158,6 +158,14 @@ input:focus, select:focus, textarea:focus {
 .panel-box .form-actions { margin-top: 10px; }
 .progress { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; margin-bottom: 6px; }
 .progress > div { height: 100%; background: var(--accent); }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 16px; margin: 10px 0; }
+.summary-grid b { display: block; font-size: 15px; }
+.export-menu { position: relative; }
+.menu-pop { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; min-width: 190px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: var(--shadow-lg); padding: 4px; display: grid; }
+.menu-pop button { display: flex; align-items: center; gap: 6px; text-align: left; background: none; border: 0; border-radius: 6px; padding: 8px 10px; font: inherit; color: inherit; cursor: pointer; }
+.menu-pop button:hover { background: var(--accent-soft); }
+.side-by-side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .side-by-side { grid-template-columns: 1fr; } }
 .inline-pair { display: flex; gap: 8px; }
 .inline-pair input { min-width: 0; flex: 1; }
 .inline-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }

@@ -12,6 +12,7 @@ import { SplitDialog } from './DonationActions';
 import { BookingActions } from './Machines';
 import { ApprovePayout, ProcessScheduled } from './Payouts';
 import { printReceipts } from './Receipts';
+import { ImportConflict } from './Imports';
 import { Overlay, PledgeDialog } from './Pledges';
 import { RequestDecision } from './Requests';
 import { VoucherDialog } from './Vouchers';
@@ -35,6 +36,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   scheduled_payout: { label: 'Scheduled Payout Due', tone: 'amber' },
   receipt_text_missing: { label: 'Receipt Text Not Set Up', tone: 'amber' },
   receipt_reissue: { label: 'Corrected Receipt Needed', tone: 'red' },
+  import_conflict: { label: 'Import Data Conflict', tone: 'amber' },
 };
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
@@ -218,6 +220,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       {item.task_type === 'machine_booking' && <MachineRequest item={item} onAct={act} />}
       {item.task_type === 'payout_request' && <ApprovePayout requestId={item.record_id} onAct={act} />}
       {item.task_type === 'receipt_text_missing' && <p><Link to="/receipt-text">Set up the receipt text</Link>. This leaves the sheet once it is saved.</p>}
+      {item.task_type === 'import_conflict' && <ImportConflict conflictId={item.record_id} onAct={act} />}
       {item.task_type === 'receipt_reissue' && <ReissueReceipt receiptId={item.record_id} onAct={act} />}
       {item.task_type === 'scheduled_payout' && <ProcessScheduled payoutId={item.record_id} onAct={act} />}
       {item.task_type === 'bank_reassign' && (

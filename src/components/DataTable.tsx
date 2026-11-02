@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Download, Filter, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Download, Filter, Printer, SlidersHorizontal, X } from 'lucide-react';
 import { logActivity, type Row } from '../lib/supabase';
 import { dateTime, download, money, toCsv } from '../lib/format';
+import { printReport } from '../lib/printReport';
+import { XLSX_TYPE, downloadBytes, sheetValue, toXlsx } from '../lib/sheets';
 import { useAuth } from '../lib/auth';
 import { useSearch } from './Layout';
 import TableCustomize, { useSavedViews } from './TableCustomize';
@@ -122,6 +124,7 @@ export default function DataTable(p: Props) {
   const [group, setGroup] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [exportMenu, setExportMenu] = useState(false);
 
   useEffect(() => { if (activeFilters) setShowFilters(true); }, [activeFilters]);
 
@@ -200,14 +203,19 @@ export default function DataTable(p: Props) {
 
   const setFilter = (key: string, value: string) => setConfig({ ...config, filters: { ...filters, [key]: value } });
 
-  async function exportCsv() {
+  /** Whatever is filtered and shown, as CSV, Excel or a printed page. */
+  async function exportAs(format: 'csv' | 'xlsx' | 'print') {
+    setExportMenu(false);
     setExporting(true);
     try {
       const rows = p.exportAll ? await p.exportAll() : visible;
-      const cols = columns.map(c => ({ key: c.key, label: c.label }));
+      const cols = columns.map(c => ({ key: c.key, label: c.label, align: c.align === 'right' ? 'right' as const : undefined }));
       const data = rows.map(r => Object.fromEntries(columns.map(c => [c.key, val(c, r)])));
-      download(`${p.exportName ?? p.title}.csv`, toCsv(data, cols));
-      void logActivity('export', { table: p.exportName ?? p.title, rows: data.length });
+      const name = p.exportName ?? p.title;
+      if (format === 'csv') download(`${name}.csv`, toCsv(data, cols));
+      else if (format === 'xlsx') downloadBytes(`${name}.xlsx`, toXlsx(data.map(r => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, sheetValue(v)]))), cols, p.title), XLSX_TYPE);
+      else await printReport(p.title, cols, data, { landscape: cols.length > 7 });
+      void logActivity('export', { table: name, rows: data.length, format });
     } finally {
       setExporting(false);
     }
@@ -290,9 +298,18 @@ export default function DataTable(p: Props) {
             </>
           )}
           {!inPlatformSession && (
-            <button className="btn" title="Download CSV" onClick={exportCsv} disabled={exporting}>
-              <Download size={16} /> {exporting ? 'Exporting…' : 'Export'}
-            </button>
+            <div className="export-menu">
+              <button className="btn" title="Export or print" onClick={() => setExportMenu(m => !m)} disabled={exporting}>
+                <Download size={16} /> {exporting ? 'Exporting…' : 'Export'}
+              </button>
+              {exportMenu && (
+                <div className="menu-pop" onMouseLeave={() => setExportMenu(false)}>
+                  <button onClick={() => exportAs('xlsx')}>Excel (.xlsx)</button>
+                  <button onClick={() => exportAs('csv')}>CSV</button>
+                  <button onClick={() => exportAs('print')}><Printer size={14} /> Print or save as PDF</button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
