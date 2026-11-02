@@ -24,6 +24,8 @@ import TasksPage from './pages/Tasks';
 import { TemplatesPage } from './pages/Templates';
 import DashboardPage, { BalanceSummaryPage } from './pages/Dashboard';
 import { DuplicatesPage } from './pages/DonorExtras';
+import { PayoutMethodsPage, PayoutRequestsPage } from './pages/Payouts';
+import { PayeesPage } from './pages/Payees';
 import { MachineRegistryPage, MachineReportPage, MachinesPage } from './pages/Machines';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
@@ -137,6 +139,9 @@ export default function App() {
         <Route path="pledges" element={<PledgesPage />} />
         <Route path="vouchers" element={<AdminOnly><VouchersPage /></AdminOnly>} />
         <Route path="expenses" element={<ExpensesPage />} />
+        <Route path="payout-requests" element={<PayoutRequestsPage />} />
+        <Route path="payees" element={<PayeesPage />} />
+        <Route path="payout-methods" element={<AdminOnly><PayoutMethodsPage /></AdminOnly>} />
         <Route path="transfers" element={<AdminOnly><TransfersPage /></AdminOnly>} />
         <Route path="sources" element={<AdminOnly><SourcesPage /></AdminOnly>} />
         <Route path="sources/:id" element={<AdminOnly><SourceDetail /></AdminOnly>} />

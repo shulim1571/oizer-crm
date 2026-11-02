@@ -10,6 +10,7 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { SplitDialog } from './DonationActions';
 import { BookingActions } from './Machines';
+import { ApprovePayout, ProcessScheduled } from './Payouts';
 import { Overlay, PledgeDialog } from './Pledges';
 import { RequestDecision } from './Requests';
 import { VoucherDialog } from './Vouchers';
@@ -29,6 +30,8 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   inactive_campaign: { label: 'Inactive Campaign', tone: '' },
   bank_reassign: { label: 'Bank Account Reassignment Needed', tone: 'red' },
   machine_booking: { label: 'Machine Request', tone: 'blue' },
+  payout_request: { label: 'Payout Request', tone: 'violet' },
+  scheduled_payout: { label: 'Scheduled Payout Due', tone: 'amber' },
 };
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
@@ -210,6 +213,8 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
         </div>
       )}
       {item.task_type === 'machine_booking' && <MachineRequest item={item} onAct={act} />}
+      {item.task_type === 'payout_request' && <ApprovePayout requestId={item.record_id} onAct={act} />}
+      {item.task_type === 'scheduled_payout' && <ProcessScheduled payoutId={item.record_id} onAct={act} />}
       {item.task_type === 'bank_reassign' && (
         <p className="muted">Open the campaign and choose another bank account, or clear it to use the default. This leaves the sheet once that's done.</p>
       )}

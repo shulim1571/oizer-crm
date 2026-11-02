@@ -1,6 +1,7 @@
 import CrudPage, { campLabel } from '../components/CrudPage';
 import AdminLink from '../components/AdminLink';
 import { useState } from 'react';
+import { PayoutStatusPill, payoutStatus } from './Payouts';
 import { Balance, Pill, StatusPill } from '../components/Pill';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -15,14 +16,15 @@ export function ExpensesPage() {
   const { defaultAccountId } = useAuth();
   return (
     <CrudPage
-      title="Expenses" noun="Expense"
+      title="Payouts" noun="Payout"
       table="expenses"
       select={`*, campaigns(${CAMP}), accounts(name)`}
       order={{ column: 'created_at', ascending: false }}
       columns={[
         { key: 'campaign', label: 'Campaign', value: r => campLabel(r.campaigns), width: 200 },
-        { key: 'description', label: 'Description' },
+        { key: 'status', label: 'Status', value: payoutStatus, render: r => <PayoutStatusPill row={r} /> },
         { key: 'payee', label: 'To', width: 160 },
+        { key: 'description', label: 'Description' },
         { key: 'amount', label: 'Amount', render: r => money(r.amount), align: 'right' },
         {
           key: 'account', label: 'Account', value: r => r.accounts?.name,
@@ -31,6 +33,7 @@ export function ExpensesPage() {
         { key: 'method', label: 'Method' },
         { key: 'memo', label: 'Memo' },
         { key: 'check_number', label: 'Check Number' },
+        { key: 'reference', label: 'Reference' },
         { key: 'cleared', label: 'Cleared', render: r => yn(r.cleared) },
         { key: 'notes', label: 'Notes' },
         { key: 'created_at', label: 'Timestamp', render: r => dateTime(r.created_at), width: 170 },

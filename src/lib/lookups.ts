@@ -71,6 +71,19 @@ export const paymentMethodIdOptions = () =>
       .map(m => ({ value: m.id, label: m.name })),
   );
 
+export const payoutMethodOptions = () =>
+  cached('payoutMethods', async () =>
+    (await fetchAll((a, b) => supabase.from('payout_methods').select('name').eq('active', true).order('name').range(a, b)))
+      .map(m => ({ value: m.name, label: m.name })),
+  );
+
+/** Admins only; fundraisers search with lookup_payees. */
+export const payeeOptions = () =>
+  cached('payees', async () =>
+    (await fetchAll((a, b) => supabase.from('payees').select('id, name, phone').is('merged_into', null).order('name').range(a, b)))
+      .map(p => ({ value: p.id, label: `${p.name}${p.phone ? ` · ${p.phone}` : ''}` })),
+  );
+
 export const EXPENSE_METHODS = ['Check', 'Zelle', 'Account Transfer', 'Credit Card', 'Cash', 'Wire', 'other'].map(v => ({ value: v, label: v }));
 export const DONATION_TYPES = ['Payment', 'Batch'].map(v => ({ value: v, label: v }));
 export const DONATION_STATUSES = [

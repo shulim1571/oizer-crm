@@ -150,6 +150,12 @@ log, donor merge, duplicate flags, dashboards and balance summary, inactive-camp
 Shabbos and Yom Tov warnings, machine registry, assignment history and booking.
 
 ### Phase 6: Payouts and documents (L)
+Being built in four parts. Part 1 is on staging: payee profiles with Do Not Pay, rejection notes and merging; payout
+requests from fundraisers with bank and Zelle details encrypted by a Vault key; approval on the Task Sheet (first admin
+wins); scheduled payouts; custom payout methods; and payee details hidden from fundraisers without payout rights, while
+their balances still count every payout. Part 2 is check printing and the check register, part 3 receipts and year-end
+statements, part 4 reports, exports and bulk imports. Payout emails arrive with Phase 7 and phone requests with Phase 10.
+On live, each payee name already used becomes a profile (about 1,040; some differ only by punctuation and can be merged).
 Payees and Do Not Pay, payout requests with encrypted bank details, scheduled payouts, check PDF with MICR line,
 check register, receipts with the override cascade and permanent numbering, year-end statements, campaign reports,
 donor lists, source reports, Excel/CSV/PDF export, the three bulk imports with 24-hour reversal.

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PGlite, type Transaction } from '@electric-sql/pglite';
+import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 
 const DIR = join(__dirname, '..', 'migrations');
 const MULTI_TENANT = '20261102000000_multi_tenant.sql';
@@ -37,6 +38,16 @@ const SUPABASE_STUB = `
   create function auth.uid() returns uuid language sql stable as
     $$ select (auth.jwt() ->> 'sub')::uuid $$;
   grant execute on all functions in schema auth to anon, authenticated, service_role;
+
+  create schema extensions;
+  create extension pgcrypto schema extensions;
+  grant usage on schema extensions to anon, authenticated, service_role;
+
+  create schema vault;
+  create table vault.secrets (id uuid primary key default gen_random_uuid(), name text unique, description text, secret text);
+  create view vault.decrypted_secrets as select id, name, description, secret, secret as decrypted_secret from vault.secrets;
+  create function vault.create_secret(new_secret text, new_name text, new_description text default '') returns uuid language sql as
+    $$ insert into vault.secrets (name, description, secret) values (new_name, new_description, new_secret) returning id $$;
 
   create schema cron;
   create table cron.job (jobname text primary key, schedule text, command text);
@@ -89,7 +100,7 @@ export async function seed(db: PGlite) {
 }
 
 export async function freshDb() {
-  const db = new PGlite();
+  const db = new PGlite({ extensions: { pgcrypto } });
   await db.exec(SUPABASE_STUB);
   return db;
 }

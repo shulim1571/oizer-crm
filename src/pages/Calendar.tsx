@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { dateTime, localToday } from '../lib/format';
+import { dateTime, localToday, money } from '../lib/format';
 import { dateOf, isoOf, jewishDays, type JewishDay } from '../lib/jewishCalendar';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -28,17 +28,23 @@ export default function CalendarPage() {
   const to = isoOf(end);
 
   const data = useQuery(async () => {
-    const [list, avail] = await Promise.all([
+    const [list, avail, payouts] = await Promise.all([
       fetchAll((a, b) => supabase.from('machine_booking_list').select('*').gte('booking_date', from).lte('booking_date', to).neq('status', 'cancelled').order('queue_at').range(a, b) as never),
       supabase.rpc('machine_availability', { p_from: from, p_to: to }),
+      supabase.from('expenses').select('id, amount, payee, method, scheduled_for, campaign_id').is('processed_at', null).gte('scheduled_for', from).lte('scheduled_for', to).order('scheduled_for'),
     ]);
     if (avail.error) throw new Error(avail.error.message);
-    return { list: list as Row[], machines: (avail.data as Row[])[0]?.machines ?? 0 };
+    return { list: list as Row[], machines: (avail.data as Row[])[0]?.machines ?? 0, payouts: (payouts.data ?? []) as Row[] };
   }, [from, to, version]);
   const machines = data.data?.machines ?? 0;
   const byDay = useMemo(() => {
     const m = new Map<string, Row[]>();
     for (const b of data.data?.list ?? []) m.set(b.booking_date, [...(m.get(b.booking_date) ?? []), b]);
+    return m;
+  }, [data.data]);
+  const payoutsByDay = useMemo(() => {
+    const m = new Map<string, Row[]>();
+    for (const p of data.data?.payouts ?? []) m.set(p.scheduled_for, [...(m.get(p.scheduled_for) ?? []), p]);
     return m;
   }, [data.data]);
 
@@ -82,6 +88,9 @@ export default function CalendarPage() {
               {d.holidays.map(h => <span key={h} className="calendar-line holiday">{h}</span>)}
               {d.candles && <span className="calendar-line muted">Candles {d.candles}</span>}
               {d.havdalah && <span className="calendar-line muted">Ends {d.havdalah}</span>}
+              {(payoutsByDay.get(d.iso) ?? []).length > 0 && (
+                <span className="calendar-line payout">{(payoutsByDay.get(d.iso) ?? []).length === 1 ? 'Payout' : `${(payoutsByDay.get(d.iso) ?? []).length} payouts`} {money((payoutsByDay.get(d.iso) ?? []).reduce((s, p) => s + Number(p.amount), 0))}</span>
+              )}
               {bookings.length > 0 && (
                 <span className={`calendar-count${over ? ' over' : ''}`}>{bookings.length} of {machines} machines{over ? ' · Over Capacity' : ''}</span>
               )}
@@ -89,13 +98,13 @@ export default function CalendarPage() {
           );
         })}
       </div>
-      <p className="muted small">Shabbos and Yom Tov are shaded. Times are for New York. Scheduled payouts will appear here once they're built.</p>
-      {open && <DayDialog day={open} machines={machines} bookings={byDay.get(open.iso) ?? []} onClose={() => setOpen(null)} onChanged={() => setVersion(v => v + 1)} />}
+      <p className="muted small">Shabbos and Yom Tov are shaded. Times are for New York. Scheduled payouts show on the day they're due.</p>
+      {open && <DayDialog day={open} machines={machines} bookings={byDay.get(open.iso) ?? []} payouts={payoutsByDay.get(open.iso) ?? []} onClose={() => setOpen(null)} onChanged={() => setVersion(v => v + 1)} />}
     </section>
   );
 }
 
-function DayDialog({ day, machines, bookings, onClose, onChanged }: { day: JewishDay; machines: number; bookings: Row[]; onClose: () => void; onChanged: () => void }) {
+function DayDialog({ day, machines, bookings, payouts, onClose, onChanged }: { day: JewishDay; machines: number; bookings: Row[]; payouts: Row[]; onClose: () => void; onChanged: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   useEffect(() => setError(null), [day.iso]);
@@ -120,6 +129,14 @@ function DayDialog({ day, machines, bookings, onClose, onChanged }: { day: Jewis
         <p>
           {[day.shabbos && (day.parsha ?? 'Shabbos'), ...day.holidays, day.candles && `Candle lighting ${day.candles}`, day.havdalah && `Ends ${day.havdalah}`].filter(Boolean).join(' · ')}
         </p>
+      )}
+      {payouts.length > 0 && (
+        <>
+          <h3>Scheduled payouts</h3>
+          <ul className="plain">
+            {payouts.map(p => <li key={p.id}><b>{money(p.amount)}</b> {p.method} to {p.payee ?? 'no payee'} · campaign {p.campaign_id}</li>)}
+          </ul>
+        </>
       )}
       <h3>Machine requests</h3>
       <p className="muted small">{bookings.length} request{bookings.length === 1 ? '' : 's'} · {confirmed} confirmed · {machines} machine{machines === 1 ? '' : 's'} in service{bookings.length > machines ? ' · Over Capacity' : ''}</p>

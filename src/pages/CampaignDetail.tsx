@@ -22,6 +22,7 @@ import { ChangeModeDialog, SubCampaignsTab, modeLabel } from './SubCampaigns';
 import { TRANSFER_SELECT, TransferDialog, transferColumns } from './Transfers';
 import { RequestTeamDialog } from './Requests';
 import { CampaignSettingsTab } from './Templates';
+import { PayoutStatusPill, RequestPayoutDialog, payoutStatus } from './Payouts';
 
 type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers' | 'sub-campaigns' | 'settings';
 
@@ -39,6 +40,8 @@ export default function CampaignDetail() {
   const [transferStart, setTransferStart] = useState<Row | null>(null);
   const [changingMode, setChangingMode] = useState(false);
   const [requestingTeam, setRequestingTeam] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [canRequestPayout, setCanRequestPayout] = useState(false);
 
   // A fundraiser with the override can enter payments here, held for approval.
   useEffect(() => {
@@ -49,6 +52,12 @@ export default function CampaignDetail() {
   useEffect(() => {
     if (isAdmin) return setIsPrimary(true);
     supabase.rpc('is_primary_on', { p_campaign: id }).then(({ data }) => setIsPrimary(!!data));
+  }, [id, isAdmin]);
+
+  // Payouts are asked for by the primary fundraiser, or someone given that right. Admins enter them directly.
+  useEffect(() => {
+    if (isAdmin) return setCanRequestPayout(false);
+    supabase.rpc('can_request_payout', { p_campaign: id }).then(({ data }) => setCanRequestPayout(!!data));
   }, [id, isAdmin]);
 
   const summary = useQuery(
@@ -70,6 +79,8 @@ export default function CampaignDetail() {
       case 'donations':
         return page((a, b) => supabase.from('donations').select(DONATION_SELECT).eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
       case 'expenses':
+        // Fundraisers get the list through a function that leaves out the payee for those who may not see it.
+        if (!isAdmin) return (await supabase.rpc('campaign_payouts', { p_campaign: id })).data ?? [];
         return page((a, b) => supabase.from('expenses').select('*, accounts(name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
       case 'transfers':
         return page((a, b) => supabase.from('transfers')
@@ -113,8 +124,10 @@ export default function CampaignDetail() {
     },
     expenses: {
       columns: [
+        { key: 'status', label: 'Status', value: payoutStatus, render: (r: Row) => <PayoutStatusPill row={r} /> },
         { key: 'payee', label: 'To' },
         { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
+        { key: 'reference', label: 'Reference' },
         { key: 'method', label: 'Method' },
         { key: 'check_number', label: 'Check #' },
         { key: 'memo', label: 'Memo' },
@@ -123,8 +136,8 @@ export default function CampaignDetail() {
         { key: 'cleared', label: 'Cleared', render: (r: Row) => yn(r.cleared) },
         { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
       ],
-      add: isAdmin && { table: 'expenses', title: 'New Expense', fields: expenseFields, defaults: { campaign_id: id, account_id: defaultAccountId, created_at: new Date().toISOString() } },
-      edit: isAdmin && { table: 'expenses', title: 'Edit Expense', fields: expenseFields },
+      add: isAdmin && { table: 'expenses', title: 'New Payout', fields: expenseFields, defaults: { campaign_id: id, account_id: defaultAccountId, created_at: new Date().toISOString() } },
+      edit: isAdmin && { table: 'expenses', title: 'Edit Payout', fields: expenseFields },
     },
     transfers: {
       columns: [
@@ -249,7 +262,7 @@ export default function CampaignDetail() {
 
       <div className="tabs">
         {tabs.map(t => (
-          <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>
+          <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t === 'expenses' ? 'Payouts' : t[0].toUpperCase() + t.slice(1)}</button>
         ))}
       </div>
 
@@ -266,6 +279,7 @@ export default function CampaignDetail() {
           tab === 'transfers' ? isAdmin && c.status === 'active' && c.balance_mode !== 'shared' && (
             <button className="btn primary" onClick={() => setTransferStart({ from_campaign_id: id })}><Plus size={16} /> New transfer</button>
           )
+          : tab === 'expenses' ? canRequestPayout && <button type="button" className="btn" onClick={() => setRequesting(true)}>Request payout</button>
           : tab === 'pledges' ? canWork && c.status !== 'closed' && <NewPledgeButtons campaignId={id} onSaved={() => setVersion(v => v + 1)} />
           : tab === 'vouchers' ? isAdmin && c.status !== 'closed' && <NewVoucherButton campaignId={id} onSaved={() => setVersion(v => v + 1)} />
           : tabConfig.add && (
@@ -277,6 +291,7 @@ export default function CampaignDetail() {
       />}
 
       {transferStart && <TransferDialog start={transferStart} onClose={() => setTransferStart(null)} onDone={() => { setTransferStart(null); setVersion(v => v + 1); }} />}
+      {requesting && <RequestPayoutDialog campaignId={id} onClose={() => setRequesting(false)} onSaved={() => { setRequesting(false); alert('Your payout request was sent to the office. You can follow it under Payout Requests.'); }} />}
       {requestingTeam && <RequestTeamDialog campaignId={id} onClose={() => setRequestingTeam(false)} />}
       {changingMode && <ChangeModeDialog campaign={c} onClose={() => setChangingMode(false)} onDone={() => { setChangingMode(false); setVersion(v => v + 1); }} />}
       {openPledge && <PledgeDialog id={openPledge} onClose={() => setOpenPledge(null)} onChanged={() => setVersion(v => v + 1)} />}

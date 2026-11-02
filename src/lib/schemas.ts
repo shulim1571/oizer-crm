@@ -1,6 +1,6 @@
 import type { Field } from '../components/RecordForm';
 import {
-  CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, EXPENSE_METHODS, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
+  CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, payeeOptions, payoutMethodOptions, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
   collectorOptions, donorOptions, managerOptions, sourceOptions,
 } from './lookups';
 
@@ -11,6 +11,7 @@ const create = {
   collector: () => ({ noun: 'collector', table: 'collectors', fields: personFields }),
   source: () => ({ noun: 'source', table: 'sources', fields: sourceFields }),
   account: () => ({ noun: 'account', table: 'accounts', fields: accountFields }),
+  payee: () => ({ noun: 'payee', table: 'payees', fields: payeeFields }),
 };
 
 export const campaignFields: Field[] = [
@@ -131,11 +132,22 @@ export const adminTaskFields = (): Field[] => [
 /** Admin notes aren't for fundraisers. */
 export const fundraiserDonorFields = (): Field[] => donorFields.filter(f => f.name !== 'notes');
 
+export const payeeFields: Field[] = [
+  { name: 'name', label: 'Name', required: true },
+  { name: 'phone', label: 'Phone' },
+  { name: 'email', label: 'Email', type: 'email' },
+  { name: 'address', label: 'Address', type: 'textarea' },
+  { name: 'preferred_method', label: 'Preferred payout method', type: 'select', options: payoutMethodOptions },
+  { name: 'notes', label: 'Notes', type: 'textarea' },
+];
+
 export const expenseFields: Field[] = [
   { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },
-  { name: 'payee', label: 'To' },
+  { name: 'payee_id', label: 'Payee', type: 'search', options: payeeOptions, create: create.payee },
   { name: 'amount', label: 'Amount', type: 'number', required: true },
-  { name: 'method', label: 'Method', type: 'select', options: EXPENSE_METHODS, freeText: true },
+  { name: 'method', label: 'Method', type: 'select', options: payoutMethodOptions },
+  { name: 'scheduled_for', label: 'Process on', type: 'date', help: 'A later date schedules it. It leaves the balance now and comes back to the Task Sheet on the day.' },
+  { name: 'reference', label: 'Reference', help: 'Zelle or ACH reference, wire confirmation number' },
   { name: 'account_id', label: 'Account', type: 'select', options: accountOptions, create: create.account },
   { name: 'check_number', label: 'Check Number' },
   { name: 'memo', label: 'Memo' },
