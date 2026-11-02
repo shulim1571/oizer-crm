@@ -9,21 +9,26 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { dateTime, money } from '../lib/format';
-import { donorFields, taskFields } from '../lib/schemas';
+import { donorFields, fundraiserDonorFields, taskFields } from '../lib/schemas';
 import { DONATION_SELECT, donationColumns, isLive } from './donationColumns';
+import { ContactLog, DonorLookup, DonorPledges } from './DonorExtras';
+import { NewPledgeButtons } from './Pledges';
 
 export function DonorsPage() {
   const nav = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, canWork } = useAuth();
   const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const { data, error, loading } = useQuery(() =>
     fetchAll((a, b) => supabase.from('donor_summary').select('*').order('total_given', { ascending: false }).range(a, b)),
   );
 
   return (
     <>
+      {canWork && <DonorLookup />}
+      {addError && <div className="error">{addError}</div>}
       <DataTable
-        title="Donors"
+        title={isAdmin ? 'Donors' : 'My Donors'}
         rows={data ?? []}
         loading={loading}
         error={error}
@@ -45,6 +50,9 @@ export function DonorsPage() {
           },
           { key: 'total_given', label: 'Total Given', render: r => <b className="num">{money(r.total_given)}</b>, align: 'right' },
           { key: 'gift_count', label: 'Gifts', align: 'right' },
+          { key: 'open_pledges', label: 'Open Pledges', render: r => money(r.open_pledges), align: 'right' },
+          { key: 'id', label: 'Donor ID' },
+          { key: 'country', label: 'Country' },
           { key: 'phone', label: 'Phone' },
           { key: 'email', label: 'Email' },
           { key: 'address', label: 'Address' },
@@ -53,12 +61,67 @@ export function DonorsPage() {
           { key: 'matbia_id', label: 'Matbia ID' },
           { key: 'ojc_id', label: 'OJC ID' },
         ]}
-        actions={isAdmin && <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New donor</button>}
+        actions={
+          <>
+            {isAdmin && <button className="btn" onClick={() => nav('/donors/duplicates')}>Possible duplicates</button>}
+            {canWork && <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New donor</button>}
+          </>
+        }
       />
-      {adding && (
-        <RecordForm table="donors" title="New Donor" fields={donorFields} onClose={() => setAdding(false)} onSaved={r => nav(`/donors/${r.id}`)} />
+      {adding && !isAdmin && (
+        <FundraiserNewDonor onClose={() => setAdding(false)} onError={setAddError} />
+      )}
+      {adding && isAdmin && (
+        <RecordForm table="donors" title="New Donor" fields={donorFields} defaults={{ country: 'US' }} onClose={() => setAdding(false)} onSaved={r => nav(`/donors/${r.id}`)} />
       )}
     </>
+  );
+}
+
+/** Goes through a function, which also puts the new donor on this fundraiser's list. */
+function FundraiserNewDonor({ onClose, onError }: { onClose: () => void; onError: (m: string | null) => void }) {
+  const nav = useNavigate();
+  const [first, setFirst] = useState('');
+  const [last, setLast] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [country, setCountry] = useState('US');
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setError(null);
+    onError(null);
+    const { data, error: e } = await supabase.rpc('add_fundraiser_donor', { p_fields: { first_name: first, last_name: last, phone: phone || null, email: email || null, address: address || null, country } });
+    if (e) return setError(e.message);
+    nav(`/donors/${encodeURIComponent(data)}`);
+  }
+
+  return (
+    <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal"><div className="record-form">
+        <div className="form-head"><h2>New donor</h2></div>
+        <p className="muted small">Look them up first, so nobody ends up with two records. You can add a pledge or a follow-up task on the next screen.</p>
+        <div className="fields">
+          <label className="field"><span>First name *</span><input value={first} onChange={e => setFirst(e.target.value)} /></label>
+          <label className="field"><span>Last name *</span><input value={last} onChange={e => setLast(e.target.value)} /></label>
+          <label className="field"><span>Phone</span><input value={phone} onChange={e => setPhone(e.target.value)} /></label>
+          <label className="field"><span>Email</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+          <label className="field"><span>Address</span><input value={address} onChange={e => setAddress(e.target.value)} /></label>
+          <label className="field"><span>Country</span>
+            <select value={country} onChange={e => setCountry(e.target.value)}>
+              <option value="US">USA</option><option value="CA">Canada</option><option value="IL">Israel</option><option value="GB">England</option>
+            </select>
+          </label>
+        </div>
+        {error && <div className="error">{error}</div>}
+        <div className="form-actions">
+          <div className="spacer" />
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn primary" disabled={!first.trim() || !last.trim()} onClick={save}>Add donor</button>
+        </div>
+      </div></div>
+    </div>
   );
 }
 
@@ -128,7 +191,8 @@ export function DonorDetail() {
         {canWork && (
           <button className="btn" onClick={() => setAddingTask(true)}><Plus size={16} /> Follow-up task</button>
         )}
-        {isAdmin && <button className="btn" onClick={() => setEditing(true)}><Pencil size={16} /> Edit</button>}
+        {canWork && <NewPledgeButtons donorId={d.id} onSaved={() => setVersion(v => v + 1)} />}
+        {canWork && <button className="btn" onClick={() => setEditing(true)}><Pencil size={16} /> Edit</button>}
       </div>
 
       <div className="kpis">
@@ -148,7 +212,9 @@ export function DonorDetail() {
             <dt>Address</dt><dd>{d.address?.trim() || '—'}</dd>
             <dt>OJC / Matbia</dt><dd>{[d.ojc_id, d.matbia_id].filter(Boolean).join(' / ') || '—'}</dd>
             <dt>Pledger / Nadvan</dt><dd>{[d.pledger_id, d.nadvan_id].filter(Boolean).join(' / ') || '—'}</dd>
-            <dt>Notes</dt><dd>{d.notes || '—'}</dd>
+            <dt>Country</dt><dd>{d.country}</dd>
+            <dt>Donor ID</dt><dd>{d.id}</dd>
+            {isAdmin && <><dt>Notes</dt><dd className="pre-line">{d.notes || '—'}</dd></>}
           </dl>
         </div>
         <div className="card">
@@ -186,6 +252,11 @@ export function DonorDetail() {
         </div>
       </div>
 
+      <div className="cards">
+        <ContactLog donorId={d.id} />
+        <DonorPledges donorId={d.id} onChanged={() => setVersion(v => v + 1)} />
+      </div>
+
       <DataTable
         title="Giving history"
         exportName={`donor-${d.id}`}
@@ -198,7 +269,7 @@ export function DonorDetail() {
       <p className="muted pad">Last updated {dateTime(d.updated_at)}</p>
 
       {editing && (
-        <RecordForm table="donors" title="Edit Donor" fields={donorFields} record={d} allowDelete
+        <RecordForm table="donors" title="Edit Donor" fields={isAdmin ? donorFields : fundraiserDonorFields()} record={d} allowDelete={isAdmin}
                     onClose={() => setEditing(false)}
                     onSaved={r => { setEditing(false); if (r._deleted) nav('/donors'); else setVersion(v => v + 1); }} />
       )}

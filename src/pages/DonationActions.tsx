@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import SearchSelect from '../components/SearchSelect';
-import { money } from '../lib/format';
+import { localToday, money } from '../lib/format';
 import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
 import { supabase, type Row } from '../lib/supabase';
 
 const RETURN_REASONS = ['NSF', 'Account Closed', 'Stop Payment', 'Other'];
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localToday();
 
 /** What an admin can do to a saved transaction, beyond editing its fields. */
 export default function DonationActions({ record, onDone }: { record: Row; onDone: (row: Row) => void }) {

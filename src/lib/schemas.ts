@@ -128,6 +128,9 @@ export const adminTaskFields = (): Field[] => [
   { name: 'owner_manager_id', label: 'For fundraiser', type: 'search', options: managerOptions, help: 'Empty keeps it shared on the campaign' },
 ];
 
+/** Admin notes aren't for fundraisers. */
+export const fundraiserDonorFields = (): Field[] => donorFields.filter(f => f.name !== 'notes');
+
 export const expenseFields: Field[] = [
   { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },
   { name: 'payee', label: 'To' },
@@ -158,6 +161,7 @@ export const transferEditFields: Field[] = [
 ];
 
 export const donorFields: Field[] = [
+  { name: 'country', label: 'Country', type: 'select', options: [['US', 'USA'], ['CA', 'Canada'], ['IL', 'Israel'], ['GB', 'England']].map(([value, label]) => ({ value, label })) },
   { name: 'english_title', label: 'English Title' },
   { name: 'first_name', label: 'First Name' },
   { name: 'last_name', label: 'Last Name' },

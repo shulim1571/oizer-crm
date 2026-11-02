@@ -7,7 +7,7 @@ import RecordForm from '../components/RecordForm';
 import SearchSelect from '../components/SearchSelect';
 import { StatusPill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { dateTime, download, money, toCsv } from '../lib/format';
+import { localToday, dateTime, download, money, toCsv } from '../lib/format';
 import { clearLookups, paymentMethodOptions, type Option } from '../lib/lookups';
 import { pledgeEditFields, pledgeFields, recurringPledgeEditFields, recurringPledgeFields } from '../lib/schemas';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
@@ -36,9 +36,9 @@ export const pledgeColumns = (hideCampaign = false): Column[] => [
 ];
 
 /** Add buttons for a one-time or recurring pledge, and the form that goes with them. */
-export function NewPledgeButtons({ campaignId, onSaved }: { campaignId?: string; onSaved: () => void }) {
+export function NewPledgeButtons({ campaignId, donorId, onSaved }: { campaignId?: string; donorId?: string; onSaved: () => void }) {
   const [form, setForm] = useState<'one' | 'recurring' | null>(null);
-  const defaults = { campaign_id: campaignId, date_pledged: new Date().toISOString().slice(0, 10) };
+  const defaults = { campaign_id: campaignId, donor_id: donorId, date_pledged: localToday() };
   return (
     <>
       <button className="btn" onClick={() => setForm('recurring')}><Plus size={16} /> Recurring pledge</button>
@@ -357,7 +357,7 @@ function MatchPanel({ pledge: p, schedule, onDone, onCancel }: { pledge: Row; sc
 function ReschedulePanel({ pledge: p, onDone, onCancel }: { pledge: Row; onDone: (m?: string) => void; onCancel: () => void }) {
   const [amount, setAmount] = useState(String(p.installment_amount));
   const [frequency, setFrequency] = useState<string>(p.frequency);
-  const [start, setStart] = useState<string>(p.next_due_date ?? new Date().toISOString().slice(0, 10));
+  const [start, setStart] = useState<string>(p.next_due_date ?? localToday());
   const [count, setCount] = useState(p.installment_count ? String(p.installments_upcoming + p.installments_overdue) : '');
   const [error, setError] = useState<string | null>(null);
 

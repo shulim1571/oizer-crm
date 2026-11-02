@@ -58,3 +58,9 @@ export function download(name: string, text: string) {
 }
 
 export const balanceClass = (v: unknown) => (Number(v) < 0 ? 'neg' : Number(v) > 0 ? 'pos' : '');
+
+/** Today on this computer. toISOString() gives the UTC date, which is already tomorrow on a New York evening. */
+export function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}

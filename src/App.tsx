@@ -22,6 +22,8 @@ import TaskSheetPage from './pages/TaskSheet';
 import RequestsPage from './pages/Requests';
 import TasksPage from './pages/Tasks';
 import { TemplatesPage } from './pages/Templates';
+import DashboardPage, { BalanceSummaryPage } from './pages/Dashboard';
+import { DuplicatesPage } from './pages/DonorExtras';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
   AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage,
@@ -36,7 +38,7 @@ function AdminOnly({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const { session, role, memberStatus, org, orgs, isPlatformOwner, loading, signOut, refresh } = useAuth();
+  const { session, role, memberStatus, org, orgs, isPlatformOwner, isAdmin, loading, signOut, refresh } = useAuth();
   const [recovering, setRecovering] = useState(false);
   const [emailLink, setEmailLink] = useState(arrivedWith);
 
@@ -106,7 +108,11 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/campaigns/active" replace />} />
+        {/* Admins start on what's waiting for them, fundraisers on their own numbers. */}
+        <Route index element={<Navigate to={isAdmin ? '/task-sheet' : '/dashboard'} replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="balance-summary" element={<AdminOnly><BalanceSummaryPage /></AdminOnly>} />
+        <Route path="donors/duplicates" element={<AdminOnly><DuplicatesPage /></AdminOnly>} />
         <Route path="campaigns/active" element={<Campaigns mode="active" />} />
         <Route path="campaigns/all" element={<Campaigns mode="all" />} />
         <Route path="campaigns/archived" element={<Campaigns mode="archived" />} />
@@ -140,7 +146,7 @@ export default function App() {
         <Route path="activity" element={<AdminOnly><ActivityPage /></AdminOnly>} />
         <Route path="organization" element={<AdminOnly><OrganizationPage /></AdminOnly>} />
         {isPlatformOwner && <Route path="platform" element={<PlatformPage />} />}
-        <Route path="*" element={<Navigate to="/campaigns/active" replace />} />
+        <Route path="*" element={<Navigate to={isAdmin ? '/task-sheet' : '/dashboard'} replace />} />
       </Route>
     </Routes>
   );

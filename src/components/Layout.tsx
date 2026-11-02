@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent,
-  PlusCircle, Receipt, RefreshCw, Repeat, Ticket, Search, ShieldCheck, UserCircle, Users, Wallet,
+  Archive, ArrowLeftRight, Building, Building2, CircleDollarSign, ClipboardCheck, Contact, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent,
+  PlusCircle, Receipt, RefreshCw, Repeat, Scale, Ticket, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
@@ -27,6 +27,12 @@ interface NavSection { title: string; items: NavItem[] }
 
 const I = 18;
 const NAV: NavSection[] = [
+  {
+    title: 'Home',
+    items: [
+      { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={I} /> },
+    ],
+  },
   {
     title: 'Campaigns',
     items: [
@@ -58,6 +64,7 @@ const NAV: NavSection[] = [
       { to: '/requests', label: 'Campaign Requests', icon: <FilePlus size={I} /> },
       { to: '/tasks', label: 'Tasks', icon: <ClipboardCheck size={I} /> },
       { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true },
+      { to: '/balance-summary', label: 'Balance Summary', icon: <Scale size={I} />, admin: true },
       { to: '/collectors', label: 'Collectors', icon: <Users size={I} />, admin: true },
     ],
   },

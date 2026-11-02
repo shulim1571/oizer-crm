@@ -7,7 +7,7 @@ import RecordForm from '../components/RecordForm';
 import SearchSelect from '../components/SearchSelect';
 import { StatusPill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { dateTime, download, money, toCsv } from '../lib/format';
+import { localToday, dateTime, download, money, toCsv } from '../lib/format';
 import { campaignOptions, donorOptions, managerOptions, type Option } from '../lib/lookups';
 import { adminTaskFields, taskFields } from '../lib/schemas';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
@@ -16,7 +16,7 @@ import { Overlay, PledgeDialog } from './Pledges';
 
 const CAMP = 'id, internal_name, campaign_name, external_name';
 const SELECT = `*, campaigns(${CAMP}), donors(display_name), owner:managers!tasks_owner_fkey(full_name), task_call_items(contacted)`;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localToday();
 const isOverdue = (r: Row) => r.status !== 'Done' && r.due_date && r.due_date < today();
 const statusOf = (r: Row) => (isOverdue(r) ? 'Overdue' : r.status);
 

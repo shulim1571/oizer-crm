@@ -5,7 +5,7 @@ import DataTable, { type Column } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import { Pill, StatusPill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { dateTime, money } from '../lib/format';
+import { localToday, dateTime, money } from '../lib/format';
 import { clearLookups } from '../lib/lookups';
 import { voucherFields } from '../lib/schemas';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
@@ -65,7 +65,7 @@ export function NewVoucherButton({ campaignId, onSaved }: { campaignId?: string;
           table="vouchers"
           title="Log voucher"
           fields={voucherFields}
-          defaults={{ campaign_id: campaignId, submission: 'online', date_received: new Date().toISOString().slice(0, 10) }}
+          defaults={{ campaign_id: campaignId, submission: 'online', date_received: localToday() }}
           onClose={() => setAdding(false)}
           onSaved={() => { setAdding(false); onSaved(); }}
         />
@@ -225,7 +225,7 @@ export function VoucherDialog({ id, onClose, onChanged }: { id: string; onClose:
 
 function FundPanel({ voucher: v, onDone, onCancel, onOverage }: { voucher: Row; onDone: () => void; onCancel: () => void; onOverage: () => void }) {
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(localToday());
   const [bank, setBank] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
