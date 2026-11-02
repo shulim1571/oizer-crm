@@ -156,8 +156,13 @@ wins); scheduled payouts; custom payout methods; and payee details hidden from f
 their balances still count every payout. Part 2 is on staging too: per-account check settings, checks printed on letter
 stock with the check on top and two stubs, numbered per account and never reused, the check register (outstanding,
 cleared, voided with a reason, lost), signature images, and the organization's own MICR font (upload a licensed
-E-13B font; printing is blocked until one is added). Matching cleared checks to the bank is Phase 11. Part 3 is receipts and year-end
-statements, part 4 reports, exports and bulk imports. Payout emails arrive with Phase 7 and phone requests with Phase 10.
+E-13B font; printing is blocked until one is added). Matching cleared checks to the bank is Phase 11. Part 3 is on
+staging too: receipts with permanent R-YYYY-NNNNN numbers, frozen when issued; receipt text at four levels (single
+donation, campaign, fundraiser, default) with Hebrew right to left; partial amounts; Void & Correct; receipts voided
+automatically when a donation changes, with a Task Sheet item to reissue; one receipt for a split donation; bulk
+receipting by date range; year-end statements with a permanent log. Receipts and statements print from the browser
+(save as PDF); sending them by email or SMS, auto-receipts and PDF attachments arrive with Phase 7. Part 4 is reports,
+exports and bulk imports. Payout emails arrive with Phase 7 and phone requests with Phase 10.
 On live, each payee name already used becomes a profile (about 1,040; some differ only by punctuation and can be merged).
 Payees and Do Not Pay, payout requests with encrypted bank details, scheduled payouts, check PDF with MICR line,
 check register, receipts with the override cascade and permanent numbering, year-end statements, campaign reports,

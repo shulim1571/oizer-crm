@@ -27,6 +27,7 @@ import { DuplicatesPage } from './pages/DonorExtras';
 import { PayoutMethodsPage, PayoutRequestsPage } from './pages/Payouts';
 import { PayeesPage } from './pages/Payees';
 import { ChecksPage } from './pages/Checks';
+import { ReceiptTextPage, ReceiptsPage } from './pages/Receipts';
 import { MachineRegistryPage, MachineReportPage, MachinesPage } from './pages/Machines';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
@@ -143,6 +144,8 @@ export default function App() {
         <Route path="payout-requests" element={<PayoutRequestsPage />} />
         <Route path="payees" element={<PayeesPage />} />
         <Route path="checks" element={<AdminOnly><ChecksPage /></AdminOnly>} />
+        <Route path="receipts" element={<AdminOnly><ReceiptsPage /></AdminOnly>} />
+        <Route path="receipt-text" element={<AdminOnly><ReceiptTextPage /></AdminOnly>} />
         <Route path="payout-methods" element={<AdminOnly><PayoutMethodsPage /></AdminOnly>} />
         <Route path="transfers" element={<AdminOnly><TransfersPage /></AdminOnly>} />
         <Route path="sources" element={<AdminOnly><SourcesPage /></AdminOnly>} />

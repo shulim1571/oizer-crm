@@ -12,6 +12,7 @@ import { dateTime, money } from '../lib/format';
 import { donorFields, fundraiserDonorFields, taskFields } from '../lib/schemas';
 import { DONATION_SELECT, donationColumns, isLive } from './donationColumns';
 import { ContactLog, DonorLookup, DonorPledges } from './DonorExtras';
+import { DonorReceipts } from './Receipts';
 import { NewPledgeButtons } from './Pledges';
 
 export function DonorsPage() {
@@ -254,6 +255,7 @@ export function DonorDetail() {
 
       <div className="cards">
         <ContactLog donorId={d.id} />
+        <DonorReceipts donor={d} />
         <DonorPledges donorId={d.id} onChanged={() => setVersion(v => v + 1)} />
       </div>
 

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Archive, ArrowLeftRight, Banknote, BookUser, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent, Printer,
+  Archive, ArrowLeftRight, Banknote, BookUser, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, FileCheck, FileText, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent, Printer,
   PlusCircle, Receipt, RefreshCw, Repeat, Scale, Send, Smartphone, Ticket, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -56,6 +56,7 @@ const NAV: NavSection[] = [
       { to: '/expenses', label: 'Payouts', icon: <Receipt size={I} /> },
       { to: '/payout-requests', label: 'Payout Requests', icon: <Send size={I} /> },
       { to: '/checks', label: 'Check Register', icon: <Printer size={I} />, admin: true },
+      { to: '/receipts', label: 'Receipts', icon: <FileCheck size={I} />, admin: true },
       { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} />, admin: true },
     ],
   },
@@ -86,6 +87,7 @@ const NAV: NavSection[] = [
       { to: '/sources', label: 'Sources', icon: <Wallet size={I} />, admin: true },
       { to: '/templates', label: 'Campaign Templates', icon: <LayoutTemplate size={I} />, admin: true },
       { to: '/fees', label: 'Methods & Fees', icon: <Percent size={I} />, admin: true },
+      { to: '/receipt-text', label: 'Receipt Text', icon: <FileText size={I} />, admin: true },
       { to: '/payout-methods', label: 'Payout Methods', icon: <Banknote size={I} />, admin: true },
       { to: '/accounts', label: 'Accounts', icon: <Building2 size={I} />, admin: true },
       { to: '/users', label: 'Users & Access', icon: <ShieldCheck size={I} />, admin: true },

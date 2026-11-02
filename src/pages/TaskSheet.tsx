@@ -11,6 +11,7 @@ import { useQuery } from '../lib/useQuery';
 import { SplitDialog } from './DonationActions';
 import { BookingActions } from './Machines';
 import { ApprovePayout, ProcessScheduled } from './Payouts';
+import { printReceipts } from './Receipts';
 import { Overlay, PledgeDialog } from './Pledges';
 import { RequestDecision } from './Requests';
 import { VoucherDialog } from './Vouchers';
@@ -32,6 +33,8 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   machine_booking: { label: 'Machine Request', tone: 'blue' },
   payout_request: { label: 'Payout Request', tone: 'violet' },
   scheduled_payout: { label: 'Scheduled Payout Due', tone: 'amber' },
+  receipt_text_missing: { label: 'Receipt Text Not Set Up', tone: 'amber' },
+  receipt_reissue: { label: 'Corrected Receipt Needed', tone: 'red' },
 };
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
@@ -214,6 +217,8 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       )}
       {item.task_type === 'machine_booking' && <MachineRequest item={item} onAct={act} />}
       {item.task_type === 'payout_request' && <ApprovePayout requestId={item.record_id} onAct={act} />}
+      {item.task_type === 'receipt_text_missing' && <p><Link to="/receipt-text">Set up the receipt text</Link>. This leaves the sheet once it is saved.</p>}
+      {item.task_type === 'receipt_reissue' && <ReissueReceipt receiptId={item.record_id} onAct={act} />}
       {item.task_type === 'scheduled_payout' && <ProcessScheduled payoutId={item.record_id} onAct={act} />}
       {item.task_type === 'bank_reassign' && (
         <p className="muted">Open the campaign and choose another bank account, or clear it to use the default. This leaves the sheet once that's done.</p>
@@ -231,6 +236,19 @@ function MachineRequest({ item, onAct }: { item: Row; onAct: (call: PromiseLike<
       <p className="muted small">Number {b.queue_position} in line that day{b.notes ? ` · ${b.notes}` : ''}. <Link to="/calendar">See the calendar</Link></p>
       <BookingActions booking={b} onAct={onAct} />
     </>
+  );
+}
+
+function ReissueReceipt({ receiptId, onAct }: { receiptId: string; onAct: (call: PromiseLike<{ error: { message: string } | null }>, action: string, note?: string | null) => void }) {
+  const q = useQuery(async () => (await supabase.from('receipts').select('donation_id, receipt_number').eq('id', receiptId).maybeSingle()).data as Row | null, [receiptId]);
+  if (!q.data) return null;
+  return (
+    <div className="panel-box">
+      <p className="muted small">Issue a new receipt for the donation as it is now. It prints straight away.</p>
+      <div className="form-actions"><div className="spacer" />
+        <button type="button" className="btn primary" onClick={() => onAct(supabase.rpc('issue_receipt', { p_donation: q.data!.donation_id }).then(async r => { if (!r.error) await printReceipts([r.data as string]); return r; }), 'reissued')}>Issue corrected receipt</button>
+      </div>
+    </div>
   );
 }
 

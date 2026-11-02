@@ -7,6 +7,7 @@ import { money } from '../lib/format';
 import { accountOptions, clearLookups, paymentMethodIdOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { ReceiptTextCard } from './Receipts';
 
 const LANGUAGES = [['en', 'English'], ['he', 'Hebrew'], ['yi', 'Yiddish']];
 const FIELD_TYPES = [['text', 'Text'], ['number', 'Number'], ['date', 'Date'], ['dropdown', 'Dropdown'], ['checkbox', 'Checkbox']];
@@ -253,6 +254,7 @@ export function CampaignSettingsTab({ campaignId }: { campaignId: string }) {
   return (
     <div className="table-card pad">
       <div key={q.data?.updated_at ?? 'new'}><SettingsFields value={settings} onChange={setSettings} /></div>
+      <ReceiptTextCard level="campaign" refId={campaignId} title="Receipt text for this campaign" />
       {message && <div className="notice">{message}</div>}
       {error && <div className="error">{error}</div>}
       <div className="form-actions">
