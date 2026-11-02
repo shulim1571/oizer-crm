@@ -160,6 +160,9 @@ input:focus, select:focus, textarea:focus {
 .progress > div { height: 100%; background: var(--accent); }
 .inline-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
 .nav-count { margin-left: auto; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; line-height: 20px; text-align: center; }
+.check-row { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 8px 0; }
+.custom-field-row { display: grid; grid-template-columns: 1fr 140px auto auto auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
 .session-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .splash { display: grid; place-items: center; height: 100%; color: var(--muted); }
 .splash .logo { animation: pulse 1.2s ease-in-out infinite; }

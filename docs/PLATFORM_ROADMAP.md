@@ -141,8 +141,8 @@ detection, unattributed payments, sub-campaigns, transfers, bank accounts and ro
 ### Phase 5: Workflow (L)
 Being built in parts. Part 1 is on staging: the Admin Task Sheet, campaign requests and team requests. The sheet covers the
 types whose features exist so far; payout, delivery failure, receipt, machine, recurring and reconciliation items arrive with
-those phases, and its emails with Phase 7. Part 2 is templates, fundraiser tasks and call lists; part 3 is donor lookup, the
-contact log, merging and dashboards.
+those phases, and its emails with Phase 7. Part 2 is on staging too: templates, private fundraiser tasks and call lists. Template page settings take effect with the
+payment pages in Phase 8, and due-today reminders with Phase 7. Part 3 is donor lookup, the contact log, merging and dashboards.
 Admin Task Sheet with all task types, campaign requests and templates, fundraiser tasks and call lists, donor contact
 log, donor merge, duplicate flags, dashboards and balance summary, inactive-campaign flags, Jewish calendar with
 Shabbos and Yom Tov warnings, machine registry, assignment history and booking.

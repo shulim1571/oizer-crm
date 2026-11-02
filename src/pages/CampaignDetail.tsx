@@ -21,8 +21,9 @@ import { NewVoucherButton, VoucherDialog, voucherColumns } from './Vouchers';
 import { ChangeModeDialog, SubCampaignsTab, modeLabel } from './SubCampaigns';
 import { TRANSFER_SELECT, TransferDialog, transferColumns } from './Transfers';
 import { RequestTeamDialog } from './Requests';
+import { CampaignSettingsTab } from './Templates';
 
-type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers' | 'sub-campaigns';
+type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers' | 'sub-campaigns' | 'settings';
 
 export default function CampaignDetail() {
   const { id = '' } = useParams();
@@ -79,6 +80,7 @@ export default function CampaignDetail() {
       case 'pledges':
         return page((a, b) => supabase.from('pledge_list').select('*').eq('campaign_id', id).order('date_pledged', { ascending: false }).range(a, b));
       case 'sub-campaigns':
+      case 'settings':
         return [];
       case 'vouchers':
         return page((a, b) => supabase.from('voucher_list').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
@@ -93,7 +95,7 @@ export default function CampaignDetail() {
   const combines = Number(c.combined_raised) !== Number(c.raised);
   const canAddSub = c.status !== 'closed' && isPrimary;
   // Fundraisers have no view of transfers, and a sub-campaign fundraiser's page stays on their own numbers.
-  const tabs: Tab[] = ['donations', 'expenses', ...(isAdmin ? ['transfers' as Tab] : []), 'tasks', 'pledges', 'vouchers', 'sub-campaigns'];
+  const tabs: Tab[] = ['donations', 'expenses', ...(isAdmin ? ['transfers' as Tab] : []), 'tasks', 'pledges', 'vouchers', 'sub-campaigns', ...(isPrimary ? ['settings' as Tab] : [])];
   const canEditTasks = canWork;
   const setStatus = async (status: string, question: string) => {
     if (!confirm(question)) return;
@@ -133,6 +135,11 @@ export default function CampaignDetail() {
       edit: isAdmin && { table: 'transfers', title: 'Edit memo', fields: transferEditFields },
     },
     'sub-campaigns': {
+      columns: [],
+      add: false as const,
+      edit: false as const,
+    },
+    settings: {
       columns: [],
       add: false as const,
       edit: false as const,
@@ -246,7 +253,7 @@ export default function CampaignDetail() {
         ))}
       </div>
 
-      {tab === 'sub-campaigns' ? <SubCampaignsTab parent={c} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
+      {tab === 'settings' ? <CampaignSettingsTab campaignId={id} /> : tab === 'sub-campaigns' ? <SubCampaignsTab parent={c} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
         title={tab[0].toUpperCase() + tab.slice(1)}
         exportName={`${c.id}-${tab}`}
         rows={(rows.data as Row[]) ?? []}

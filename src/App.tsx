@@ -20,9 +20,11 @@ import { VouchersPage } from './pages/Vouchers';
 import { TransfersPage } from './pages/Transfers';
 import TaskSheetPage from './pages/TaskSheet';
 import RequestsPage from './pages/Requests';
+import TasksPage from './pages/Tasks';
+import { TemplatesPage } from './pages/Templates';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
-  AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage,
+  AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage,
 } from './pages/SimplePages';
 
 // Read once at startup: reading it clears an error from the address bar.
@@ -113,6 +115,7 @@ export default function App() {
         <Route path="campaigns/:id" element={<CampaignDetail />} />
         <Route path="campaigns/:id/batch" element={<BatchEntry />} />
         <Route path="donations/batch" element={<AdminOnly><BatchEntry /></AdminOnly>} />
+        <Route path="templates" element={<AdminOnly><TemplatesPage /></AdminOnly>} />
         <Route path="fees" element={<AdminOnly><FeesPage /></AdminOnly>} />
         <Route path="donations/new" element={<AdminOnly><NewDonation /></AdminOnly>} />
         <Route path="donations/recent" element={<RecentDonations />} />

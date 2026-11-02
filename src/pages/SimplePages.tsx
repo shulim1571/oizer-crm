@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, yn } from '../lib/format';
 import {
-  accountFields, expenseFields, personFields, sourceFields, taskFields,
+  accountFields, expenseFields, personFields, sourceFields,
 } from '../lib/schemas';
 
 const CAMP = 'id, internal_name, campaign_name, external_name';
@@ -142,28 +142,3 @@ export function CollectorsPage() {
   return <CrudPage title="Collectors" noun="Collector" table="collectors" order={{ column: 'full_name' }} columns={personColumns} fields={personFields} />;
 }
 
-export function TasksPage() {
-  const { canWork } = useAuth();
-  return (
-    <CrudPage
-      title="Tasks" noun="Task"
-      table="tasks"
-      select={`*, campaigns(${CAMP}), donors(display_name)`}
-      order={{ column: 'created_at', ascending: false }}
-      canEdit={canWork}
-      defaults={{ status: 'Pending' }}
-      groupBy={{ label: "Status", value: r => r.status }}
-      columns={[
-        { key: 'title', label: 'Task', width: 200 },
-        { key: 'campaign', label: 'Campaign', value: r => campLabel(r.campaigns), render: r => campLabel(r.campaigns) },
-        { key: 'donor', label: 'Donor', value: r => r.donors?.display_name, render: r => r.donors?.display_name },
-        { key: 'assigned_to', label: 'Assigned to' },
-        { key: "status", label: "Status", render: r => <StatusPill value={r.status} /> },
-        { key: 'due_date', label: 'Due' },
-        { key: 'description', label: 'Description' },
-        { key: 'created_at', label: 'Created', render: r => dateTime(r.created_at) },
-      ]}
-      fields={taskFields}
-    />
-  );
-}

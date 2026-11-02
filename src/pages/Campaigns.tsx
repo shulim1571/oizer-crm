@@ -11,6 +11,7 @@ import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { money, pct } from '../lib/format';
 import { newCampaignFields } from '../lib/schemas';
+import { TemplateStep } from './Templates';
 
 export const campaignColumns: Column[] = [
   {
@@ -46,6 +47,7 @@ export default function Campaigns({ mode }: { mode: Mode }) {
   const { isAdmin } = useAuth();
   const nav = useNavigate();
   const [adding, setAdding] = useState(false);
+  const [choice, setChoice] = useState<{ template: Row | null; settings: Row | null } | null>(null);
 
   const { data, error, loading } = useQuery(
     () => fetchAll((a, b) => {
@@ -80,14 +82,19 @@ export default function Campaigns({ mode }: { mode: Mode }) {
           <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New campaign</button>
         )}
       />
-      {adding && (
+      {adding && !choice && <TemplateStep onClose={() => setAdding(false)} onNext={setChoice} />}
+      {adding && choice && (
         <RecordForm
           table="campaigns"
-          title="New Campaign"
+          title={choice.template ? `New campaign from ${choice.template.name}` : 'New Campaign'}
           fields={newCampaignFields}
-          defaults={{ status: 'active' }}
-          onClose={() => setAdding(false)}
-          onSaved={r => nav(`/campaigns/${encodeURIComponent(r.id)}`)}
+          defaults={{ status: 'active', account_id: choice.template?.account_id ?? undefined }}
+          onClose={() => { setAdding(false); setChoice(null); }}
+          onSaved={async r => {
+            const { error: e } = await supabase.rpc('save_campaign_settings', { p_campaign: r.id, p_settings: choice.settings, p_template: choice.template?.id ?? null });
+            if (e) alert(`The campaign was created, but its page settings weren't saved: ${e.message}`);
+            nav(`/campaigns/${encodeURIComponent(r.id)}`);
+          }}
         />
       )}
     </>

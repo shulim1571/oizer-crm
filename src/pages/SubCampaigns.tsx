@@ -61,14 +61,23 @@ function AddSubDialog({ parent, onClose, onDone }: { parent: Row; onClose: () =>
   const [goal, setGoal] = useState('');
   const [manager, setManager] = useState<string | null>(null);
   const [managers, setManagers] = useState<Option[]>([]);
+  const [template, setTemplate] = useState('');
+  const [templates, setTemplates] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { managerOptions().then(setManagers); }, []);
+  useEffect(() => {
+    managerOptions().then(setManagers);
+    supabase.from('campaign_templates').select('id, name').order('name').then(({ data }) => setTemplates((data ?? []) as Row[]));
+  }, []);
 
   async function save() {
     setBusy(true);
     setError(null);
-    const { error: e } = await supabase.rpc('add_sub_campaign', { p_parent: parent.id, p_name: name, p_mode: mode, p_goal: goal ? Number(goal) : null, p_manager: manager });
+    const { data, error: e } = await supabase.rpc('add_sub_campaign', { p_parent: parent.id, p_name: name, p_mode: mode, p_goal: goal ? Number(goal) : null, p_manager: manager });
+    if (!e && template) {
+      const { error: t } = await supabase.rpc('save_campaign_settings', { p_campaign: data, p_settings: null, p_template: template });
+      if (t) alert(`The sub-campaign was created, but the template wasn't applied: ${t.message}`);
+    }
     setBusy(false);
     if (e) return setError(e.message);
     clearLookups();
@@ -85,6 +94,14 @@ function AddSubDialog({ parent, onClose, onDone }: { parent: Row; onClose: () =>
         </label>
         <p className="muted small">{MODES.find(m => m.value === mode)?.help}</p>
         <label className="field"><span>Goal</span><input type="number" step="0.01" min="0" value={goal} onChange={e => setGoal(e.target.value)} /></label>
+        {templates.length > 0 && (
+          <label className="field"><span>Start from</span>
+            <select value={template} onChange={e => setTemplate(e.target.value)}>
+              <option value="">Parent's settings</option>
+              {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </label>
+        )}
         <label className="field"><span>Fundraiser</span><SearchSelect value={manager} options={managers} onChange={setManager} placeholder="Optional…" /></label>
         <p className="muted small">Fees and the bank account follow the parent unless you set them on the sub-campaign later.</p>
         {error && <div className="error">{error}</div>}

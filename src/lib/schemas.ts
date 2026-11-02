@@ -122,6 +122,12 @@ export const voucherFields: Field[] = [
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 
+/** Admins can also make a task on a fundraiser's behalf, which then belongs to that fundraiser. */
+export const adminTaskFields = (): Field[] => [
+  ...taskFields,
+  { name: 'owner_manager_id', label: 'For fundraiser', type: 'search', options: managerOptions, help: 'Empty keeps it shared on the campaign' },
+];
+
 export const expenseFields: Field[] = [
   { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },
   { name: 'payee', label: 'To' },
@@ -191,7 +197,7 @@ export const accountFields: Field[] = [
 
 export const taskFields: Field[] = [
   { name: 'title', label: 'Task', required: true },
-  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },
+  { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, create: create.campaign },
   { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, create: create.donor },
   { name: 'assigned_to', label: 'Assigned to' },
   { name: 'status', label: 'Status', type: 'select', options: TASK_STATUSES, required: true },
