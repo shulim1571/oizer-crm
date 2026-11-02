@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Archive, ArrowLeftRight, Banknote, BookUser, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent,
+  Archive, ArrowLeftRight, Banknote, BookUser, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent, Printer,
   PlusCircle, Receipt, RefreshCw, Repeat, Scale, Send, Smartphone, Ticket, Search, ShieldCheck, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -55,6 +55,7 @@ const NAV: NavSection[] = [
       { to: '/pledges', label: 'Pledges', icon: <Handshake size={I} /> },
       { to: '/expenses', label: 'Payouts', icon: <Receipt size={I} /> },
       { to: '/payout-requests', label: 'Payout Requests', icon: <Send size={I} /> },
+      { to: '/checks', label: 'Check Register', icon: <Printer size={I} />, admin: true },
       { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} />, admin: true },
     ],
   },

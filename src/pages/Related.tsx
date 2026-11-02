@@ -10,6 +10,7 @@ import { campLabel } from '../components/CrudPage';
 import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { CheckSettingsCard } from './Checks';
 import { dateTime, money, yn } from '../lib/format';
 import { accountFields, personFields, sourceFields } from '../lib/schemas';
 import { STATUS_LABEL, campaignColumns } from './Campaigns';
@@ -110,9 +111,10 @@ export function AccountDetail() {
         <Kpi label="Net" value={<Balance value={d.donations_total - d.expenses_total} />} icon={<Scale size={18} />} tone="violet" />
         <Kpi label="Uncleared checks" value={money(d.uncleared_total)} icon={<AlertCircle size={18} />} tone="red" />
       </div>
+      <CheckSettingsCard accountId={d.id} />
       <div className="tabs">
         <button className={tab === 'donations' ? 'active' : ''} onClick={() => setTab('donations')}>Donations</button>
-        <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}>Expenses</button>
+        <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}>Payouts</button>
       </div>
       {tab === 'donations'
         ? <PagedDonations title="Donations into this account" filter={{ column: 'account_id', value: d.id }} />
