@@ -216,8 +216,32 @@ their donation alerts. The Task Sheet is read as one of the organization's admin
 Still to come in Phase 7: automatic receipts (they need the receipt page drawn on the server), recurring-donation notices
 with Phase 8, and message alerts with part 4.
 
-Parts 3 and 4 haven't started:
-- Part 3: payment link sharing and Custom Outreach.
+Part 3, sharing and outreach, is built.
+
+**Sharing a campaign's payment link.** The Share button on a campaign is for admins, and for fundraisers on their own
+campaigns. It:
+- copies the link, or gives a button snippet to put on a website
+- emails or texts the link with the organization's check, Zelle and EIN details, plus an optional message above or
+  below them
+- shows the campaign's share history
+
+The link comes from the campaign's Payment Link field until the payment pages arrive in Phase 8.
+
+**Custom Outreach** is admin only:
+- recipients are picked donors and fundraisers, groups (a campaign's donors, all donors, all fundraisers, primaries), or
+  typed addresses, which aren't saved
+- sent by email, text or both, with `{first_name}`, `{last_name}` and `{campaign_name}` filled in per person
+- **bold**, *italic* and links in email, a preview per recipient, an optional PDF attachment, and scheduling with cancel
+- saved templates
+- a history showing delivery, opens and clicks per recipient and per send
+
+**Both are marketing sends, so they carry opt-outs:**
+- Every email has an unsubscribe link, the organization's address, and a List-Unsubscribe header. Every text ends
+  "Reply STOP to opt out."
+- Unsubscribing stops only marketing email; receipts and notifications still go. SendGrid unsubscribes and spam reports
+  count as unsubscribes too.
+
+Part 4 hasn't started:
 - Part 4: internal messaging.
 
 ### Phase 8: Public payment pages and cards (XL, needs vendors)

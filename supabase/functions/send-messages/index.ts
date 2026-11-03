@@ -12,6 +12,7 @@ interface Message {
   org_id: string; id: string; channel: 'email' | 'sms'; to_address: string; to_name: string | null;
   subject: string | null; body: string; html: string | null; kind: string;
   from_name: string; from_email: string; reply_to: string | null; sms_from: string | null;
+  unsubscribe_url: string | null; attachment_name: string | null; attachment: string | null;
 }
 interface Result { ok: boolean; providerId?: string; error?: string; optedOut?: boolean }
 
@@ -41,6 +42,9 @@ async function sendEmail(m: Message): Promise<Result> {
       ...(m.reply_to ? { reply_to: { email: m.reply_to } } : {}),
       subject: m.subject ?? m.from_name,
       content: [{ type: 'text/plain', value: m.body }, ...(m.html ? [{ type: 'text/html', value: m.html }] : [])],
+      // Marketing email: mail apps show their own unsubscribe button from this header.
+      ...(m.unsubscribe_url ? { headers: { 'List-Unsubscribe': `<${m.unsubscribe_url}>` } } : {}),
+      ...(m.attachment ? { attachments: [{ content: m.attachment, filename: m.attachment_name ?? 'attachment.pdf', type: 'application/pdf', disposition: 'attachment' }] } : {}),
       tracking_settings: { click_tracking: { enable: track, enable_text: false }, open_tracking: { enable: track } },
     }),
   });

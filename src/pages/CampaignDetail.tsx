@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Clock, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Star, StickyNote, TrendingUp,
+  ArrowLeft, Clock, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Share2, Star, StickyNote, TrendingUp,
 } from 'lucide-react';
+import { ShareDialog } from './Outreach';
 import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
 import Kpi from '../components/Kpi';
@@ -42,6 +43,7 @@ export default function CampaignDetail() {
   const [transferStart, setTransferStart] = useState<Row | null>(null);
   const [changingMode, setChangingMode] = useState(false);
   const [requestingTeam, setRequestingTeam] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [reporting, setReporting] = useState<'report' | 'donors' | 'contacts' | null>(null);
   const [canRequestPayout, setCanRequestPayout] = useState(false);
@@ -210,6 +212,7 @@ export default function CampaignDetail() {
         {c.payment_link && (
           <a className="btn" href={c.payment_link} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>
         )}
+        {canWork && c.status !== 'closed' && <button className="btn" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>}
         {canEnter && c.status !== 'closed' && <Link className="btn" to={`/campaigns/${encodeURIComponent(id)}/batch`}>Batch entry</Link>}
         {isAdmin && c.status === 'draft' && (
           <button className="btn" onClick={() => setStatus('active', 'Publish this campaign?')}>Publish</button>
@@ -302,6 +305,7 @@ export default function CampaignDetail() {
       {reporting === 'donors' && <DonorListDialog campaign={c} onClose={() => setReporting(null)} />}
       {reporting === 'contacts' && <ContactImportDialog campaignId={id} onClose={() => setReporting(null)} />}
       {requestingTeam && <RequestTeamDialog campaignId={id} onClose={() => setRequestingTeam(false)} />}
+      {sharing && <ShareDialog campaign={c} onClose={() => setSharing(false)} />}
       {changingMode && <ChangeModeDialog campaign={c} onClose={() => setChangingMode(false)} onDone={() => { setChangingMode(false); setVersion(v => v + 1); }} />}
       {openPledge && <PledgeDialog id={openPledge} onClose={() => setOpenPledge(null)} onChanged={() => setVersion(v => v + 1)} />}
       {openVoucher && <VoucherDialog id={openVoucher} onClose={() => setOpenVoucher(null)} onChanged={() => setVersion(v => v + 1)} />}

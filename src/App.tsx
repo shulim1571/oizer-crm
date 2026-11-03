@@ -30,6 +30,7 @@ import { ChecksPage } from './pages/Checks';
 import { ReceiptTextPage, ReceiptsPage } from './pages/Receipts';
 import { MessagesPage, MessagingSettingsPage, SharedDocumentPage } from './pages/Messaging';
 import NotificationsPage from './pages/Notifications';
+import { OutreachHistoryPage, OutreachPage, OutreachTemplatesPage, UnsubscribePage } from './pages/Outreach';
 import { FundraiserDirectoryPage, SourceReportPage } from './pages/Reports';
 import { DataImportPage } from './pages/Imports';
 import { MachineRegistryPage, MachineReportPage, MachinesPage } from './pages/Machines';
@@ -46,6 +47,8 @@ const arrivedWith = readEmailLink();
 
 // A receipt or statement opened from a link in a text: shown without signing in.
 const sharedToken = /^#\/d\/([0-9a-f]{20,})$/.exec(window.location.hash)?.[1] ?? null;
+// The unsubscribe link in a marketing email, also without signing in.
+const unsubscribeToken = /^#\/u\/([0-9a-f]{32})$/.exec(window.location.hash)?.[1] ?? null;
 
 function AdminOnly({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();
@@ -65,6 +68,7 @@ export default function App() {
   }, []);
 
   if (sharedToken) return <SharedDocumentPage token={sharedToken} />;
+  if (unsubscribeToken) return <UnsubscribePage token={unsubscribeToken} />;
   if (loading) return <div className="splash"><div className="logo">O</div></div>;
   if (emailLink.tokenHash && emailLink.type) {
     return (
@@ -157,6 +161,9 @@ export default function App() {
         <Route path="fundraiser-directory" element={<AdminOnly><FundraiserDirectoryPage /></AdminOnly>} />
         <Route path="data-import" element={<AdminOnly><DataImportPage /></AdminOnly>} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="outreach" element={<AdminOnly><OutreachPage /></AdminOnly>} />
+        <Route path="outreach/history" element={<AdminOnly><OutreachHistoryPage /></AdminOnly>} />
+        <Route path="outreach/templates" element={<AdminOnly><OutreachTemplatesPage /></AdminOnly>} />
         <Route path="messages" element={<AdminOnly><MessagesPage /></AdminOnly>} />
         <Route path="messaging-settings" element={<AdminOnly><MessagingSettingsPage /></AdminOnly>} />
         <Route path="receipt-text"element={<AdminOnly><ReceiptTextPage /></AdminOnly>} />

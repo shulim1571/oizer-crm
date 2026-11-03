@@ -62,6 +62,14 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    title: 'Outreach',
+    items: [
+      { to: '/outreach', label: 'New Message', icon: <Send size={I} />, admin: true },
+      { to: '/outreach/history', label: 'Outreach History', icon: <History size={I} />, admin: true },
+      { to: '/outreach/templates', label: 'Outreach Templates', icon: <FileText size={I} />, admin: true },
+    ],
+  },
+  {
     title: 'Machines',
     items: [
       { to: '/machines', label: 'Machine Bookings', icon: <CreditCard size={I} /> },
