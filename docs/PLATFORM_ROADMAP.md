@@ -4,14 +4,16 @@ Plan for growing the Oizer CRM into the multi-tenant platform described in the C
 spec (v1.0, June 2026). The spec itself is not committed here because it contains credentials (see
 [Before anything else](#before-anything-else)).
 
-Status: Phases 0, 1, 2 and 3 are on the staging project ("Oizer DRM" in the Trubase Live org), which holds only test data.
-None of them is on the live `oizer-crm` project. Later phases haven't started.
+Status: Phases 0 to 6 are live. On 2026-11-02 the "Oizer DRM" project (`wwaknikpdquwnphhwzsm`, Trubase Live org),
+until then staging, became production, served from Cloudflare Pages (`oizer-drm`). The old `oizer-crm` project and
+GitHub Pages site are retired. It still holds test data; the real data is reimported once the final version is ready.
+Phases 7 to 10 haven't started.
 
 Still open for Phase 1:
 - Supabase's built-in email only reaches the project's team members, a few messages an hour. Inviting anyone else needs
   a custom email provider, which Phase 7 sets up and which sign-ups need sooner on the live project.
-- Per-organization subdomains need the move off GitHub Pages (decision 2). Organizations can already be reached by a
-  mapped hostname or `?org=slug`.
+- Per-organization subdomains: the front end is now on Cloudflare Pages (decision 2), so each one is a custom domain
+  on the `oizer-drm` project plus a row in `org_domains`. Organizations can already be reached by `?org=slug`.
 - Feature switches are stored per organization, but no screen uses them until those features exist.
 
 Limits to know about:

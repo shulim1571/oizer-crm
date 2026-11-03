@@ -73,12 +73,10 @@ npm run dev
 
 ## Deploying
 
-The build output (`dist/`) is a static site, so any static host works:
-
-- **Netlify / Vercel / Cloudflare Pages:** import this GitHub repo, build command `npm run build`, output `dist`,
-  and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-- **GitHub Pages (current):** live at https://oizer.trubase.org (CNAME → `shulim1571.github.io`). Run the
-  *Deploy to GitHub Pages* workflow to publish changes.
+The site is hosted on Cloudflare Pages (project `oizer-drm`, https://oizer-drm.pages.dev) against the Supabase
+project `wwaknikpdquwnphhwzsm` ("Oizer DRM"). `npm run deploy` builds with `.env.production` and publishes `dist/`;
+sign in once with `npx.cmd wrangler login` (in PowerShell, plain `npx` is blocked by the script policy).
+`public/_headers` sets `noindex` and the security headers. The old project `poymxghhjisendozqgkm` is retired.
 
 After deploying, add the site URL in Supabase → Authentication → URL Configuration (Site URL and Redirect URLs),
 so confirmation and password-reset emails link back to it.
