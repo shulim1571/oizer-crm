@@ -70,7 +70,7 @@ These change the build, so they need an answer before the phase noted.
 | 1 | The spec lets one email hold separate accounts in different orgs. Supabase Auth keeps one user per email. | Built this way: one login with a membership per org; the URL picks the org. People in two orgs share a password, which departs slightly from the spec. | Phase 1 |
 | 2 | The spec names AWS/GCP/Azure, Redis and S3. | Stay on Supabase (Postgres, Auth, Storage, Edge Functions) and move the front end to Cloudflare Pages, which the spec requires in front of payment pages anyway. GitHub Pages cannot do per-org subdomains or custom headers. Confirm Supabase's uptime terms meet the 99.9% requirement. | Phase 1 |
 | 3 | A separate staging Supabase project, which is an added cost. | Required. Multi-tenant RLS must not be developed against live donor data. | Phase 0 |
-| 4 | Which legal entity holds vendor contracts. The spec leaves the Platform Owner undecided but also names "Success Systems". | Decide before signing USAePay, Twilio, Plaid and email contracts. | Phase 7 |
+| 4 | Which legal entity holds vendor contracts. The spec leaves the Platform Owner undecided but also names "Success Systems". | Decide before signing Sola, Twilio, Plaid and email contracts. | Phase 7 |
 | 5 | `Exchange` campaigns and `Collect` donations exist today but not in the spec. | Both kept: 26 Exchange campaigns stay flagged, and 41 Collect donations became the status `collect`. Tell us if either should change. | Phase 2 |
 | 6 | Today's `Batch` donations look like vouchers (batch/voucher number, funded, pending). The spec's "Batch Entry" means something different. | Migrate them to voucher records, after checking a sample with whoever enters them. | Phase 4 |
 
@@ -88,7 +88,7 @@ The plan follows the right-hand column unless told otherwise.
 | Fees on receipts | "Shown transparently on the receipt" vs. "never shown" | Gross amount only |
 | Transfers | "Fundraisers have no visibility" vs. "appears in both campaigns' history" | Fundraisers see an "Internal transfer" line with the amount only, so their balance still adds up |
 | Donor access | "Own campaigns only" and "No access" vs. full-database lookup | Lookup across the org, history limited to own campaigns, no database screen |
-| Recurring | Changelog says USAePay recurring billing vs. the body's own engine | Own engine |
+| Recurring | Changelog says processor recurring billing (USAePay, now Sola) vs. the body's own engine | Own engine; Sola's Recurring API as fallback |
 | Refund of a split leg | "Balance gains back the net" vs. net removed elsewhere | Net is removed from the campaign balance |
 | Timezone | "System timezone: Eastern" vs. per-org configuration | Per-org setting, defaulting to Eastern |
 
@@ -265,11 +265,65 @@ Part 4, internal messaging, is built. Under Messages:
 Phase 7 is complete apart from automatic receipts.
 
 ### Phase 8: Public payment pages and cards (XL, needs vendors)
-Public pages per campaign in English, Hebrew and Yiddish, Pay.js card capture, Turnstile, Cloudflare rate limits,
-cover-the-fee, custom fields, donor wall, thank-you page, embeddable widget, saved cards, gateway void and refund,
-recurring engine with retries.
-**Needs:** USAePay merchant account and sandbox, plus a PCI scope review. Admin and IVR card entry bring card data
-server-side under the spec as written; using Pay.js for admin entry would reduce that.
+Public pages per campaign in English, Hebrew and Yiddish, Turnstile, Cloudflare rate limits, cover-the-fee, custom
+fields, donor wall, thank-you page, embeddable widget, saved cards, gateway void and refund, and the recurring engine
+with retries.
+
+**Processor: Sola Payments, not USAePay.** The owner decided this on 2026-11-02. Sola is the former Cardknox, so its API
+hosts are on cardknox.com. Each organization has its own Sola account and keys:
+- **Keys:** the **iFields key** is public and safe in the browser, so it's stored plainly. The **API key** (`xKey`)
+  must stay on the server; it's stored encrypted, like payee bank details, and only the payments Edge Function reads it.
+  Each organization enters its own keys on a Payments settings screen.
+- **Sandbox or production:** the key decides which, so the screen marks keys as sandbox for labels and 3-D Secure's
+  staging mode.
+- **Card capture:** iFields (`cdn.cardknox.com/ifields/<version>/ifields.min.js`) for both the public page and admin
+  entry. Card number and CVV go straight from the browser to Sola as single-use tokens, so card data never reaches our
+  server. That should keep us out of PCI scope (likely SAQ A, to be confirmed with Sola), and it removes the old
+  concern about admin entry.
+- **Charging:** a payments Edge Function posts to `https://x1.cardknox.com/gatewayjson` with the organization's
+  `xKey`, `xVersion` 5.0.0 and these commands:
+  - `cc:sale`
+  - `cc:void`, `cc:refund` and `cc:voidrefund`
+  - `cc:save`
+  - `check:*` for ACH
+  
+  Each charge gets a unique `xInvoice`, so Sola's duplicate block protects against double submits.
+- **Saved cards:** each card is stored on the donor as Sola's `xToken`, which never includes the CVV, and charged
+  later with `cc:sale` plus `xToken`.
+- **Recurring:** keeps our own engine, as decided earlier: scheduled `cc:sale` with the saved token, retried after 3
+  and then 7 days. Sola's Recurring API (it has a Hebrew-calendar option) stays a fallback.
+- **Webhooks:** each organization points Sola's webhook at our function, with a PIN of 15 or more characters, and we
+  check the `ck-signature` MD5. Sola tries once and doesn't retry, so the webhook only confirms; our own response
+  handling is the record.
+- **Cover-the-fee:** we add the fee to `xAmount` ourselves, since Sola documents no surcharge field.
+- **Testing:** use Sola's test cards (Visa 4111 1111 1111 1111). Amount 9.91 declines, 9.92 returns a gateway error,
+  and CVV 222 fails the CVV check.
+
+Planned parts:
+1. Payments settings and admin card entry: keys, charge a card on New Donation, void and refund at the gateway, saved
+   cards on the donor, webhook receiver.
+
+   **Built.** The Super Admin enters the keys under Settings → Payments. The API key and webhook PIN are encrypted with
+   the Vault key `payment_keys_key`.
+   - **Charging:** "Charge a card" on New Donation and on the donor's Cards panel uses iFields 3.5.2607.1401. Each
+     attempt is a `gateway_transactions` row. The `payments` Edge Function checks the admin through the database as
+     them, reads the key, calls Sola and records the answer as that admin.
+   - **Results:** an approval becomes a completed Credit Card donation with Sola's reference in `gateway_id`. A decline
+     becomes a `failed` donation that doesn't count.
+   - **Voids and refunds:** "Void at Sola" and "Refund at Sola" on a card donation; refunds are full only.
+   - **Saved cards:** stored encrypted in `donor_cards`.
+   - **Webhook:** `sola-webhook?org=<id>` checks the PIN signature, logs to `gateway_events` and finishes any charge
+     whose answer was lost.
+   - **Not yet:** ACH (`check:*`), partial refunds, and surcharges.
+2. Public payment pages per campaign in three languages, with Turnstile, cover-the-fee, custom fields, donor wall and
+   thank-you page. A campaign's Payment Link fills in automatically.
+3. Recurring donations: schedules, retries, notices, admin cancel, pause and change.
+4. Embeddable widget, Apple Pay and Google Pay, and 3-D Secure.
+
+**Needs:**
+- each organization's Sola sandbox keys (sign up at solapayments.com/devsdk), and production keys at go-live
+- a Cloudflare Turnstile site key
+- Sola to confirm the PCI SAQ type, and whether its PayFac fee pass-through applies
 
 ### Phase 9: Donary and DAF integrations (L, needs vendors)
 Donary reference APIs and all four webhooks with idempotency. OJC, Matbia, The Donors Fund and Pledger integrations,
@@ -308,7 +362,7 @@ domains, "Powered by" footer.
 | Donor lookup, contact log, merge, dashboards | 5 |
 | Customizable table views | 3 |
 | Sub-campaigns, transfers, bank routing | 4 |
-| Payment processing: USAePay | 8 |
+| Payment processing: Sola Payments (replaces USAePay) | 8 |
 | Payment processing: Donary, DAF platforms | 9 |
 | Payment processing: manual entry, custom methods | 4 |
 | SMS lookup, phone IVR | 10 |

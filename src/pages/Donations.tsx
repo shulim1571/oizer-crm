@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HandCoins, Landmark, Plus, TrendingUp } from 'lucide-react';
+import { CreditCard, HandCoins, Landmark, Plus, TrendingUp } from 'lucide-react';
 import Kpi from '../components/Kpi';
 import DataTable, { parseNumberFilter, sumBadge, type Column, type ServerQuery } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
@@ -12,6 +12,7 @@ import { money } from '../lib/format';
 import { donationFields } from '../lib/schemas';
 import TransactionBulk from './TransactionBulk';
 import { DONATION_KINDS, DONATION_SELECT, donationColumns, donationKind, isLive } from './donationColumns';
+import { CardChargeDialog } from './Payments';
 
 function useDonationEditor(onChange: (row: Row) => void) {
   const { isAdmin } = useAuth();
@@ -283,11 +284,14 @@ export function NewDonation() {
   const nav = useNavigate();
   const [last, setLast] = useState<Row | null>(null);
   const [key, setKey] = useState(0);
+  const [charging, setCharging] = useState(false);
   return (
     <section className="view narrow">
       <div className="view-head">
         <div className="view-title"><h1>New Donation</h1><span className="count">Record a gift against a campaign</span></div>
+        <div className="view-actions"><button type="button" className="btn primary" onClick={() => setCharging(true)}><CreditCard size={15} /> Charge a card</button></div>
       </div>
+      {charging && <CardChargeDialog onClose={() => setCharging(false)} onDone={t => setLast({ amount: t.amount, campaign_id: t.campaign_id })} />}
       {last && (
         <div className="notice">
           Saved {money(last.amount)} to campaign {last.campaign_id}.{' '}

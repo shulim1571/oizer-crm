@@ -102,6 +102,7 @@ const NAV: NavSection[] = [
       { to: '/fees', label: 'Methods & Fees', icon: <Percent size={I} />, admin: true },
       { to: '/receipt-text', label: 'Receipt Text', icon: <FileText size={I} />, admin: true },
       { to: '/messaging-settings', label: 'Messaging', icon: <MessageSquare size={I} />, admin: true },
+      { to: '/payments-settings', label: 'Payments', icon: <CreditCard size={I} />, admin: true },
       { to: '/notifications', label: 'My Notifications', icon: <Bell size={I} /> },
       { to: '/payout-methods', label: 'Payout Methods', icon: <Banknote size={I} />, admin: true },
       { to: '/accounts', label: 'Accounts', icon: <Building2 size={I} />, admin: true },

@@ -4,6 +4,7 @@ import SearchSelect from '../components/SearchSelect';
 import { localToday, money } from '../lib/format';
 import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
 import { supabase, type Row } from '../lib/supabase';
+import { GatewayActions } from './Payments';
 
 const RETURN_REASONS = ['NSF', 'Account Closed', 'Stop Payment', 'Other'];
 const today = () => localToday();
@@ -12,6 +13,8 @@ const today = () => localToday();
 export default function DonationActions({ record, onDone }: { record: Row; onDone: (row: Row) => void }) {
   const [error, setError] = useState<string | null>(null);
   const [splitting, setSplitting] = useState(false);
+  // Charged through Sola: refunds go through Sola too, so the plain "mark refunded" button is hidden.
+  const [viaSola, setViaSola] = useState(false);
   const done = record.status === 'completed' || record.status === 'collect';
   const isCheck = /check/i.test(record.payment_method ?? '');
 
@@ -59,11 +62,12 @@ export default function DonationActions({ record, onDone }: { record: Row; onDon
         <button type="button" className="btn" onClick={() => run(supabase.rpc('mark_duplicate_reviewed', { p_id: record.id }))}>Not a duplicate</button>
       )}
       {done && !record.split_group_id && <button type="button" className="btn" onClick={() => setSplitting(true)}>Split</button>}
-      {done && <button type="button" className="btn" onClick={refund}>Refund</button>}
+      {done && !viaSola && <button type="button" className="btn" onClick={refund}>Refund</button>}
       {done && isCheck && <button type="button" className="btn" onClick={returned}>Returned check</button>}
       <button type="button" className="btn danger" onClick={remove}>Delete</button>
       {error && <div className="error">{error}</div>}
       {splitting && <SplitDialog record={record} onClose={() => setSplitting(false)} onSplit={run} />}
+      {record.gateway_id && <GatewayActions record={record} onDone={() => run(Promise.resolve({ error: null }))} onCharged={setViaSola} />}
     </div>
   );
 }

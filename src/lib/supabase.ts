@@ -9,6 +9,8 @@ if (!url || !key) {
 
 let requestOrg: string | null = null;
 export const setRequestOrg = (id: string | null) => { requestOrg = id; };
+/** The organization data requests are for, for calls that carry it themselves (Edge Functions). */
+export const requestOrgId = () => requestOrg;
 
 // Tells the database which organization a data request is for. The database still checks the
 // signed-in user belongs to it, so this only ever selects, it never grants.
