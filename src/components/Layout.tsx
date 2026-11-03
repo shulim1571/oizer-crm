@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Archive, ArrowLeftRight, Banknote, BookOpen, BookUser, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, FileCheck, FileText, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent, PieChart, Printer,
-  PlusCircle, Receipt, RefreshCw, Repeat, Scale, Send, Smartphone, Ticket, Search, ShieldCheck, Upload, UserCircle, Users, Wallet,
+  Mail, MessageSquare, PlusCircle, Receipt, RefreshCw, Repeat, Scale, Send, Smartphone, Ticket, Search, ShieldCheck, Upload, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
@@ -74,6 +74,7 @@ const NAV: NavSection[] = [
       { to: '/donors', label: 'Donors', icon: <Contact size={I} /> },
       { to: '/payees', label: 'Payees', icon: <BookUser size={I} /> },
       { to: '/task-sheet', label: 'Task Sheet', icon: <ListChecks size={I} />, admin: true },
+      { to: '/messages', label: 'Sent Messages', icon: <Mail size={I} />, admin: true },
       { to: '/requests', label: 'Campaign Requests', icon: <FilePlus size={I} /> },
       { to: '/tasks', label: 'Tasks', icon: <ClipboardCheck size={I} /> },
       { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true },
@@ -90,6 +91,7 @@ const NAV: NavSection[] = [
       { to: '/templates', label: 'Campaign Templates', icon: <LayoutTemplate size={I} />, admin: true },
       { to: '/fees', label: 'Methods & Fees', icon: <Percent size={I} />, admin: true },
       { to: '/receipt-text', label: 'Receipt Text', icon: <FileText size={I} />, admin: true },
+      { to: '/messaging-settings', label: 'Messaging', icon: <MessageSquare size={I} />, admin: true },
       { to: '/payout-methods', label: 'Payout Methods', icon: <Banknote size={I} />, admin: true },
       { to: '/accounts', label: 'Accounts', icon: <Building2 size={I} />, admin: true },
       { to: '/data-import', label: 'Data Import', icon: <Upload size={I} />, admin: true },

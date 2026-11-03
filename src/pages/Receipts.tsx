@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Printer, X } from 'lucide-react';
+import { Printer, Send, X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import { Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
 import { dateTime, localToday, money } from '../lib/format';
 import { campaignOptions, managerOptions, type Option } from '../lib/lookups';
-import { printPages, receiptPage, statementPage, type OrgDetails } from '../lib/receiptHtml';
+import { documentHtml, printPages, receiptPage, statementPage, type OrgDetails } from '../lib/receiptHtml';
+import { SendDocumentDialog } from './Messaging';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
@@ -24,8 +25,8 @@ async function directorSignature() {
   return s ? `data:${s.mime};base64,${s.data}` : null;
 }
 
-/** Prints receipts by id, in the order given. */
-export async function printReceipts(ids: string[]) {
+/** Receipt pages by id, in the order given. */
+async function receiptPages(ids: string[]) {
   const { data, error } = await supabase.from('receipts').select('*').in('id', ids);
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as Row[];
@@ -33,9 +34,22 @@ export async function printReceipts(ids: string[]) {
   const numbers = corrects.length ? (await supabase.from('receipts').select('id, receipt_number').in('id', corrects)).data ?? [] : [];
   const [org, sig] = await Promise.all([orgDetails(), directorSignature()]);
   const byId = new Map(rows.map(r => [r.id, r]));
-  printPages(rows.length === 1 ? rows[0].receipt_number : `${rows.length} receipts`,
-    ids.map(id => byId.get(id)).filter(Boolean).map(r => receiptPage({ ...r!, corrects_number: numbers.find(n => n.id === r!.corrects_id)?.receipt_number }, org, sig)));
+  return {
+    title: rows.length === 1 ? rows[0].receipt_number as string : `${rows.length} receipts`,
+    pages: ids.map(id => byId.get(id)).filter(Boolean).map(r => receiptPage({ ...r!, corrects_number: numbers.find(n => n.id === r!.corrects_id)?.receipt_number }, org, sig)),
+  };
 }
+
+/** Prints receipts by id, in the order given. */
+export async function printReceipts(ids: string[]) {
+  const { title, pages } = await receiptPages(ids);
+  printPages(title, pages);
+}
+
+const receiptDocument = async (id: string) => {
+  const { title, pages } = await receiptPages([id]);
+  return documentHtml(title, pages);
+};
 
 // ---------------------------------------------------------------------------
 // On a donation
@@ -44,6 +58,7 @@ export function ReceiptActions({ donationId }: { donationId: string }) {
   const [version, setVersion] = useState(0);
   const [issuing, setIssuing] = useState(false);
   const [correcting, setCorrecting] = useState<Row | null>(null);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const q = useQuery(async () => (await supabase.from('receipts').select('*').contains('donation_ids', [donationId]).order('issued_at', { ascending: false })).data as Row[], [donationId, version]);
   const list = (q.data as Row[]) ?? [];
@@ -55,6 +70,7 @@ export function ReceiptActions({ donationId }: { donationId: string }) {
         <>
           <span>Receipt <b>{live.receipt_number}</b>{Number(live.amount) !== Number(live.actual_amount) && ` for ${money(live.amount)}`}</span>
           <button type="button" className="btn" onClick={() => printReceipts([live.id]).catch(e => setError(e.message))}><Printer size={15} /> Print receipt</button>
+          <button type="button" className="btn" onClick={() => setSending(true)}><Send size={15} /> Send receipt</button>
           <button type="button" className="btn" onClick={() => setCorrecting(live)}>Void & Correct</button>
         </>
       ) : (
@@ -64,6 +80,10 @@ export function ReceiptActions({ donationId }: { donationId: string }) {
       {error && <div className="error">{error}</div>}
       {issuing && <IssueReceiptDialog donationId={donationId} onClose={() => setIssuing(false)} onDone={done} />}
       {correcting && <CorrectReceiptDialog receipt={correcting} onClose={() => setCorrecting(null)} onDone={done} />}
+      {sending && live && (
+        <SendDocumentDialog kind="receipt" recordId={live.id} donorId={live.donor_id} campaignId={live.campaign_id} title={live.receipt_number}
+          build={() => receiptDocument(live.id)} onClose={() => setSending(false)} />
+      )}
     </div>
   );
 }
@@ -414,12 +434,27 @@ function StatementDialog({ donor, onClose, onDone }: { donor: Row; onClose: () =
     supabase.rpc('statement_items', args).then(({ data, error: e }) => (e ? setError(e.message) : setItems((data ?? []) as Row[])));
   }, [year, scope, campaigns.join(','), manager]); // eslint-disable-line react-hooks/exhaustive-deps
   const scopeText = scope === 'all' ? 'All campaigns' : scope === 'fundraiser' ? `Campaigns of ${managerOpts.find(m => m.value === manager)?.label ?? ''}` : `Campaigns ${campaigns.join(', ')}`;
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const title = `Statement ${year} ${donor.display_name}`;
   async function print() {
     setError(null);
     const { error: e } = await supabase.rpc('log_tax_statement', args);
     if (e) return setError(e.message);
-    printPages(`Statement ${year} ${donor.display_name}`, [statementPage({ donor, year, items: items ?? [], scope: scopeText }, await orgDetails())]);
+    printPages(title, [statementPage({ donor, year, items: items ?? [], scope: scopeText }, await orgDetails())]);
     onDone();
+  }
+  async function send() {
+    setError(null);
+    const { data, error: e } = await supabase.rpc('log_tax_statement', args);
+    if (e) return setError(e.message);
+    setSendingId(data as string);
+  }
+  if (sendingId) {
+    return (
+      <SendDocumentDialog kind="statement" recordId={sendingId} donorId={donor.id} title={`${year} giving statement`}
+        build={async () => documentHtml(title, [statementPage({ donor, year, items: items ?? [], scope: scopeText }, await orgDetails())])}
+        onClose={onDone} />
+    );
   }
   return (
     <Overlay onClose={onClose}>
@@ -454,6 +489,7 @@ function StatementDialog({ donor, onClose, onDone }: { donor: Row; onClose: () =
       <p className="muted small">DAF grants and vouchers are left out; the DAF sends the donor its own paperwork. Each statement printed is logged on the donor for good.</p>
       {error && <div className="error">{error}</div>}
       <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
+        <button type="button" className="btn" disabled={!items || (scope === 'fundraiser' && !manager)} onClick={send}><Send size={15} /> Send statement</button>
         <button type="button" className="btn primary" disabled={!items || (scope === 'fundraiser' && !manager)} onClick={print}><Printer size={15} /> Print statement</button></div>
     </Overlay>
   );

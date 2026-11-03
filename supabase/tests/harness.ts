@@ -49,6 +49,11 @@ const SUPABASE_STUB = `
   create function vault.create_secret(new_secret text, new_name text, new_description text default '') returns uuid language sql as
     $$ insert into vault.secrets (name, description, secret) values (new_name, new_description, new_secret) returning id $$;
 
+  create schema net;
+  create table net.requests (id bigint generated always as identity, url text, headers jsonb, body jsonb);
+  create function net.http_post(url text, headers jsonb default '{}', body jsonb default '{}') returns bigint language sql as
+    $$ insert into net.requests (url, headers, body) values (url, headers, body) returning id $$;
+
   create schema cron;
   create table cron.job (jobname text primary key, schedule text, command text);
   create function cron.schedule(name text, schedule text, command text) returns bigint language sql as

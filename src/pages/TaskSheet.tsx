@@ -13,6 +13,7 @@ import { BookingActions } from './Machines';
 import { ApprovePayout, ProcessScheduled } from './Payouts';
 import { printReceipts } from './Receipts';
 import { ImportConflict } from './Imports';
+import { DeliveryFailed } from './Messaging';
 import { Overlay, PledgeDialog } from './Pledges';
 import { RequestDecision } from './Requests';
 import { VoucherDialog } from './Vouchers';
@@ -37,6 +38,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   receipt_text_missing: { label: 'Receipt Text Not Set Up', tone: 'amber' },
   receipt_reissue: { label: 'Corrected Receipt Needed', tone: 'red' },
   import_conflict: { label: 'Import Data Conflict', tone: 'amber' },
+  delivery_failed: { label: 'Delivery Failed', tone: 'red' },
 };
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
@@ -223,6 +225,12 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       {item.task_type === 'import_conflict' && <ImportConflict conflictId={item.record_id} onAct={act} />}
       {item.task_type === 'receipt_reissue' && <ReissueReceipt receiptId={item.record_id} onAct={act} />}
       {item.task_type === 'scheduled_payout' && <ProcessScheduled payoutId={item.record_id} onAct={act} />}
+      {item.task_type === 'delivery_failed' && (
+        <>
+          <DeliveryFailed messageId={item.record_id} onDone={() => { void log('resent').then(onDone); }} />
+          <div className="donation-actions">{dismiss('Handled another way', 'Take this off the sheet? Say how it was handled, for example "called the donor":')}</div>
+        </>
+      )}
       {item.task_type === 'bank_reassign' && (
         <p className="muted">Open the campaign and choose another bank account, or clear it to use the default. This leaves the sheet once that's done.</p>
       )}

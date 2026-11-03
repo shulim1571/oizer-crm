@@ -180,6 +180,22 @@ Email and SMS providers, donation notifications and digests, Delivery Failed han
 with tracking and opt-outs, internal messaging with voice notes, announcements and broadcasts.
 **Needs:** verified sender domain, Twilio account and US A2P SMS registration, which has its own lead time.
 
+Part 1, the sending engine, is built. Every email and text is a row in `messages`. The `send-messages` function hands
+messages to SendGrid and Twilio. It runs as soon as a message is queued, and again every minute; the database calls it
+with a token kept in its Vault. `message-events` records SendGrid's signed event webhook, Twilio's signed status
+reports, and STOP/START replies. A failure becomes one Delivery Failed task per message, with no automatic retry. Each
+organization has Messaging Settings: sender, texting number, test list, and a test mode that holds everything else
+until it is switched off. Receipts and statements can be sent by email (the page itself) or by text (a private link
+valid for a year).
+
+Provider keys are Edge Function secrets the owner enters: `SENDGRID_API_KEY`, `SENDGRID_WEBHOOK_PUBLIC_KEY`,
+`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`. The project's URL is the Vault entry `project_url`.
+
+Parts 2 to 4 haven't started:
+- Part 2: donation notifications, admin notification preferences, digests and other system emails.
+- Part 3: payment link sharing and Custom Outreach.
+- Part 4: internal messaging.
+
 ### Phase 8: Public payment pages and cards (XL, needs vendors)
 Public pages per campaign in English, Hebrew and Yiddish, Pay.js card capture, Turnstile, Cloudflare rate limits,
 cover-the-fee, custom fields, donor wall, thank-you page, embeddable widget, saved cards, gateway void and refund,

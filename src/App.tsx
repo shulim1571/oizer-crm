@@ -28,6 +28,7 @@ import { PayoutMethodsPage, PayoutRequestsPage } from './pages/Payouts';
 import { PayeesPage } from './pages/Payees';
 import { ChecksPage } from './pages/Checks';
 import { ReceiptTextPage, ReceiptsPage } from './pages/Receipts';
+import { MessagesPage, MessagingSettingsPage, SharedDocumentPage } from './pages/Messaging';
 import { FundraiserDirectoryPage, SourceReportPage } from './pages/Reports';
 import { DataImportPage } from './pages/Imports';
 import { MachineRegistryPage, MachineReportPage, MachinesPage } from './pages/Machines';
@@ -41,6 +42,9 @@ const CalendarPage = lazy(() => import('./pages/Calendar'));
 
 // Read once at startup: reading it clears an error from the address bar.
 const arrivedWith = readEmailLink();
+
+// A receipt or statement opened from a link in a text: shown without signing in.
+const sharedToken = /^#\/d\/([0-9a-f]{20,})$/.exec(window.location.hash)?.[1] ?? null;
 
 function AdminOnly({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();
@@ -59,6 +63,7 @@ export default function App() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  if (sharedToken) return <SharedDocumentPage token={sharedToken} />;
   if (loading) return <div className="splash"><div className="logo">O</div></div>;
   if (emailLink.tokenHash && emailLink.type) {
     return (
@@ -150,7 +155,9 @@ export default function App() {
         <Route path="source-report" element={<SourceReportPage />} />
         <Route path="fundraiser-directory" element={<AdminOnly><FundraiserDirectoryPage /></AdminOnly>} />
         <Route path="data-import" element={<AdminOnly><DataImportPage /></AdminOnly>} />
-        <Route path="receipt-text" element={<AdminOnly><ReceiptTextPage /></AdminOnly>} />
+        <Route path="messages" element={<AdminOnly><MessagesPage /></AdminOnly>} />
+        <Route path="messaging-settings" element={<AdminOnly><MessagingSettingsPage /></AdminOnly>} />
+        <Route path="receipt-text"element={<AdminOnly><ReceiptTextPage /></AdminOnly>} />
         <Route path="payout-methods" element={<AdminOnly><PayoutMethodsPage /></AdminOnly>} />
         <Route path="transfers" element={<AdminOnly><TransfersPage /></AdminOnly>} />
         <Route path="sources" element={<AdminOnly><SourcesPage /></AdminOnly>} />
