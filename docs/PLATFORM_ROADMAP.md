@@ -191,8 +191,32 @@ valid for a year).
 Provider keys are Edge Function secrets the owner enters: `SENDGRID_API_KEY`, `SENDGRID_WEBHOOK_PUBLIC_KEY`,
 `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`. The project's URL is the Vault entry `project_url`.
 
-Parts 2 to 4 haven't started:
-- Part 2: donation notifications, admin notification preferences, digests and other system emails.
+Part 2, notifications, is built. The `run_notifications` job runs every minute and handles:
+- **Donation alerts:** sent to the campaign's fundraisers and to the parent campaign's primary. Donary machine payments,
+  opening balances and imported rows are left out.
+- **Refund and returned-check alerts:** sent only to the team of the campaign whose money went back.
+- **Admin donation alerts:** each admin chooses all donations, those at or over an amount, or none, on all or chosen
+  campaigns.
+- **New Task Sheet items:** sent right away. Payout requests follow each admin's own payout setting.
+
+Timed emails go out in each organization's own time zone:
+- **8 AM:** a digest of Task Sheet items waiting a day or more, the admin donation digest (daily, or weekly on Sunday), and
+  each fundraiser's tasks due today.
+- **Sunday:** digests of open pledges and open vouchers.
+- **At `machine_digest_time`:** each campaign's machine-by-machine summary.
+
+These are sent as they happen, by triggers:
+- decisions on campaign, team and payout requests
+- team additions (to the person added and to the primary)
+- machine booking confirmations with the person's place in line, and later status changes
+
+Everyone sets their own choices under My Notifications: email, text or both for each kind. Fundraisers can't turn off
+their donation alerts. The Task Sheet is read as one of the organization's admins would see it.
+
+Still to come in Phase 7: automatic receipts (they need the receipt page drawn on the server), recurring-donation notices
+with Phase 8, and message alerts with part 4.
+
+Parts 3 and 4 haven't started:
 - Part 3: payment link sharing and Custom Outreach.
 - Part 4: internal messaging.
 

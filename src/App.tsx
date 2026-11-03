@@ -29,6 +29,7 @@ import { PayeesPage } from './pages/Payees';
 import { ChecksPage } from './pages/Checks';
 import { ReceiptTextPage, ReceiptsPage } from './pages/Receipts';
 import { MessagesPage, MessagingSettingsPage, SharedDocumentPage } from './pages/Messaging';
+import NotificationsPage from './pages/Notifications';
 import { FundraiserDirectoryPage, SourceReportPage } from './pages/Reports';
 import { DataImportPage } from './pages/Imports';
 import { MachineRegistryPage, MachineReportPage, MachinesPage } from './pages/Machines';
@@ -155,6 +156,7 @@ export default function App() {
         <Route path="source-report" element={<SourceReportPage />} />
         <Route path="fundraiser-directory" element={<AdminOnly><FundraiserDirectoryPage /></AdminOnly>} />
         <Route path="data-import" element={<AdminOnly><DataImportPage /></AdminOnly>} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="messages" element={<AdminOnly><MessagesPage /></AdminOnly>} />
         <Route path="messaging-settings" element={<AdminOnly><MessagingSettingsPage /></AdminOnly>} />
         <Route path="receipt-text"element={<AdminOnly><ReceiptTextPage /></AdminOnly>} />
