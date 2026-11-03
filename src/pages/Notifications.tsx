@@ -10,9 +10,9 @@ import { useQuery } from '../lib/useQuery';
 type Channel = 'email' | 'sms' | 'both';
 const CHANNELS: [Channel, string][] = [['email', 'Email'], ['sms', 'Text'], ['both', 'Email and text']];
 
-const ADMIN_KINDS: [string, string][] = [['donations', 'Donation alerts'], ['tasks', 'Task Sheet alerts'], ['digests', 'Digests']];
+const ADMIN_KINDS: [string, string][] = [['donations', 'Donation alerts'], ['tasks', 'Task Sheet alerts'], ['messages', 'Fundraiser messages'], ['digests', 'Digests']];
 const FUNDRAISER_KINDS: [string, string][] = [
-  ['donations', 'Donations to my campaigns'], ['machine_digest', 'Nightly machine summary'], ['reminders', 'Tasks due today'],
+  ['donations', 'Donations to my campaigns'], ['messages', 'Messages from the office'], ['machine_digest', 'Nightly machine summary'], ['reminders', 'Tasks due today'],
   ['payouts', 'Payout request decisions'], ['requests', 'Campaign and team request decisions'], ['bookings', 'Machine bookings'],
 ];
 
@@ -31,7 +31,7 @@ export default function NotificationsPage() {
   const [campaigns, setCampaigns] = useState<Option[]>([]);
   const [f, setF] = useState({
     phone: '', donation_alerts: 'off', donation_min: '', donation_campaigns: [] as string[], donation_digest: 'off',
-    task_alerts: 'both', payout_alerts: 'immediate', weekly_digests: true, channels: {} as Record<string, Channel>,
+    task_alerts: 'both', payout_alerts: 'immediate', weekly_digests: true, message_alerts: 'immediate', channels: {} as Record<string, Channel>,
   });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +42,7 @@ export default function NotificationsPage() {
     setF({
       phone: p?.phone ?? '', donation_alerts: p?.donation_alerts ?? 'off', donation_min: p?.donation_min != null ? String(p.donation_min) : '',
       donation_campaigns: p?.donation_campaigns ?? [], donation_digest: p?.donation_digest ?? 'off', task_alerts: p?.task_alerts ?? 'both',
-      payout_alerts: p?.payout_alerts ?? 'immediate', weekly_digests: p?.weekly_digests ?? true, channels: p?.channels ?? {},
+      payout_alerts: p?.payout_alerts ?? 'immediate', weekly_digests: p?.weekly_digests ?? true, message_alerts: p?.message_alerts ?? 'immediate', channels: p?.channels ?? {},
     });
   }, [q.data]);
 
@@ -53,7 +53,7 @@ export default function NotificationsPage() {
     const { error: e } = await supabase.rpc('save_notification_preferences', {
       p_phone: f.phone, p_donation_alerts: f.donation_alerts, p_donation_min: f.donation_min ? Number(f.donation_min) : null,
       p_donation_campaigns: f.donation_campaigns.length ? f.donation_campaigns : null, p_donation_digest: f.donation_digest,
-      p_task_alerts: f.task_alerts, p_payout_alerts: f.payout_alerts, p_weekly_digests: f.weekly_digests, p_channels: f.channels,
+      p_task_alerts: f.task_alerts, p_payout_alerts: f.payout_alerts, p_weekly_digests: f.weekly_digests, p_channels: f.channels, p_message_alerts: f.message_alerts,
     });
     if (e) return setError(e.message);
     setSaved(true);
@@ -99,7 +99,7 @@ export default function NotificationsPage() {
           </div>
 
           <div className="panel-box">
-            <h2>Task Sheet and payouts</h2>
+            <h2>Task Sheet, payouts and messages</h2>
             <div className="fields">
               <label className="field"><span>New Task Sheet items</span>
                 <select value={f.task_alerts} onChange={e => set('task_alerts', e.target.value)}>
@@ -109,6 +109,10 @@ export default function NotificationsPage() {
               <label className="field"><span>Payout requests</span>
                 <select value={f.payout_alerts} onChange={e => set('payout_alerts', e.target.value)}>
                   <option value="immediate">Right away</option><option value="digest">In the morning digest</option><option value="off">Off</option>
+                </select></label>
+              <label className="field"><span>Messages from fundraisers</span>
+                <select value={f.message_alerts} onChange={e => set('message_alerts', e.target.value)}>
+                  <option value="immediate">Right away</option><option value="digest">Morning digest of unread</option><option value="off">Off</option>
                 </select></label>
               <label className="inline-check"><input type="checkbox" checked={f.weekly_digests} onChange={e => set('weekly_digests', e.target.checked)} /> Sunday digests of open pledges and vouchers</label>
             </div>

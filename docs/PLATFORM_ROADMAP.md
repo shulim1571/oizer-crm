@@ -241,8 +241,28 @@ The link comes from the campaign's Payment Link field until the payment pages ar
 - Unsubscribing stops only marketing email; receipts and notifications still go. SendGrid unsubscribes and spam reports
   count as unsubscribes too.
 
-Part 4 hasn't started:
-- Part 4: internal messaging.
+Part 4, internal messaging, is built. Under Messages:
+- **Conversations:** each fundraiser has one conversation with the office, which all admins share. Fundraisers can't
+  write to each other, except in a campaign group chat that an admin turns on; turning it off hides it but keeps the
+  history.
+- **Voice messages:** hold to record, up to 2 minutes, stored apart from the text. Admins can download them.
+- **Read receipts:** come from when each side last opened the conversation.
+- **For admins:** quick replies (only the Super Admin edits them), one pinned announcement (emailed when posted,
+  can't be dismissed), and broadcasts to all fundraisers, primaries or chosen ones. A broadcast lands in each
+  person's conversation, and broadcast history is kept.
+- **Unread count:** shows on the menu and on a bell in the header, which for admins adds the Task Sheet count.
+
+**Email alerts:**
+- Fundraisers hear when the office writes.
+- Group members hear about new group messages.
+- Admins choose right away, a morning digest of unread messages, or off.
+- Someone emailed about a conversation in the last ten minutes, who hasn't opened it since, isn't emailed again.
+
+**Not built:**
+- Messages are fetched every 15 seconds, not pushed live.
+- Automatic receipts are still to come.
+
+Phase 7 is complete apart from automatic receipts.
 
 ### Phase 8: Public payment pages and cards (XL, needs vendors)
 Public pages per campaign in English, Hebrew and Yiddish, Pay.js card capture, Turnstile, Cloudflare rate limits,

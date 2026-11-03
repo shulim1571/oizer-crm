@@ -2,10 +2,11 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Archive, ArrowLeftRight, Banknote, BookOpen, BookUser, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, FileCheck, FileText, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent, PieChart, Printer,
-  Bell, Mail, MessageSquare, PlusCircle, Receipt, RefreshCw, Repeat, Scale, Send, Smartphone, Ticket, Search, ShieldCheck, Upload, UserCircle, Users, Wallet,
+  Bell, Mail, MessageSquare, MessagesSquare, PlusCircle, Receipt, RefreshCw, Repeat, Scale, Send, Smartphone, Ticket, Search, ShieldCheck, Upload, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
+import { useUnreadMessages } from '../pages/Inbox';
 import { supabase } from '../lib/supabase';
 import { leavePlatformOrg, type Org } from '../lib/org';
 
@@ -62,8 +63,9 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    title: 'Outreach',
+    title: 'Messages',
     items: [
+      { to: '/inbox', label: 'Messages', icon: <MessagesSquare size={I} /> },
       { to: '/outreach', label: 'New Message', icon: <Send size={I} />, admin: true },
       { to: '/outreach/history', label: 'Outreach History', icon: <History size={I} />, admin: true },
       { to: '/outreach/templates', label: 'Outreach Templates', icon: <FileText size={I} />, admin: true },
@@ -128,6 +130,7 @@ export default function Layout() {
   const loc = useLocation();
   // Counted again on every page change, so it follows what's just been dealt with.
   const taskCount = useTaskCount(isAdmin, loc.pathname + loc.key);
+  const unread = useUnreadMessages(canWork);
 
   useEffect(() => {
     setQ('');
@@ -169,6 +172,7 @@ export default function Layout() {
                   <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'active' : '')}>
                     {n.icon}<span>{n.label}</span>
                     {n.to === '/task-sheet' && taskCount > 0 && <span className="nav-count">{taskCount}</span>}
+                    {n.to === '/inbox' && unread > 0 && <span className="nav-count">{unread}</span>}
                   </NavLink>
                 ))}
               </div>
@@ -203,6 +207,12 @@ export default function Layout() {
             }}>
               <input className="id-jump" aria-label="Go to campaign ID" placeholder="Campaign ID" value={campaignId} onChange={e => setCampaignId(e.target.value)} />
             </form>
+          )}
+          {canWork && (
+            <button className="icon-btn outlined bell" title={`${unread} unread message${unread === 1 ? '' : 's'}${isAdmin ? `, ${taskCount} on the Task Sheet` : ''}`}
+              onClick={() => nav(isAdmin && !unread && taskCount ? '/task-sheet' : '/inbox')}>
+              <Bell size={16} />{unread + (isAdmin ? taskCount : 0) > 0 && <span className="nav-count">{unread + (isAdmin ? taskCount : 0)}</span>}
+            </button>
           )}
           <button className="icon-btn outlined" title="Refresh data" onClick={() => setTick(t => t + 1)}><RefreshCw size={16} /></button>
         </header>
