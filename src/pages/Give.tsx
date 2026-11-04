@@ -74,6 +74,16 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
   useEffect(() => { void load(); }, [load]);
 
   const lang: Lang = (data?.page?.language as Lang) ?? 'en';
+  // Inside the donate widget, the page tells the host site how tall it is.
+  const framed = window.parent !== window;
+  useEffect(() => {
+    if (!framed) return;
+    const send = () => window.parent.postMessage({ type: 'oizer-give-height', height: document.documentElement.scrollHeight }, '*');
+    const watch = new ResizeObserver(send);
+    watch.observe(document.body);
+    send();
+    return () => watch.disconnect();
+  }, [framed]);
   const t = T[lang];
   const rtl = lang !== 'en';
   useEffect(() => {
@@ -88,7 +98,7 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
   const c = data.campaign;
   const pct = c.goal ? Math.min(100, Math.round((Number(c.raised ?? 0) / Number(c.goal)) * 100)) : 0;
   return (
-    <div className={`give ${rtl ? 'give-rtl' : ''}`} lang={lang === 'en' ? 'en' : lang === 'he' ? 'he' : 'yi'}>
+    <div className={`give ${rtl ? 'give-rtl' : ''} ${framed ? 'give-framed' : ''}`} lang={lang === 'en' ? 'en' : lang === 'he' ? 'he' : 'yi'}>
       <header className="give-head">
         {data.org.logo_url ? <img src={data.org.logo_url} alt={data.org.name} /> : <b>{data.org.name}</b>}
       </header>

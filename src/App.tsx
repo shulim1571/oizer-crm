@@ -53,6 +53,8 @@ const arrivedWith = readEmailLink();
 const sharedToken = /^#\/d\/([0-9a-f]{20,})$/.exec(window.location.hash)?.[1] ?? null;
 // The unsubscribe link in a marketing email, also without signing in.
 const unsubscribeToken = /^#\/u\/([0-9a-f]{32})$/.exec(window.location.hash)?.[1] ?? null;
+// The page other websites may frame for the donate widget.
+const embedded = /\/embed(\.html)?$/.test(window.location.pathname);
 // A campaign's public payment page.
 const giveCampaign = /^#\/give\/([A-Za-z0-9-]{1,40})\/?$/.exec(window.location.hash)?.[1] ?? null;
 
@@ -76,6 +78,8 @@ export default function App() {
   if (sharedToken) return <SharedDocumentPage token={sharedToken} />;
   if (unsubscribeToken) return <UnsubscribePage token={unsubscribeToken} />;
   if (giveCampaign) return <GivePage campaignId={giveCampaign} />;
+  // The embeddable page can sit inside any website, so it shows donation forms and nothing else.
+  if (embedded) return <div className="shared-missing"><h1>Donation form not found</h1></div>;
   if (loading) return <div className="splash"><div className="logo">O</div></div>;
   if (emailLink.tokenHash && emailLink.type) {
     return (

@@ -66,7 +66,9 @@ export function ShareDialog({ campaign, onClose }: { campaign: Row; onClose: () 
   const full = (message.trim() ? (below ? `${template}\n\n${message.trim()}` : `${message.trim()}\n\n${template}`) : template)
     + (channel === 'sms' ? '\nReply STOP to opt out.' : '');
   const recipients = to.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
-  const snippet = link ? `<a href="${link}" target="_blank" rel="noopener" style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-family:Arial,sans-serif">Donate to ${esc(name ?? '')}</a>` : '';
+  const origin = window.location.origin;
+  const snippet = `<script src="${origin}/widget.js" data-campaign="${campaign.id}" data-label="Donate" async></script>`;
+  const inline = `<script src="${origin}/widget.js" data-campaign="${campaign.id}" data-mode="inline" async></script>`;
 
   async function send() {
     setError(null);
@@ -88,9 +90,13 @@ export function ShareDialog({ campaign, onClose }: { campaign: Row; onClose: () 
         <>
           <div className="panel-box">
             <div className="share-link"><code>{link}</code><button type="button" className="btn" onClick={() => copy(link, setNote)}><Copy size={15} /> Copy link</button></div>
-            <details><summary className="muted small">Button for a website</summary>
-              <textarea className="snippet" readOnly rows={3} value={snippet} onFocus={e => e.target.select()} />
-              <button type="button" className="btn" onClick={() => copy(snippet, setNote)}><Copy size={15} /> Copy code</button></details>
+            <details><summary className="muted small">Donate widget for a website</summary>
+              <p className="muted small">A Donate button that opens this campaign's form over the website:</p>
+              <textarea className="snippet" readOnly rows={2} value={snippet} onFocus={e => e.target.select()} />
+              <button type="button" className="btn" onClick={() => copy(snippet, setNote)}><Copy size={15} /> Copy button code</button>
+              <p className="muted small">Or the whole form placed right in the page:</p>
+              <textarea className="snippet" readOnly rows={2} value={inline} onFocus={e => e.target.select()} />
+              <button type="button" className="btn" onClick={() => copy(inline, setNote)}><Copy size={15} /> Copy form code</button></details>
             {note && <p className="muted small">{note}</p>}
           </div>
 

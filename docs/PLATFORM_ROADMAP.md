@@ -356,6 +356,25 @@ Planned parts:
    - **Not yet:** automatic receipts per charge, which need the server-side receipt renderer.
 4. Embeddable widget, Apple Pay and Google Pay, and 3-D Secure.
 
+   **Widget built.** `/widget.js?` is placed on any site as `<script src="<org address>/widget.js"
+   data-campaign="1001">`.
+   - **Button mode:** a Donate button that opens the campaign's page over the host site.
+   - **Inline mode:** `data-mode="inline"` puts the form in the page, and the page reports its height so the frame
+     never scrolls.
+   - **The framed page:** `embed.html`, the same app, which the headers allow inside other sites (`frame-ancestors *`).
+     It shows only donation forms, so no portal screen can be framed.
+   - **Where to get it:** the campaign's Share window gives both snippets.
+   - **Microphone:** the site headers now allow it on the CRM's own pages, so voice messages can record (they were
+     blocked before).
+
+   **Deferred by the owner on 2026-11-03:** Apple Pay, Google Pay and 3-D Secure.
+   - Apple Pay needs an Apple Developer account, a merchant ID, and certificates in each organization's Sola portal.
+   - Google Pay setup goes through a Sola representative.
+   - 3-D Secure makes full billing address and mobile number required, and Sola's docs disagree on some verify-step
+     fields, so confirm with Sola first.
+   - Sola's docs for all three are summarized in the session notes: iFields `enable3DS`/`verify3DS`, the
+     `/verifyJSON` endpoint, and `xDigitalWalletType` `ApplePay`/`GooglePay` with the base-64 token in `xCardNum`.
+
 **Needs:**
 - each organization's Sola sandbox keys (sign up at solapayments.com/devsdk), and production keys at go-live
 - a Cloudflare Turnstile site key
