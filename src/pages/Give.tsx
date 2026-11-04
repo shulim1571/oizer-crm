@@ -9,6 +9,7 @@ import { CardFields } from './Payments';
 type Lang = 'en' | 'he' | 'yi';
 const T: Record<Lang, Record<string, string>> = {
   en: {
+    recurring: 'Make this a recurring donation', often: 'How often', weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', annually: 'Yearly', start: 'Start date', payments: 'Number of payments', until: 'Until I cancel', fixed: 'A set number', series: '{n} payments of {amount}: {total} in total', agree: 'I agree to be charged {amount} each {period}{until}. The office can stop it any time I ask.', agree_until: ' until I ask to stop', agree_n: ' for {n} payments', agree_needed: 'Please confirm the recurring terms.', week: 'week', month: 'month', quarter: 'quarter', year: 'year', text_me: 'Text me about this recurring donation', saved: 'Your card is saved. The first charge of {amount} will be on {date}.', per: 'each',
     raised: 'raised of', goal: 'goal', amount: 'Amount', other: 'Other amount', cover: 'I\'d like to cover the processing fee so 100% of my donation goes to the campaign',
     fee: 'fee', total: 'Total charge', first: 'First name', last: 'Last name', phone: 'Phone', email: 'Email (optional)', country: 'Country',
     address: 'Address (optional)', zip: 'ZIP code', postal: 'Postal code', postcode: 'Postcode', notes: 'Message (optional)', card: 'Card number', cvv: 'CVV',
@@ -20,6 +21,7 @@ const T: Record<Lang, Record<string, string>> = {
     required: 'required', test: 'Test mode: no real charges. Use card 4111 1111 1111 1111.', robot: 'Please confirm you\'re not a robot.',
   },
   he: {
+    recurring: 'תרומה קבועה', often: 'תדירות', weekly: 'שבועי', monthly: 'חודשי', quarterly: 'רבעוני', annually: 'שנתי', start: 'תאריך התחלה', payments: 'מספר תשלומים', until: 'עד שאבטל', fixed: 'מספר קבוע', series: '{n} תשלומים של {amount}: סה״כ {total}', agree: 'אני מסכים לחיוב של {amount} בכל {period}{until}. המשרד יפסיק בכל עת לבקשתי.', agree_until: ' עד שאבקש להפסיק', agree_n: ' למשך {n} תשלומים', agree_needed: 'נא לאשר את תנאי התרומה הקבועה.', week: 'שבוע', month: 'חודש', quarter: 'רבעון', year: 'שנה', text_me: 'שלחו לי הודעות על התרומה הקבועה', saved: 'הכרטיס נשמר. החיוב הראשון של {amount} יהיה ב-{date}.', per: 'בכל',
     raised: 'נאספו מתוך', goal: 'יעד', amount: 'סכום', other: 'סכום אחר', cover: 'אני מעוניין לכסות את עמלת הסליקה כדי שכל תרומתי תגיע למטרה',
     fee: 'עמלה', total: 'סך החיוב', first: 'שם פרטי', last: 'שם משפחה', phone: 'טלפון', email: 'דוא״ל (רשות)', country: 'מדינה',
     address: 'כתובת (רשות)', zip: 'מיקוד', postal: 'מיקוד', postcode: 'מיקוד', notes: 'הודעה (רשות)', card: 'מספר כרטיס', cvv: 'CVV',
@@ -31,6 +33,7 @@ const T: Record<Lang, Record<string, string>> = {
     required: 'חובה', test: 'מצב בדיקה: אין חיוב אמיתי. השתמשו בכרטיס 4111 1111 1111 1111.', robot: 'נא לאשר שאינך רובוט.',
   },
   yi: {
+    recurring: 'א קבועה נדבה', often: 'ווי אפט', weekly: 'וועכנטליך', monthly: 'כל חודש', quarterly: 'יעדע דריי חדשים', annually: 'יערליך', start: 'אנהייב דאטום', payments: 'צאל באצאלונגען', until: 'ביז איך שטעל אפ', fixed: 'א געוויסע צאל', series: '{n} באצאלונגען פון {amount}: סך הכל {total}', agree: 'איך בין מסכים צו באצאלן {amount} יעדע {period}{until}. דער אפיס קען עס אפשטעלן ווען איך בעט.', agree_until: ' ביז איך בעט אפצושטעלן', agree_n: ' פאר {n} באצאלונגען', agree_needed: 'ביטע באשטעטיגט די תנאים פון דער קבועה נדבה.', week: 'וואך', month: 'חודש', quarter: 'דריי חדשים', year: 'יאר', text_me: 'שיקט מיר מעסעדזשעס וועגן די קבועה נדבה', saved: 'די קארטל איז געהאלטן. די ערשטע באצאלונג פון {amount} וועט זיין {date}.', per: 'יעדע',
     raised: 'געזאמלט פון', goal: 'ציל', amount: 'סכום', other: 'אן אנדער סכום', cover: 'איך וויל צאלן די באארבעטונג אפצאל, כדי מיין גאנצע נדבה זאל אנקומען צום ציל',
     fee: 'אפצאל', total: 'סך הכל', first: 'ערשטער נאמען', last: 'פאמיליע נאמען', phone: 'טעלעפאן', email: 'אימעיל (אויב געוואלט)', country: 'לאנד',
     address: 'אדרעס (אויב געוואלט)', zip: 'זיפ קאוד', postal: 'פאסט קאוד', postcode: 'פאסט קאוד', notes: 'מעסעדזש (אויב געוואלט)', card: 'קארטל נומער', cvv: 'CVV',
@@ -143,6 +146,8 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   const turnstileBox = useRef<HTMLDivElement>(null);
   const turnstileId = useRef<string | null>(null);
 
+  const todayIso = new Date().toLocaleDateString('en-CA');
+  const [rec, setRec] = useState({ on: false, frequency: 'monthly' as 'weekly' | 'monthly' | 'quarterly' | 'annually', start: todayIso, fixed: false, count: '12', textMe: false, agreed: false });
   const chosen = other ? Number(other) : amount;
   useEffect(() => {
     if (!p.cover_fee || !cover || !(chosen && chosen > 0)) return setCoverTotal(null);
@@ -163,6 +168,10 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   }, []);
 
   const total = cover && coverTotal ? coverTotal : chosen ?? 0;
+  const period = { weekly: t.week, monthly: t.month, quarterly: t.quarter, annually: t.year }[rec.frequency];
+  const count = rec.fixed ? Number(rec.count) : null;
+  const terms = t.agree.replace('{amount}', usd(total)).replace('{period}', period)
+    .replace('{until}', count ? t.agree_n.replace('{n}', String(count)) : t.agree_until);
   const fields: Row[] = p.custom_fields ?? [];
   const set = (k: keyof typeof d) => (e: { target: { value: string } }) => setD(x => ({ ...x, [k]: e.target.value }));
   const zipLabel = d.country === 'USA' ? t.zip : d.country === 'England' ? t.postcode : t.postal;
@@ -172,6 +181,8 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
     setError(null);
     if (!(chosen && chosen > 0)) return setError(t.choose);
     if (p.min && chosen < Number(p.min)) return setError(t.min.replace('{amount}', usd(Number(p.min))));
+    if (rec.on && !rec.agreed) return setError(t.agree_needed);
+    if (rec.on && rec.fixed && !(count && count >= 2)) return setError(t.payments);
     if (!confirmed && chosen > Number(p.confirm_over ?? 5000)) return setConfirming(true);
     setConfirming(false);
     if (TURNSTILE_KEY && !human) return setError(t.robot);
@@ -179,7 +190,10 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
     try {
       const card = await tokens.current!();
       const { data: r, error: e } = await supabase.functions.invoke('give', {
-        body: { org: orgId, campaign: data.campaign.id, amount: chosen, cover_fee: cover && !!p.cover_fee, donor: d, custom, card_sut: card.card, cvv_sut: card.cvv, exp: expDigits, turnstile: human },
+        body: {
+          org: orgId, campaign: data.campaign.id, amount: chosen, cover_fee: cover && !!p.cover_fee, donor: d, custom, card_sut: card.card, cvv_sut: card.cvv, exp: expDigits, turnstile: human,
+          recurring: rec.on ? { frequency: rec.frequency, start: rec.start, count, text_me: rec.textMe } : null,
+        },
       });
       if (e) throw new Error('Something went wrong. Please try again.');
       if (r.approved) return onDone(r);
@@ -214,6 +228,28 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
       {p.cover_fee && (
         <label className="inline-check give-cover"><input type="checkbox" checked={cover} onChange={e => setCover(e.target.checked)} />
           <span dir="auto">{t.cover}{cover && coverTotal && chosen ? ` (+ ${usd(coverTotal - chosen)} ${t.fee})` : ''}</span></label>
+      )}
+
+      <label className="inline-check give-cover"><input type="checkbox" checked={rec.on} onChange={e => setRec(r => ({ ...r, on: e.target.checked }))} />
+        <span dir="auto"><b>{t.recurring}</b></span></label>
+      {rec.on && (
+        <div className="give-recurring">
+          <div className="give-grid">
+            <label className="field"><span dir="auto">{t.often}</span>
+              <select value={rec.frequency} onChange={e => setRec(r => ({ ...r, frequency: e.target.value as typeof r.frequency }))}>
+                {(['weekly', 'monthly', 'quarterly', 'annually'] as const).map(f => <option key={f} value={f}>{t[f]}</option>)}
+              </select></label>
+            <label className="field"><span dir="auto">{t.start}</span><input type="date" dir="ltr" min={todayIso} value={rec.start} onChange={e => setRec(r => ({ ...r, start: e.target.value }))} /></label>
+            <label className="field"><span dir="auto">{t.payments}</span>
+              <select value={rec.fixed ? 'n' : 'until'} onChange={e => setRec(r => ({ ...r, fixed: e.target.value === 'n' }))}>
+                <option value="until">{t.until}</option><option value="n">{t.fixed}</option>
+              </select></label>
+            {rec.fixed && <label className="field"><span dir="auto">#</span><input type="number" min={2} max={520} dir="ltr" value={rec.count} onChange={e => setRec(r => ({ ...r, count: e.target.value }))} /></label>}
+          </div>
+          {count && count >= 2 && chosen ? <p dir="auto"><b>{t.series.replace('{n}', String(count)).replace('{amount}', usd(total)).replace('{total}', usd(total * count))}</b></p> : null}
+          <label className="inline-check"><input type="checkbox" checked={rec.textMe} onChange={e => setRec(r => ({ ...r, textMe: e.target.checked }))} /> <span dir="auto">{t.text_me}</span></label>
+          <label className="inline-check"><input type="checkbox" checked={rec.agreed} onChange={e => setRec(r => ({ ...r, agreed: e.target.checked }))} /> <span dir="auto">{terms}</span></label>
+        </div>
       )}
 
       <div className="give-grid">
@@ -270,8 +306,10 @@ function Thanks({ t, data, result, onAgain }: { t: Record<string, string>; data:
     <section className="give-thanks">
       <h2 dir="auto">{t.thanks} {data.campaign.name}!</h2>
       {data.page.thank_you && <p dir="auto">{data.page.thank_you}</p>}
-      <p dir="auto">{t.charged}: <b>{amount}</b>{result.card ? ` · ${result.card}` : ''}</p>
-      {sent ? <p dir="auto">{t.receipt_sent}</p> : asking ? (
+      {result.scheduled
+        ? <p dir="auto">{t.saved.replace('{amount}', usd(Number(result.per))).replace('{date}', result.start ? new Date(`${result.start}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : '')}</p>
+        : <p dir="auto">{t.charged}: <b>{amount}</b>{result.card ? ` · ${result.card}` : ''}</p>}
+      {!result.token ? null : sent ? <p dir="auto">{t.receipt_sent}</p> : asking ? (
         <div className="give-grid">
           <label className="field"><span dir="auto">{t.email}</span><input type="email" dir="ltr" value={email} onChange={e => setEmail(e.target.value)} /></label>
           <label className="field"><span dir="auto">{t.phone}</span><input type="tel" dir="ltr" value={phone} onChange={e => setPhone(e.target.value)} /></label>

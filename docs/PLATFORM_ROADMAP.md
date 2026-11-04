@@ -336,6 +336,24 @@ Planned parts:
    - **Before real donors:** the Hebrew and Yiddish wording needs checking by a native speaker. DAF card options come
      with Phase 9.
 3. Recurring donations: schedules, retries, notices, admin cancel, pause and change.
+
+   **Built.** `recurring_donations` runs on our own engine with the donor's saved Sola card.
+   - **From the page:** weekly, monthly, quarterly or annually, from a start date, until cancelled or for 2 to 520
+     payments, with a live total and a terms box to tick. Starting today charges the first payment. A later start only
+     saves the card (`cc:save`).
+   - **From the office:** set one up on a saved card from the donor's Cards panel. "Save a card" saves without charging.
+   - **Charging:** `kick_recurring` runs hourly (and on resume or retry) and calls the `recurring-charges` function. It
+     claims what's due in the organization's own date and charges the saved token.
+   - **Recording:** `record_gateway_result` records the donation and moves the schedule on in the same transaction, so a
+     payment is never charged twice. Only successful charges count toward a fixed number; the last one completes the
+     schedule. A closed campaign's charge lands unattributed.
+   - **Failures:** retried after 3 days, then 7. The first failure notifies admins and the team. The third pauses the
+     schedule and adds a Recurring Charge Failed item (via `task_items`).
+   - **Admin controls:** pause, resume, retry now, cancel (the donor is told), and change the amount, frequency, card or
+     next date.
+   - **Deleted cards:** deleting a card cancels the recurring donations it paid for.
+   - **Recurring page:** shows what's due in the next 30 and 90 days. Fundraisers see their own campaigns'.
+   - **Not yet:** automatic receipts per charge, which need the server-side receipt renderer.
 4. Embeddable widget, Apple Pay and Google Pay, and 3-D Secure.
 
 **Needs:**

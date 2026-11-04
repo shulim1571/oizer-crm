@@ -32,7 +32,7 @@ async function rpc(name: string, args: unknown, auth: { token: string; org?: str
 }
 
 interface Body {
-  action: 'sale' | 'void' | 'refund';
+  action: 'sale' | 'void' | 'refund' | 'save';
   org: string;
   campaign_id?: string; donor_id?: string | null; amount?: number; card_id?: string | null; save_card?: boolean;
   name?: string; email?: string; notes?: string; zip?: string; street?: string;
@@ -50,7 +50,7 @@ Deno.serve(async req => {
   const user = { token, org: b.org };
   const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || null;
 
-  if (b.action === 'sale' && !b.card_id && (!b.card_sut || !b.cvv_sut || !/^\d{4}$/.test(b.exp ?? ''))) {
+  if ((b.action === 'save' || (b.action === 'sale' && !b.card_id)) && (!b.card_sut || !b.cvv_sut || !/^\d{4}$/.test(b.exp ?? ''))) {
     return reply({ error: 'Enter the card number, expiry (MMYY) and CVV' });
   }
 
@@ -62,7 +62,9 @@ Deno.serve(async req => {
           p_campaign: b.campaign_id, p_donor: b.donor_id ?? null, p_amount: b.amount, p_card: b.card_id ?? null,
           p_save_card: !!b.save_card, p_name: b.name ?? null, p_email: b.email ?? null, p_notes: b.notes ?? null, p_ip: ip,
         }, user)
-      : await rpc('begin_card_reversal', { p_donation: b.donation_id, p_kind: b.action }, user);
+      : b.action === 'save'
+        ? await rpc('begin_card_save', { p_donor: b.donor_id, p_name: b.name ?? null, p_ip: ip }, user)
+        : await rpc('begin_card_reversal', { p_donation: b.donation_id, p_kind: b.action }, user);
   } catch (e) {
     return reply({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -77,7 +79,9 @@ Deno.serve(async req => {
 
   // 3. Sola.
   const base = { xKey: c.api_key, xVersion: '5.0.0', xSoftwareName: 'Oizer CRM', xSoftwareVersion: '1.0', xInvoice: c.invoice, xIP: ip ?? undefined };
-  const command = c.kind === 'sale'
+  const command = c.kind === 'save'
+    ? { ...base, xCommand: 'cc:save', xCardNum: b.card_sut, xCVV: b.cvv_sut, xExp: b.exp, xName: c.card_name ?? undefined, xBillZip: b.zip || undefined }
+    : c.kind === 'sale'
     ? {
         ...base, xCommand: 'cc:sale', xAmount: Number(c.amount).toFixed(2),
         ...(c.card_token ? { xToken: c.card_token } : { xCardNum: b.card_sut, xCVV: b.cvv_sut, xExp: b.exp }),

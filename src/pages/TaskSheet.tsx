@@ -14,6 +14,7 @@ import { ApprovePayout, ProcessScheduled } from './Payouts';
 import { printReceipts, receiptDocument } from './Receipts';
 import { ImportConflict } from './Imports';
 import { DeliveryFailed, SendDocumentDialog } from './Messaging';
+import { RecurringFailed } from './Recurring';
 import { Overlay, PledgeDialog } from './Pledges';
 import { RequestDecision } from './Requests';
 import { VoucherDialog } from './Vouchers';
@@ -40,6 +41,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   import_conflict: { label: 'Import Data Conflict', tone: 'amber' },
   delivery_failed: { label: 'Delivery Failed', tone: 'red' },
   receipt_requested: { label: 'Receipt Requested', tone: 'blue' },
+  recurring_failed: { label: 'Recurring Charge Failed', tone: 'red' },
 };
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
@@ -226,6 +228,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       {item.task_type === 'import_conflict' && <ImportConflict conflictId={item.record_id} onAct={act} />}
       {item.task_type === 'receipt_reissue' && <ReissueReceipt receiptId={item.record_id} onAct={act} />}
       {item.task_type === 'scheduled_payout' && <ProcessScheduled payoutId={item.record_id} onAct={act} />}
+      {item.task_type === 'recurring_failed' && <RecurringFailed id={item.record_id} onDone={onDone} />}
       {item.task_type === 'receipt_requested' && <ReceiptRequest item={item} onDone={() => { void log('receipt_sent').then(onDone); }} />}
       {item.task_type === 'delivery_failed' && (
         <>

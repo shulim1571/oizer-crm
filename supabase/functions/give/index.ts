@@ -57,11 +57,11 @@ Deno.serve(async req => {
   if (!await humanCheck(b.turnstile, ip, page.payments?.sandbox)) return reply({ error: 'Please confirm you\'re not a robot and try again.', retry_check: true });
 
   // 1. The page's rules and the connection's limits.
-  let start: { id: string; token: string; total: number };
+  let start: { id: string; token: string; total: number; kind: 'sale' | 'save' };
   try {
     start = await rpc('begin_public_sale', {
       p_org: b.org, p_campaign: b.campaign, p_amount: Number(b.amount), p_cover_fee: !!b.cover_fee,
-      p_donor: b.donor ?? {}, p_custom: b.custom ?? {}, p_ip: ip,
+      p_donor: b.donor ?? {}, p_custom: b.custom ?? {}, p_ip: ip, p_recurring: b.recurring ?? null,
     });
   } catch (e) {
     return reply({ error: e instanceof Error ? e.message : String(e) });
@@ -77,9 +77,11 @@ Deno.serve(async req => {
 
   // 3. Sola.
   const d = b.donor ?? {};
+  // A recurring donation starting later only saves the card now; its first charge comes on the start date.
+  const later = start.kind === 'save';
   const command = {
-    xKey: c.api_key, xVersion: '5.0.0', xSoftwareName: 'Oizer CRM', xSoftwareVersion: '1.0', xCommand: 'cc:sale',
-    xAmount: Number(c.amount).toFixed(2), xInvoice: c.invoice, xIP: ip ?? undefined,
+    xKey: c.api_key, xVersion: '5.0.0', xSoftwareName: 'Oizer CRM', xSoftwareVersion: '1.0', xCommand: later ? 'cc:save' : 'cc:sale',
+    ...(later ? {} : { xAmount: Number(c.amount).toFixed(2) }), xInvoice: c.invoice, xIP: ip ?? undefined,
     xCardNum: b.card_sut, xCVV: b.cvv_sut, xExp: b.exp,
     xBillFirstName: d.first_name, xBillLastName: d.last_name, xBillPhone: d.phone, xEmail: d.email || undefined,
     xBillStreet: d.address || undefined, xBillZip: d.zip || undefined, xBillCountry: COUNTRY[d.country] ?? undefined,
@@ -95,11 +97,12 @@ Deno.serve(async req => {
 
   // 4. Recorded: a donation, or a failed attempt.
   try {
-    const keep = ['xResult', 'xStatus', 'xError', 'xErrorCode', 'xRefNum', 'xAuthCode', 'xMaskedCardNumber', 'xCardType', 'xExp', 'xAvsResult', 'xCvvResult', 'xBatch'];
+    const keep = ['xResult', 'xStatus', 'xError', 'xErrorCode', 'xRefNum', 'xAuthCode', 'xMaskedCardNumber', 'xCardType', 'xExp', 'xAvsResult', 'xCvvResult', 'xBatch', 'xToken'];
     const kept = Object.fromEntries(keep.filter(k => result[k] !== undefined).map(k => [k, result[k]]));
     const g = await rpc('record_gateway_result', { p_org: b.org, p_id: start.id, p_result: kept });
     if (g.status !== 'approved') return reply({ declined: true, error: result.xError || 'The card was declined. Please check the details or try another card.' });
-    return reply({ approved: true, amount: g.amount, ref: g.ref_num, card: `${g.card_type ?? 'Card'} ${String(g.masked_card ?? '').slice(-4)}`, token: start.token });
+    return reply({ approved: true, scheduled: later, recurring: !!b.recurring, start: b.recurring?.start ?? null, amount: later ? 0 : g.amount, per: c.amount, ref: g.ref_num,
+                   card: `${g.card_type ?? 'Card'} ${String(g.masked_card ?? '').slice(-4)}`, token: later ? null : start.token });
   } catch {
     return reply({ approved: true, amount: c.amount, ref: result.xRefNum, token: start.token });
   }

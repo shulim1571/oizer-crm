@@ -54,6 +54,7 @@ const NAV: NavSection[] = [
       { to: '/donations/recent', label: 'Last 7 Days', icon: <HandCoins size={I} /> },
       { to: '/donations/all', label: 'All Transactions', icon: <CircleDollarSign size={I} /> },
       { to: '/vouchers', label: 'Vouchers', icon: <Ticket size={I} />, admin: true },
+      { to: '/recurring', label: 'Recurring', icon: <Repeat size={I} /> },
       { to: '/pledges', label: 'Pledges', icon: <Handshake size={I} /> },
       { to: '/expenses', label: 'Payouts', icon: <Receipt size={I} /> },
       { to: '/payout-requests', label: 'Payout Requests', icon: <Send size={I} /> },

@@ -682,3 +682,5 @@ ul.plain li { padding: 6px 0; }
 .give-foot { text-align: center; color: #777; font-size: 12px; padding: 16px; }
 .give-rtl h1, .give-rtl h2, .give-rtl p, .give-rtl .give-label { text-align: right; }
 @media (max-width: 560px) { .give-grid { grid-template-columns: minmax(0, 1fr); } .give-main h1 { font-size: 22px; } }
+.give-recurring { border: 1px solid #e7e9ee; background: #fafbfc; border-radius: 10px; padding: 10px 12px; margin: 6px 0 12px; }
+.give-recurring .inline-check { align-items: flex-start; margin: 4px 0; }

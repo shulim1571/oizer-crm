@@ -33,6 +33,7 @@ import NotificationsPage from './pages/Notifications';
 import InboxPage from './pages/Inbox';
 import { PaymentsSettingsPage } from './pages/Payments';
 import GivePage from './pages/Give';
+import { RecurringPage } from './pages/Recurring';
 import { OutreachHistoryPage, OutreachPage, OutreachTemplatesPage, UnsubscribePage } from './pages/Outreach';
 import { FundraiserDirectoryPage, SourceReportPage } from './pages/Reports';
 import { DataImportPage } from './pages/Imports';
@@ -167,6 +168,7 @@ export default function App() {
         <Route path="fundraiser-directory" element={<AdminOnly><FundraiserDirectoryPage /></AdminOnly>} />
         <Route path="data-import" element={<AdminOnly><DataImportPage /></AdminOnly>} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="recurring" element={<RecurringPage />} />
         <Route path="payments-settings" element={<AdminOnly><PaymentsSettingsPage /></AdminOnly>} />
         <Route path="inbox" element={<InboxPage />} />
         <Route path="inbox/:threadId" element={<InboxPage />} />

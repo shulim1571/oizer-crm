@@ -9,6 +9,7 @@ import { campaignOptions, donorOptions, type Option } from '../lib/lookups';
 import { requestOrgId, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
+import { RecurringDialog, SaveCardDialog, SetupRecurringDialog } from './Recurring';
 
 // Card payments through Sola Payments, each organization with its own Sola account. Card number and CVV
 // are typed into Sola's iFields, frames served by Sola, and come back to us only as single-use tokens.
@@ -42,7 +43,7 @@ export interface PaymentConfig { ifields_key: string | null; sandbox: boolean; a
 export const usePaymentConfig = () => useQuery(async () => (((await supabase.rpc('payment_config')).data ?? []) as PaymentConfig[])[0] ?? null, []);
 
 /** Calls the payments function for this organization. */
-async function callPayments(body: Row) {
+export async function callPayments(body: Row) {
   const { data, error } = await supabase.functions.invoke('payments', { body: { ...body, org: requestOrgId() } });
   if (error) throw new Error('The payment service didn\'t answer. Check Sent transactions before trying again.');
   return data as { transaction?: Row; error?: string; pending?: boolean };
@@ -272,26 +273,61 @@ export function SavedCards({ donor }: { donor: Row }) {
   const { isAdmin } = useAuth();
   const [version, setVersion] = useState(0);
   const [charging, setCharging] = useState<string | null | false>(false);
-  const q = useQuery(async () => ((await supabase.rpc('donor_saved_cards', { p_donor: donor.id })).data ?? []) as Row[], [donor.id, version]);
+  const [saving, setSaving] = useState(false);
+  const [settingUp, setSettingUp] = useState<string | null | false>(false);
+  const [openRecurring, setOpenRecurring] = useState<string | null>(null);
+  const q = useQuery(async () => {
+    const [cards, recurring] = await Promise.all([
+      supabase.rpc('donor_saved_cards', { p_donor: donor.id }),
+      supabase.from('recurring_list').select('id, card_id, amount, frequency, campaign_label, status, next_charge, failures').eq('donor_id', donor.id).in('status', ['active', 'paused']),
+    ]);
+    return { cards: (cards.data ?? []) as Row[], recurring: (recurring.data ?? []) as Row[] };
+  }, [donor.id, version]);
   if (!isAdmin) return null;
+  const data = q.data as { cards: Row[]; recurring: Row[] } | null;
+  const list = data?.cards ?? [];
+  const recurring = data?.recurring ?? [];
   async function remove(k: Row) {
-    if (!confirm(`Delete the ${k.card_type ?? 'card'} ending ${String(k.masked ?? '').slice(-4)}? It can't be charged again.`)) return;
+    const powering = recurring.filter(r => r.card_id === k.id);
+    const warning = powering.length
+      ? `This card is being used for an active recurring donation on ${powering.map(r => r.campaign_label).join(', ')}. Deleting it will also cancel that recurring donation, and the donor is told. Delete it?`
+      : `Delete the ${k.card_type ?? 'card'} ending ${String(k.masked ?? '').slice(-4)}? It can't be charged again.`;
+    if (!confirm(warning)) return;
     const { error } = await supabase.rpc('delete_donor_card', { p_id: k.id });
     if (error) return alert(error.message);
     setVersion(v => v + 1);
   }
-  const list = (q.data as Row[]) ?? [];
   return (
     <div className="card">
-      <div className="card-head"><h3>Cards</h3><button type="button" className="btn" onClick={() => setCharging(null)}><CreditCard size={15} /> Charge a card</button></div>
-      {list.length === 0 ? <p className="muted small">No saved cards. Tick "Save this card" when charging to keep one here.</p> : (
-        <ul className="plain-list">{list.map(k => (
-          <li key={k.id}><span>{k.card_type ?? 'Card'} ending <b>{String(k.masked ?? '').slice(-4)}</b>{k.exp ? ` · exp ${k.exp.slice(0, 2)}/${k.exp.slice(2)}` : ''} · added {dateTime(k.created_at)}</span>
-            <span><button type="button" className="link" onClick={() => setCharging(k.id)}>Charge</button>
-              <button type="button" className="icon-btn" title="Delete" onClick={() => remove(k)}><Trash2 size={14} /></button></span></li>
-        ))}</ul>
+      <div className="card-head"><h3>Cards</h3>
+        <span><button type="button" className="btn" onClick={() => setCharging(null)}><CreditCard size={15} /> Charge a card</button>
+          <button type="button" className="link" onClick={() => setSaving(true)}>Save a card</button></span></div>
+      {list.length === 0 ? <p className="muted small">No saved cards. Save one, or tick "Save this card" when charging.</p> : (
+        <ul className="plain-list">{list.map(k => {
+          const powering = recurring.filter(r => r.card_id === k.id);
+          return (
+            <li key={k.id}><span>{k.card_type ?? 'Card'} ending <b>{String(k.masked ?? '').slice(-4)}</b>{k.exp ? ` · exp ${k.exp.slice(0, 2)}/${k.exp.slice(2)}` : ''} · added {dateTime(k.created_at)}
+              {powering.length > 0 && <> · <Pill tone="blue">Pays a recurring donation</Pill></>}</span>
+              <span><button type="button" className="link" onClick={() => setCharging(k.id)}>Charge</button>
+                <button type="button" className="link" onClick={() => setSettingUp(k.id)}>Recurring</button>
+                <button type="button" className="icon-btn" title="Delete" onClick={() => remove(k)}><Trash2 size={14} /></button></span></li>
+          );
+        })}</ul>
+      )}
+      {recurring.length > 0 && (
+        <>
+          <h3>Recurring</h3>
+          <ul className="plain-list">{recurring.map(r => (
+            <li key={r.id}><button type="button" className="link" onClick={() => setOpenRecurring(r.id)}>{money(r.amount)} each {({ weekly: 'week', monthly: 'month', quarterly: 'quarter', annually: 'year' } as Record<string, string>)[r.frequency]}</button>
+              <span className="muted small">{r.campaign_label} · {r.status === 'paused' ? 'paused' : `next ${r.next_charge ?? '—'}`}</span></li>
+          ))}</ul>
+        </>
       )}
       {charging !== false && <CardChargeDialog donorId={donor.id} cardId={charging} onClose={() => { setCharging(false); setVersion(v => v + 1); }} />}
+      {saving && <SaveCardDialog donorId={donor.id} onClose={() => setSaving(false)} onSaved={() => { setSaving(false); setVersion(v => v + 1); }} />}
+      {settingUp !== false && <SetupRecurringDialog donor={donor} cards={list} cardId={settingUp ?? undefined}
+        onClose={() => setSettingUp(false)} onDone={() => { setSettingUp(false); setVersion(v => v + 1); }} />}
+      {openRecurring && <RecurringDialog id={openRecurring} onClose={() => setOpenRecurring(null)} onChanged={() => setVersion(v => v + 1)} />}
     </div>
   );
 }
