@@ -51,8 +51,11 @@ describe('sharing and outreach', () => {
     await expect(share(db, 'email', ['x@example.org'], null, MANAGER_2)).rejects.toThrow(/only for your own campaigns/);
     expect(await rows(db, MANAGER_1, `select to_address, created_by from public.campaign_shares('1001')`)).toEqual([{ to_address: 'x@example.org', created_by: 'one@example.org' }]);
     expect(await rows(db, MANAGER_2, `select * from public.campaign_shares('1001')`)).toEqual([]);
-    await db.query(`update public.campaigns set payment_link = null where id = '1001'`);
-    await expect(share(db, 'email', ['x@example.org'])).rejects.toThrow(/no payment link yet/);
+    // A Payment Link that isn't a web address gives way to the campaign's own page.
+    await db.query(`update public.campaigns set payment_link = '3040' where id = '1001'`);
+    await share(db, 'sms', ['718-555-0100']);
+    const [t] = (await db.query<{ body: string }>(`select body from public.messages where kind = 'share' and channel = 'sms'`)).rows;
+    expect(t.body.split('\n')[0]).toBe('https://oizer.example.org/#/give/1001');
   });
 
   it('stop marketing email after an unsubscribe, but never receipts and notices', async () => {

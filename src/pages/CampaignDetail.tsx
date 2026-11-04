@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Clock, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Share2, Star, StickyNote, TrendingUp,
 } from 'lucide-react';
-import { ShareDialog } from './Outreach';
+import { ShareDialog, paymentUrl } from './Outreach';
 import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
 import Kpi from '../components/Kpi';
@@ -209,9 +209,7 @@ export default function CampaignDetail() {
           </div>
         </div>
         <div className="spacer" />
-        {c.payment_link && (
-          <a className="btn" href={c.payment_link} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>
-        )}
+        <a className="btn" href={paymentUrl(c)} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>
         {canWork && c.status !== 'closed' && <button className="btn" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>}
         {canEnter && c.status !== 'closed' && <Link className="btn" to={`/campaigns/${encodeURIComponent(id)}/batch`}>Batch entry</Link>}
         {isAdmin && c.status === 'draft' && (

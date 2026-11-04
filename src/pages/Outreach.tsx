@@ -38,11 +38,15 @@ async function copy(text: string, done: (m: string) => void) {
   try { await navigator.clipboard.writeText(text); done('Copied.'); } catch { done('Copy failed; select the text and copy it.'); }
 }
 
+/** The campaign's payment link: its Payment Link when that's a web address, otherwise its own payment page. */
+export const paymentUrl = (c: Row) => (/^https?:\/\/\S+$/i.test(String(c.payment_link ?? '').trim())
+  ? String(c.payment_link).trim() : `${window.location.origin}${import.meta.env.BASE_URL}#/give/${encodeURIComponent(c.id)}`);
+
 // ---------------------------------------------------------------------------
 // Sharing a campaign's payment link
 // ---------------------------------------------------------------------------
 export function ShareDialog({ campaign, onClose }: { campaign: Row; onClose: () => void }) {
-  const link = campaign.payment_link as string | null;
+  const link = paymentUrl(campaign);
   const name = campaign.external_name || campaign.internal_name || campaign.campaign_name;
   const [channel, setChannel] = useState<'email' | 'sms'>('email');
   const [to, setTo] = useState('');
