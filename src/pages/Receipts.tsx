@@ -46,7 +46,7 @@ export async function printReceipts(ids: string[]) {
   printPages(title, pages);
 }
 
-const receiptDocument = async (id: string) => {
+export const receiptDocument = async (id: string) => {
   const { title, pages } = await receiptPages([id]);
   return documentHtml(title, pages);
 };

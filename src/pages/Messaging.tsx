@@ -31,9 +31,11 @@ const portalBase = () => window.location.origin + import.meta.env.BASE_URL;
 // ---------------------------------------------------------------------------
 // Sending a receipt or statement
 // ---------------------------------------------------------------------------
-export function SendDocumentDialog({ kind, recordId, donorId, campaignId, title, build, onClose }: {
+export function SendDocumentDialog({ kind, recordId, donorId, campaignId, title, build, onClose, to, onSent }: {
   kind: 'receipt' | 'statement'; recordId: string; donorId: string | null; campaignId?: string | null; title: string;
   build: () => Promise<string>; onClose: () => void;
+  /** Where the donor asked for it to go, in place of the addresses on their record. */
+  to?: { email?: string | null; phone?: string | null }; onSent?: () => void;
 }) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -43,14 +45,17 @@ export function SendDocumentDialog({ kind, recordId, donorId, campaignId, title,
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<Row[] | null>(null);
   useEffect(() => {
+    // A donor's own request goes everywhere they asked; otherwise email first, text only without an email.
+    const fill = (e: string | null | undefined, p: string | null | undefined, both: boolean) => {
+      setEmail(e ?? '');
+      setPhone(p ?? '');
+      setUseEmail(!!e || !p);
+      setUseText(!!p && (both || !e));
+    };
+    if (to) return fill(to.email, to.phone, true);
     if (!donorId) return;
-    supabase.from('donors').select('email, phone').eq('id', donorId).maybeSingle().then(({ data }) => {
-      setEmail(data?.email ?? '');
-      setPhone(data?.phone ?? '');
-      setUseEmail(!!data?.email || !data?.phone);
-      setUseText(!data?.email && !!data?.phone);
-    });
-  }, [donorId]);
+    supabase.from('donors').select('email, phone').eq('id', donorId).maybeSingle().then(({ data }) => fill(data?.email, data?.phone, false));
+  }, [donorId, to]);
 
   async function send() {
     setBusy(true);
@@ -64,6 +69,7 @@ export function SendDocumentDialog({ kind, recordId, donorId, campaignId, title,
       if (e) throw new Error(e.message);
       const ids = Object.values((data ?? {}) as Record<string, string>);
       setSent(((await supabase.from('messages').select('id, channel, to_address, status, error').in('id', ids)).data ?? []) as Row[]);
+      onSent?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

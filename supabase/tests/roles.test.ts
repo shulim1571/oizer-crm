@@ -172,7 +172,7 @@ describe('campaign IDs and statuses', () => {
     await setStatus('1001', 'archived');
     await as(db, ADMIN, tx => tx.query(`insert into public.donations (campaign_id, amount) values ('1001', 5)`));
     const changes = (await db.query<{ changes: { status: { new: string } } }>(
-      `select changes from public.activity_log where table_name = 'campaigns' and record_id = '1001' and action = 'update' order by id`)).rows;
+      `select changes from public.activity_log where table_name = 'campaigns' and record_id = '1001' and action = 'update' and changes ? 'status' order by id`)).rows;
     expect(changes.map(c => c.changes.status.new)).toEqual(['archived', 'active']);
   });
 });

@@ -317,6 +317,24 @@ Planned parts:
    - **Not yet:** ACH (`check:*`), partial refunds, and surcharges.
 2. Public payment pages per campaign in three languages, with Turnstile, cover-the-fee, custom fields, donor wall and
    thank-you page. A campaign's Payment Link fills in automatically.
+
+   **Built.** The page is at `<org address>/#/give/<campaign>`, needs no sign-in, and can be turned off per campaign.
+   - **Payment Link:** new campaigns, and existing ones without a link, get this address.
+   - **Content:** comes from the campaign's page settings plus new fields (page on or off, cover-the-fee on or off,
+     suggested amount, description, thank-you message, banner). Admins and the primary fundraiser edit them on the
+     campaign's Settings tab.
+   - **Cover-the-fee:** `cover_fee_total` finds the smallest charge whose fee leaves the campaign the full gift. The
+     donation records `fee_covered` and `custom_fields`.
+   - **Charging:** the `give` Edge Function (no JWT) checks Cloudflare Turnstile, using `TURNSTILE_SECRET_KEY` and
+     `VITE_TURNSTILE_SITE_KEY`. Without a secret it accepts only organizations on sandbox keys. The database enforces
+     the page's rules, plus 5 failed or 20 total attempts per IP per hour.
+   - **Recording:** an approved gift finds the donor by phone or email, or adds one, and is credited to the Online
+     source. A decline is kept as a failed transaction with the IP.
+   - **Thank-you page:** "Send me a receipt" adds a Receipt Requested item to the Task Sheet. That's the first item to
+     use `task_items`, so new kinds no longer need the view rewritten. The office issues and sends the receipt from
+     there until automatic receipts exist.
+   - **Before real donors:** the Hebrew and Yiddish wording needs checking by a native speaker. DAF card options come
+     with Phase 9.
 3. Recurring donations: schedules, retries, notices, admin cancel, pause and change.
 4. Embeddable widget, Apple Pay and Google Pay, and 3-D Secure.
 

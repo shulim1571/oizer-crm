@@ -52,7 +52,9 @@ async function callPayments(body: Row) {
 // Sola's card fields
 // ---------------------------------------------------------------------------
 /** Card number and CVV in Sola's frames. `tokens` asks Sola for single-use tokens for both. */
-function CardFields({ ifieldsKey, onTokens }: { ifieldsKey: string; onTokens: (get: () => Promise<{ card: string; cvv: string }>) => void }) {
+export function CardFields({ ifieldsKey, onTokens, labels = { card: 'Card number', cvv: 'CVV', loading: 'Loading Sola\'s secure card fields…' } }: {
+  ifieldsKey: string; onTokens: (get: () => Promise<{ card: string; cvv: string }>) => void; labels?: { card: string; cvv: string; loading: string };
+}) {
   const box = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,14 +80,14 @@ function CardFields({ ifieldsKey, onTokens }: { ifieldsKey: string; onTokens: (g
       }, () => reject(new Error(box.current?.querySelector('[data-ifields-id="card-data-error"]')?.textContent || 'Check the card number and CVV.')), 30000);
     }));
   }, [ready, ifieldsKey, onTokens]);
-  if (!ready) return error ? <div className="error">{error}</div> : <p className="muted small">Loading Sola's secure card fields…</p>;
+  if (!ready) return error ? <div className="error">{error}</div> : <p className="muted small">{labels.loading}</p>;
   return (
     <div ref={box} className="card-fields">
-      <label className="field"><span>Card number</span>
-        <iframe title="Card number" className="ifield" data-ifields-id="card-number" data-ifields-placeholder="Card number" src={`${IFIELDS}/ifield.htm`} /></label>
+      <label className="field"><span dir="auto">{labels.card}</span>
+        <iframe title={labels.card} className="ifield" data-ifields-id="card-number" data-ifields-placeholder={labels.card} src={`${IFIELDS}/ifield.htm`} /></label>
       <input type="hidden" data-ifields-id="card-number-token" name="xCardNum" />
-      <label className="field ifield-cvv"><span>CVV</span>
-        <iframe title="CVV" className="ifield" data-ifields-id="cvv" data-ifields-placeholder="CVV" src={`${IFIELDS}/ifield.htm`} /></label>
+      <label className="field ifield-cvv"><span dir="auto">{labels.cvv}</span>
+        <iframe title={labels.cvv} className="ifield" data-ifields-id="cvv" data-ifields-placeholder={labels.cvv} src={`${IFIELDS}/ifield.htm`} /></label>
       <input type="hidden" data-ifields-id="cvv-token" name="xCVV" />
       <label data-ifields-id="card-data-error" className="error-text" />
       {error && <div className="error">{error}</div>}

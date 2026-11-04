@@ -644,3 +644,41 @@ ul.plain li { padding: 6px 0; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .card-head h3 { margin: 0; }
 @media (max-width: 600px) { .card-fields { grid-template-columns: minmax(0, 1fr); } }
+
+/* Public payment page */
+.give { --give-accent: #4f46e5; min-height: 100vh; background: #f5f6f8; color: #111; font-size: 15px; }
+.give-head { background: #fff; border-bottom: 1px solid #e7e9ee; padding: 12px 16px; display: flex; justify-content: center; }
+.give-head img { max-height: 56px; max-width: 240px; }
+.give-banner { display: block; width: 100%; max-height: 320px; object-fit: cover; }
+.give-main { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
+.give-main h1 { font-size: 26px; margin: 6px 0 10px; }
+.give-main h2 { font-size: 17px; margin: 0 0 8px; }
+.give-story { white-space: pre-wrap; line-height: 1.55; }
+.give-progress { margin: 12px 0 18px; }
+.give-progress .bar { height: 10px; background: #e7e9ee; border-radius: 999px; overflow: hidden; margin-bottom: 6px; }
+.give-progress .bar span { display: block; height: 100%; background: var(--give-accent); }
+.give-form, .give-thanks, .give-other, .give-wall { background: #fff; border: 1px solid #e7e9ee; border-radius: 12px; padding: 18px; margin: 14px 0; }
+.give-label { font-weight: 600; display: block; margin: 6px 0; }
+.give-logos { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.give-logos span { font-size: 11px; font-weight: 700; border: 1px solid #d9dce3; border-radius: 4px; padding: 2px 6px; color: #444; }
+.give-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.give-presets button { border: 1.5px solid #d9dce3; background: #fff; border-radius: 10px; padding: 12px 8px; font-size: 16px; font-weight: 600; cursor: pointer; color: #111; }
+.give-presets button.suggested { border-color: var(--give-accent); }
+.give-presets button.on { background: var(--give-accent); border-color: var(--give-accent); color: #fff; }
+.give-other-amount { width: 100%; height: 42px; font-size: 16px; margin-bottom: 8px; }
+.give-cover { margin: 6px 0 12px; align-items: flex-start; }
+.give-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin: 10px 0; }
+.give-grid .wide { grid-column: 1 / -1; }
+.give .field input, .give .field select, .give .field textarea { width: 100%; box-sizing: border-box; }
+.give-exp { max-width: 160px; }
+.give-total { font-size: 17px; margin: 12px 0; }
+.give-submit { width: 100%; height: 48px; font-size: 17px; margin-top: 8px; background: var(--give-accent); border-color: var(--give-accent); }
+.give-confirm { border: 1px solid #f59e0b; background: #fffbeb; border-radius: 10px; padding: 12px; margin: 10px 0; }
+.give-confirm div { display: flex; gap: 8px; margin-top: 8px; }
+.give-test { background: #fffbeb; border: 1px solid #f59e0b; border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.give-turnstile { margin: 10px 0; }
+.give-wall ul { list-style: none; padding: 0; margin: 0; }
+.give-wall li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f1f4; }
+.give-foot { text-align: center; color: #777; font-size: 12px; padding: 16px; }
+.give-rtl h1, .give-rtl h2, .give-rtl p, .give-rtl .give-label { text-align: right; }
+@media (max-width: 560px) { .give-grid { grid-template-columns: minmax(0, 1fr); } .give-main h1 { font-size: 22px; } }

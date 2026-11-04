@@ -234,7 +234,52 @@ export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template:
   );
 }
 
-/** A campaign's own page settings. They take effect with the payment pages in Phase 8. */
+/** The public payment page: its address, whether it's on, and what it says beyond the amounts. */
+function PageContentCard({ campaignId, current, onSaved }: { campaignId: string; current: Row | null; onSaved: () => void }) {
+  const [v, setV] = useState({ page_enabled: true, cover_fee_enabled: true, suggested: '', description: '', thank_you: '', banner_url: '' });
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    setV({
+      page_enabled: current?.page_enabled ?? true, cover_fee_enabled: current?.cover_fee_enabled ?? true,
+      suggested: current?.suggested_amount != null ? String(current.suggested_amount) : '', description: current?.description ?? '',
+      thank_you: current?.thank_you ?? '', banner_url: current?.banner_url ?? '',
+    });
+  }, [current]);
+  const link = `${window.location.origin}${import.meta.env.BASE_URL}#/give/${encodeURIComponent(campaignId)}`;
+  async function save() {
+    setMessage(null);
+    setError(null);
+    const { error: e } = await supabase.rpc('save_page_content', {
+      p_campaign: campaignId, p_page_enabled: v.page_enabled, p_cover_fee_enabled: v.cover_fee_enabled, p_suggested: v.suggested ? Number(v.suggested) : null,
+      p_description: v.description, p_thank_you: v.thank_you, p_banner_url: v.banner_url,
+    });
+    if (e) return setError(e.message);
+    setMessage('Saved.');
+    onSaved();
+  }
+  return (
+    <div className="panel-box">
+      <h3>Payment page</h3>
+      <p className="small"><a href={link} target="_blank" rel="noreferrer">{link}</a></p>
+      <div className="check-row">
+        <label className="inline-check"><input type="checkbox" checked={v.page_enabled} onChange={e => setV({ ...v, page_enabled: e.target.checked })} /> Page takes donations</label>
+        <label className="inline-check"><input type="checkbox" checked={v.cover_fee_enabled} onChange={e => setV({ ...v, cover_fee_enabled: e.target.checked })} /> Offer "cover the fee"</label>
+      </div>
+      <div className="fields">
+        <label className="field"><span>Suggested amount</span><input type="number" min="0" step="0.01" value={v.suggested} onChange={e => setV({ ...v, suggested: e.target.value })} placeholder="One of the presets" /></label>
+        <label className="field"><span>Banner image address</span><input value={v.banner_url} onChange={e => setV({ ...v, banner_url: e.target.value })} placeholder="https://… (1200×400)" /></label>
+        <label className="field wide"><span>Description or story</span><textarea rows={4} dir="auto" value={v.description} onChange={e => setV({ ...v, description: e.target.value })} /></label>
+        <label className="field wide"><span>Thank-you message</span><textarea rows={2} dir="auto" value={v.thank_you} onChange={e => setV({ ...v, thank_you: e.target.value })} /></label>
+      </div>
+      {message && <div className="notice">{message}</div>}
+      {error && <div className="error">{error}</div>}
+      <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={save}>Save page</button></div>
+    </div>
+  );
+}
+
+/** A campaign's own page settings, used by its public payment page. */
 export function CampaignSettingsTab({ campaignId }: { campaignId: string }) {
   const q = useQuery(async () => (await supabase.from('campaign_page_settings').select('*').eq('campaign_id', campaignId).maybeSingle()).data as Row | null, [campaignId]);
   const [settings, setSettings] = useState<Row | null>(null);
@@ -253,6 +298,7 @@ export function CampaignSettingsTab({ campaignId }: { campaignId: string }) {
   if (!settings) return <p className="muted pad">Loading…</p>;
   return (
     <div className="table-card pad">
+      <PageContentCard campaignId={campaignId} current={q.data as Row | null} onSaved={() => void q.reload()} />
       <div key={q.data?.updated_at ?? 'new'}><SettingsFields value={settings} onChange={setSettings} /></div>
       <ReceiptTextCard level="campaign" refId={campaignId} title="Receipt text for this campaign" />
       {message && <div className="notice">{message}</div>}

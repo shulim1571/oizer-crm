@@ -11,9 +11,9 @@ import { useQuery } from '../lib/useQuery';
 import { SplitDialog } from './DonationActions';
 import { BookingActions } from './Machines';
 import { ApprovePayout, ProcessScheduled } from './Payouts';
-import { printReceipts } from './Receipts';
+import { printReceipts, receiptDocument } from './Receipts';
 import { ImportConflict } from './Imports';
-import { DeliveryFailed } from './Messaging';
+import { DeliveryFailed, SendDocumentDialog } from './Messaging';
 import { Overlay, PledgeDialog } from './Pledges';
 import { RequestDecision } from './Requests';
 import { VoucherDialog } from './Vouchers';
@@ -39,6 +39,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   receipt_reissue: { label: 'Corrected Receipt Needed', tone: 'red' },
   import_conflict: { label: 'Import Data Conflict', tone: 'amber' },
   delivery_failed: { label: 'Delivery Failed', tone: 'red' },
+  receipt_requested: { label: 'Receipt Requested', tone: 'blue' },
 };
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
@@ -225,6 +226,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       {item.task_type === 'import_conflict' && <ImportConflict conflictId={item.record_id} onAct={act} />}
       {item.task_type === 'receipt_reissue' && <ReissueReceipt receiptId={item.record_id} onAct={act} />}
       {item.task_type === 'scheduled_payout' && <ProcessScheduled payoutId={item.record_id} onAct={act} />}
+      {item.task_type === 'receipt_requested' && <ReceiptRequest item={item} onDone={() => { void log('receipt_sent').then(onDone); }} />}
       {item.task_type === 'delivery_failed' && (
         <>
           <DeliveryFailed messageId={item.record_id} onDone={() => { void log('resent').then(onDone); }} />
@@ -235,6 +237,46 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
         <p className="muted">Open the campaign and choose another bank account, or clear it to use the default. This leaves the sheet once that's done.</p>
       )}
     </Overlay>
+  );
+}
+
+/** A donor asked for a receipt on the thank-you page: issue it (or use the one already issued) and send it where they asked. */
+function ReceiptRequest({ item, onDone }: { item: Row; onDone: () => void }) {
+  const q = useQuery(async () => {
+    const [t, r, d] = await Promise.all([
+      supabase.from('task_items').select('detail').eq('task_key', item.task_key).maybeSingle(),
+      supabase.from('receipts').select('id, receipt_number, donor_id, campaign_id').contains('donation_ids', [item.record_id]).eq('status', 'issued').maybeSingle(),
+      supabase.from('donations').select('donor_id, campaign_id').eq('id', item.record_id).maybeSingle(),
+    ]);
+    return { to: (t.data?.detail ?? {}) as Row, receipt: r.data as Row | null, donation: d.data as Row | null };
+  }, [item.task_key]);
+  const [sending, setSending] = useState<Row | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const info = q.data as { to: Row; receipt: Row | null; donation: Row | null } | null;
+  if (!info) return null;
+  async function start() {
+    setError(null);
+    let receipt = info!.receipt;
+    if (!receipt) {
+      const { data, error: e } = await supabase.rpc('issue_receipt', { p_donation: item.record_id });
+      if (e) return setError(e.message);
+      receipt = (await supabase.from('receipts').select('id, receipt_number, donor_id, campaign_id').eq('id', data).maybeSingle()).data as Row;
+    }
+    setSending(receipt);
+  }
+  return (
+    <div className="panel-box">
+      <p className="muted small">They asked for it by {[info.to.email && `email to ${info.to.email}`, info.to.phone && `text to ${info.to.phone}`].filter(Boolean).join(' and ')}.
+        {info.receipt ? ` Receipt ${info.receipt.receipt_number} is already issued.` : ' A receipt is issued first.'}</p>
+      {error && <div className="error">{error}</div>}
+      <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={start}>{info.receipt ? 'Send the receipt' : 'Issue and send the receipt'}</button></div>
+      {sending && (
+        <SendDocumentDialog kind="receipt" recordId={sending.id} donorId={sending.donor_id ?? info.donation?.donor_id ?? null} campaignId={sending.campaign_id}
+          title={sending.receipt_number} build={() => receiptDocument(sending.id)} to={{ email: info.to.email, phone: info.to.phone }}
+          onSent={() => { void supabase.rpc('resolve_task_item', { p_key: item.task_key }); }}
+          onClose={() => { setSending(null); onDone(); }} />
+      )}
+    </div>
   );
 }
 

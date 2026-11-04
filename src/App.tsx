@@ -32,6 +32,7 @@ import { MessagesPage, MessagingSettingsPage, SharedDocumentPage } from './pages
 import NotificationsPage from './pages/Notifications';
 import InboxPage from './pages/Inbox';
 import { PaymentsSettingsPage } from './pages/Payments';
+import GivePage from './pages/Give';
 import { OutreachHistoryPage, OutreachPage, OutreachTemplatesPage, UnsubscribePage } from './pages/Outreach';
 import { FundraiserDirectoryPage, SourceReportPage } from './pages/Reports';
 import { DataImportPage } from './pages/Imports';
@@ -51,6 +52,8 @@ const arrivedWith = readEmailLink();
 const sharedToken = /^#\/d\/([0-9a-f]{20,})$/.exec(window.location.hash)?.[1] ?? null;
 // The unsubscribe link in a marketing email, also without signing in.
 const unsubscribeToken = /^#\/u\/([0-9a-f]{32})$/.exec(window.location.hash)?.[1] ?? null;
+// A campaign's public payment page.
+const giveCampaign = /^#\/give\/([A-Za-z0-9-]{1,40})\/?$/.exec(window.location.hash)?.[1] ?? null;
 
 function AdminOnly({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();
@@ -71,6 +74,7 @@ export default function App() {
 
   if (sharedToken) return <SharedDocumentPage token={sharedToken} />;
   if (unsubscribeToken) return <UnsubscribePage token={unsubscribeToken} />;
+  if (giveCampaign) return <GivePage campaignId={giveCampaign} />;
   if (loading) return <div className="splash"><div className="logo">O</div></div>;
   if (emailLink.tokenHash && emailLink.type) {
     return (
