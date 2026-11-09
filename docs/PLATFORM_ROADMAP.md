@@ -463,6 +463,38 @@ Pledger and The Donors Fund move to Sola.
 SMS campaign lookup, then every IVR flow. Evaluate Twilio's PCI payment feature for card entry rather than handling
 digits in our own functions.
 
+**Part 1, campaign lookup by text and phone, is built (migration `20261201000000_phone_lookup.sql`).** The platform
+number is +18456134272 (Oizer's `messaging_settings.sms_from`); its incoming-text webhook stays on `message-events`.
+No other Twilio number is touched. Settings → Messaging → Phone & Text Lookup.
+- **Who hears what.** A fundraiser texting or calling from a registered phone (up to `max_phones_per_fundraiser`, set on
+  the fundraiser's page) or from the phone on their record hears their own campaigns, primary or secondary. Anyone else
+  needs the campaign number and its PIN (`campaigns.pin`, 4–8 digits, "Phone PIN" on the campaign). Five wrong PINs
+  from one phone in an hour lock it out for the hour. Every lookup is logged without the PIN.
+- **Texts** (`message-events` answers with TwiML): `BAL` lists a registered phone's active campaigns (up to 5) with
+  balances; `1001` gives one (from a registered phone; otherwise it asks for the PIN); `1001 1234` gives one with its
+  PIN; `MENU` explains. Anything else gets no reply. STOP/START/HELP stay with Twilio's opt-out handling.
+- **Phone line** (`voice` Edge Function, Twilio-signed): enter the campaign number, then the PIN; fundraisers press star
+  for all their campaigns. Reads raised, expenses, balance and pending.
+- **Both start off.** Each costs money at Twilio, so the Super Admin switches them on: a reply is an outbound text
+  (about $0.0083 per segment plus carrier fees; Hebrew or Yiddish names switch to 70-character segments); calls are
+  about $0.0085 a minute for a local number. While the phone line is off, calls get `<Reject>`, which Twilio doesn't
+  bill. The number's voice webhook must point at `/functions/v1/voice` before the phone line can answer.
+  Outbound replies from a 10DLC number need the number's A2P registration to be approved, or carriers block them.
+
+**Card payments by phone: Twilio `<Pay>` evaluated, not built.** `<Pay>` collects the card on Twilio's side, so card
+digits never reach our functions, which is the right approach. What it needs:
+- **PCI Mode on the Twilio account.** It cannot be turned off, and it redacts sensitive data from every log on the
+  account, including other projects' numbers (such as +18456134848). Twilio recommends a separate account (or
+  subaccount) just for payments; we recommend that.
+- **A Pay Connector for Sola (Cardknox).** No branded Sola connector is listed. The Generic Pay Connector sends the card
+  to the processor's own PCI-compliant endpoint, which Sola would have to provide; ask Sola whether they support
+  Twilio `<Pay>` or have a tokenization endpoint for it.
+- **Cost:** from $0.10–$0.15 per successful charge or tokenization (failed attempts aren't billed), plus voice minutes.
+Until then, phone donations keep going through the office.
+
+**Still to come:** the remaining IVR flows in the spec (to be confirmed against it), and phone payments once the
+`<Pay>` decisions are made.
+
 ### Phase 11: Bank reconciliation (L, needs vendors)
 Plaid feed, auto-matching, discrepancy handling, check clearing and stale checks, bank-to-bank transfers, period
 sign-off. Manual reconciliation can ship before Plaid is contracted.

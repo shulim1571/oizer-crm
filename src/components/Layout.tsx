@@ -101,7 +101,7 @@ const NAV: NavSection[] = [
         tabs: [{ to: '/payments-settings', label: 'Card Processing' }, { to: '/fees', label: 'Methods & Fees' },
           { to: '/payout-methods', label: 'Payout Methods' }, { to: '/accounts', label: 'Bank Accounts' }] },
       { to: '/messaging-settings', label: 'Messaging', icon: <MessageSquare size={I} />, admin: true,
-        tabs: [{ to: '/messaging-settings', label: 'Email & Text' }, { to: '/receipt-text', label: 'Receipt Text' }] },
+        tabs: [{ to: '/messaging-settings', label: 'Email & Text' }, { to: '/phone-lookup', label: 'Phone & Text Lookup' }, { to: '/receipt-text', label: 'Receipt Text' }] },
       { to: '/sources', label: 'Sources & Machines', icon: <Smartphone size={I} />, admin: true,
         tabs: [{ to: '/sources', label: 'Sources' }, { to: '/machine-registry', label: 'Donary Machines' }] },
       { to: '/templates', label: 'Campaign Templates', icon: <LayoutTemplate size={I} />, admin: true },

@@ -66,6 +66,7 @@ async function twilioSigned(req: Request, publicUrl: string, form: URLSearchPara
   return expected === signature;
 }
 
+const xml = (t: string) => t.replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]!));
 const EMPTY_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
 
 Deno.serve(async req => {
@@ -113,8 +114,13 @@ Deno.serve(async req => {
       return new Response('ok');
     }
     // A text to the organization's number. Twilio answers STOP and START itself; we record the choice.
-    await rpc(scope ? 'sms_inbound_scoped' : 'sms_inbound', { ...(scope ? { p_scope: scope } : {}), p_to: form.get('To'), p_from: form.get('From'), p_body: form.get('Body') });
-    return new Response(EMPTY_TWIML, { headers: { 'Content-Type': 'text/xml' } });
+    const text = { p_to: form.get('To'), p_from: form.get('From'), p_body: form.get('Body') };
+    await rpc(scope ? 'sms_inbound_scoped' : 'sms_inbound', { ...(scope ? { p_scope: scope } : {}), ...text });
+    // Campaign lookup (Phase 10): a reply only when the organization turned replies on and the text asks for one.
+    const reply = await rpc(scope ? 'sms_lookup_reply_scoped' : 'sms_lookup_reply', { ...(scope ? { p_scope: scope } : {}), ...text })
+      .catch(() => null) as string | null;
+    return new Response(reply ? `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${xml(reply)}</Message></Response>` : EMPTY_TWIML,
+      { headers: { 'Content-Type': 'text/xml' } });
   }
 
   return new Response('Unknown provider', { status: 400 });

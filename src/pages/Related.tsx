@@ -1,3 +1,4 @@
+import { FundraiserPhones } from './PhoneLookup';
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -181,6 +182,7 @@ export function ManagerDetail() {
           {d.notes && <span><StickyNote size={14} /> {d.notes}</span>}
         </div>
       )}
+      <FundraiserPhones managerId={d.id} />
       <ReceiptTextCard level="fundraiser" refId={d.id} title="Receipt text for this fundraiser's campaigns" />
       <DataTable
         title="Campaigns"
