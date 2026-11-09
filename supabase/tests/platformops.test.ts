@@ -65,6 +65,20 @@ describe('platform operations', () => {
       expect((await call(db, key, 'donors', { id: 'd2' })).data).toMatchObject({ id: 'd2', last_name: 'Two' });
     });
 
+    it('give donors’ email, phone and address only to a key allowed them as well', async () => {
+      await db.query(`update public.donors set email = 'one@donor.org', phone = '7185550101', address = '1 Main St' where id = 'd1'`);
+      const names = await newKey(db, ['donors']);
+      const contact = await newKey(db, ['donors', 'donor_contact']);
+      const plain = (await call(db, names, 'donors', { id: 'd1' })).data;
+      expect(plain).toMatchObject({ id: 'd1', first_name: 'Donor', last_name: 'One' });
+      expect(plain).not.toHaveProperty('email');
+      expect(plain).not.toHaveProperty('phone');
+      expect(plain).not.toHaveProperty('address');
+      expect((await call(db, contact, 'donors', { id: 'd1' })).data).toMatchObject({ email: 'one@donor.org', phone: '7185550101', address: '1 Main St' });
+      await expect(newKey(db, ['donor_contact', 'campaigns'])).rejects.toThrow(/go with reading donors/);
+      await expect(db.query(`update public.api_keys set scopes = '{donor_contact}'`)).rejects.toThrow();
+    });
+
     it('turn away wrong, revoked and suspended keys, and nobody else may call it', async () => {
       const key = await newKey(db, ['campaigns']);
       expect(await sqlstate(call(db, 'nope', 'campaigns'))).toBe('PT401');

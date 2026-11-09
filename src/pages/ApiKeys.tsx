@@ -9,9 +9,10 @@ import { useQuery } from '../lib/useQuery';
 // Read-only API keys for the organization's own systems. The Super Admin creates and revokes them; the key is
 // shown once and only its hash is kept.
 
-const SCOPES = [
+const SCOPES: { value: string; label: string; needs?: string }[] = [
   { value: 'campaigns', label: 'Campaigns' },
-  { value: 'donors', label: 'Donors (names and contact details)' },
+  { value: 'donors', label: 'Donors (names)' },
+  { value: 'donor_contact', label: 'Donors’ email, phone and address', needs: 'donors' },
   { value: 'donations', label: 'Donations' },
 ];
 export const API_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api/v1`;
@@ -73,7 +74,7 @@ export default function ApiKeysPage() {
               <tr key={k.id}>
                 <td><b>{k.name}</b></td>
                 <td><code>oz_live_{k.prefix}_…</code></td>
-                <td>{(k.scopes as string[]).join(', ')}</td>
+                <td>{(k.scopes as string[]).map(v => (v === 'donor_contact' ? 'donor contact details' : v)).join(', ')}</td>
                 <td>{dateTime(k.created_at)}<div className="muted small">{k.created_by}</div></td>
                 <td>{k.last_used_at ? dateTime(k.last_used_at) : <span className="muted">Never</span>}</td>
                 <td>{k.revoked_at ? <Pill tone="red">Revoked</Pill> : <Pill tone="green">Active</Pill>}</td>
@@ -94,8 +95,10 @@ export default function ApiKeysPage() {
             <fieldset className="field"><span>Can read</span>
               {SCOPES.map(s => (
                 <label key={s.value} className="check">
-                  <input type="checkbox" checked={scopes.includes(s.value)}
-                    onChange={e => setScopes(x => (e.target.checked ? [...x, s.value] : x.filter(v => v !== s.value)))} /> {s.label}
+                  <input type="checkbox" checked={scopes.includes(s.value)} disabled={!!s.needs && !scopes.includes(s.needs)}
+                    onChange={e => setScopes(x => (e.target.checked ? [...x, s.value]
+                      // Contact details go with reading donors.
+                      : x.filter(v => v !== s.value && !(s.value === 'donors' && v === 'donor_contact'))))} /> {s.label}
                 </label>
               ))}
             </fieldset>
@@ -114,7 +117,7 @@ export default function ApiKeysPage() {
   "${API_BASE}/donations?limit=100&updated_since=2026-11-01T00:00:00Z"`}</pre>
         <ul className="muted small">
           <li><code>GET /campaigns</code>, <code>/campaigns/&lt;id&gt;</code></li>
-          <li><code>GET /donors</code>, <code>/donors/&lt;id&gt;</code></li>
+          <li><code>GET /donors</code>, <code>/donors/&lt;id&gt;</code>: names; email, phone and address only for a key allowed them</li>
           <li><code>GET /donations</code>, <code>/donations/&lt;id&gt;</code>, also <code>?campaign_id=</code> and <code>?donor_id=</code></li>
         </ul>
       </div>

@@ -4,8 +4,9 @@
 # First deploy (needs a Cloudflare token with Workers Scripts and Workers KV Storage edit):
 #   npx wrangler kv namespace create oizer-status      -> put its id below
 #   npx wrangler deploy --config workers/uptime/wrangler.toml
-# Optional email alerts:
-#   npx wrangler secret put SENDGRID_KEY --config workers/uptime/wrangler.toml   (and set ALERT_EMAIL below)
+# Email alerts go to ALERT_EMAIL through the platform's SendGrid account (decided 2026-11-09):
+#   npx wrangler secret put SENDGRID_KEY --config workers/uptime/wrangler.toml   (the platform SENDGRID_API_KEY)
+#   and set ALERT_FROM to a sender verified in that SendGrid account.
 
 name = "oizer-status"
 main = "src/index.ts"
@@ -25,4 +26,5 @@ SUPABASE_URL = "https://wwaknikpdquwnphhwzsm.supabase.co"
 # The anon key is public (it ships in the web app); it only lets the health checks through the API gateway.
 SUPABASE_ANON_KEY = "REPLACE_WITH_ANON_KEY"
 APP_URLS = "https://oizer.trubase.org/,https://oizer-drm.pages.dev/"
-ALERT_EMAIL = ""
+ALERT_EMAIL = "smueller@trubase.org"
+ALERT_FROM = ""
