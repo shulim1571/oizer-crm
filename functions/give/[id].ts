@@ -28,7 +28,8 @@ export function previewTags(page: Json, orgFallback: string, url: URL) {
   const raised = Number(page.campaign.raised ?? 0), goal = Number(page.campaign.goal ?? 0);
   const progress = goal > 0 ? ` ${Math.min(100, Math.round((raised / goal) * 100))}% of the $${goal.toLocaleString('en-US')} goal raised.` : '';
   const description = story ? (story.length > 180 ? `${story.slice(0, 177)}…` : story) : `Support ${name}${orgName ? ` with ${orgName}` : ''}. Give securely online.${progress}`;
-  const image = absolute(page.page?.banner_url, url.href) ?? absolute(page.org?.logo_url, url.href);
+  const banner = absolute(page.page?.banner_url, url.href);
+  const image = banner ?? absolute(page.org?.logo_url, url.href);
   return {
     title: orgName ? `${name} · ${orgName}` : name,
     tags: [
@@ -39,7 +40,8 @@ export function previewTags(page: Json, orgFallback: string, url: URL) {
       `<meta property="og:description" content="${esc(description)}" />`,
       `<meta property="og:url" content="${esc(url.origin + url.pathname)}" />`,
       image ? `<meta property="og:image" content="${esc(image)}" />` : '',
-      `<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}" />`,
+      // A wide card only for a banner; a logo shows as the small square card.
+      `<meta name="twitter:card" content="${banner ? 'summary_large_image' : 'summary'}" />`,
       `<meta name="twitter:title" content="${esc(`Donate to ${name}`)}" />`,
       `<meta name="twitter:description" content="${esc(description)}" />`,
       image ? `<meta name="twitter:image" content="${esc(image)}" />` : '',
