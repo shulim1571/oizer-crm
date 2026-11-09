@@ -42,6 +42,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   delivery_failed: { label: 'Delivery Failed', tone: 'red' },
   receipt_requested: { label: 'Receipt Requested', tone: 'blue' },
   recurring_failed: { label: 'Recurring Charge Failed', tone: 'red' },
+  ach_returned: { label: 'Bank Payment Returned', tone: 'red' },
 };
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
@@ -208,6 +209,12 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       {item.task_type === 'unattributed' && <UnattributedActions item={item} onAct={act} onHold={() => close('held', 'Hold this for later? It stays here, set aside. Add a note if useful:')} onSplit={onDone} log={log} />}
       {item.task_type === 'returned_check' && (
         <div className="donation-actions">{dismiss('Done', 'A follow-up task went to the fundraiser. Take this off the sheet? Add a note if useful:')}</div>
+      )}
+      {item.task_type === 'ach_returned' && (
+        <>
+          <p className="muted">The bank sent this ACH debit back, so the gift is marked returned and its money is off the campaign. Reach the donor for another way to give.</p>
+          <div className="donation-actions">{dismiss('Done', 'Take this off the sheet? Say how it was handled, for example "donor paid by card":')}</div>
+        </>
       )}
       {item.task_type === 'post_dated_due' && <div className="donation-actions">{dismiss('Deposited')}</div>}
       {item.task_type === 'stale_check' && (

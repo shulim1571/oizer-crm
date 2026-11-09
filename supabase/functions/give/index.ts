@@ -1,11 +1,11 @@
-// Gifts from a campaign's public payment page. No sign-in: deployed with JWT verification off. Each request
-// passes Cloudflare Turnstile (TURNSTILE_SECRET_KEY), except while an organization is on sandbox keys and no
-// Turnstile secret is set yet. The database checks the page's rules and the connection's recent attempts,
-// then the organization's own Sola key charges the card tokens from iFields.
+// Gifts from a campaign's public payment page: by card, bank account (ACH) or DAF card. No sign-in: deployed
+// with JWT verification off. Each request passes Cloudflare Turnstile with the organization's own secret key, or
+// the platform's (TURNSTILE_SECRET_KEY) when it has none, except while it is on sandbox keys and neither is set.
+// The database checks the page's rules, the method and the connection's recent attempts, then the organization's own Sola key charges the gift.
 
 const url = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const turnstileSecret = Deno.env.get('TURNSTILE_SECRET_KEY');
+const platformTurnstileSecret = Deno.env.get('TURNSTILE_SECRET_KEY') ?? null;
 const GATEWAY = 'https://x1.cardknox.com/gatewayjson';
 
 const CORS = {
@@ -26,7 +26,9 @@ async function rpc(name: string, args: unknown) {
   return body;
 }
 
-async function humanCheck(token: string | undefined, ip: string | null, sandbox: boolean) {
+async function humanCheck(org: string, token: string | undefined, ip: string | null, sandbox: boolean) {
+  const own = await rpc('org_turnstile_secret', { p_org: org }).catch(() => null) as string | null;
+  const turnstileSecret = own ?? platformTurnstileSecret;
   if (!turnstileSecret) return sandbox;
   if (!token) return false;
   const form = new URLSearchParams({ secret: turnstileSecret, response: token, ...(ip ? { remoteip: ip } : {}) });
@@ -37,15 +39,80 @@ async function humanCheck(token: string | undefined, ip: string | null, sandbox:
 
 const COUNTRY: Record<string, string> = { USA: 'US', Canada: 'CA', Israel: 'IL', England: 'GB' };
 
+// ---------------------------------------------------------------------------
+// Payment methods: card, bank account (ACH) or DAF card. The same block is in the payments, give and
+// recurring-charges functions. Bank and DAF numbers pass through to Sola; they're never stored or logged.
+// ---------------------------------------------------------------------------
+interface Pay {
+  method?: 'card' | 'ach' | 'daf'; program?: string;
+  card_sut?: string; cvv_sut?: string; exp?: string;
+  routing?: string; account?: string; account_type?: string; account_name?: string;
+  daf_card?: string; daf_exp?: string; daf_cvv?: string; daf_email?: string; daf_pin?: string;
+}
+
+// The ABA checksum every US routing number passes.
+const routingOk = (r: string) => /^\d{9}$/.test(r) && [...r].reduce((s, d, i) => s + Number(d) * [3, 7, 1][i % 3], 0) % 10 === 0;
+
+// What each fund asks for, as on the organization's existing page. Donors Fund also signs in by email and PIN.
+const DAF_NEEDS: Record<string, { exp: boolean; cvv: boolean }> = {
+  OJC: { exp: true, cvv: false }, Pledger: { exp: true, cvv: true }, Matbia: { exp: true, cvv: false }, 'Donors Fund': { exp: false, cvv: true },
+};
+
+function payProblem(p: Pay): string | null {
+  const m = p.method ?? 'card';
+  if (m === 'card') return p.card_sut && p.cvv_sut && /^\d{4}$/.test(p.exp ?? '') ? null : 'Enter the card number, expiry and CVV.';
+  if (m === 'ach') {
+    if (!routingOk(p.routing ?? '')) return 'Check the routing number.';
+    if (!/^\d{4,17}$/.test(p.account ?? '')) return 'Check the account number.';
+    if (!['Checking', 'Savings'].includes(p.account_type ?? '')) return 'Choose checking or savings.';
+    return null;
+  }
+  const need = DAF_NEEDS[p.program ?? ''];
+  if (!need) return 'Choose the fund.';
+  if (p.program === 'Donors Fund' && p.daf_email) {
+    return /^\S+@\S+\.\S+$/.test(p.daf_email) && /^\d{4}$/.test(p.daf_pin ?? '') ? null : 'Enter the Donors Fund email and 4-digit PIN.';
+  }
+  if (!/^\d{8,19}$/.test(p.daf_card ?? '')) return `Check the ${p.program} card number.`;
+  if (need.exp && !/^\d{4}$/.test(p.daf_exp ?? '')) return 'Enter the expiry as MM/YY.';
+  if (need.cvv && !/^\d{3,4}$/.test(p.daf_cvv ?? '')) return 'Enter the CVV.';
+  return null;
+}
+
+/** The method's part of a Sola request: the command, and the account, card or saved token. */
+function solaFields(method: string, kind: string, p: Pay, token: string | null, ref?: string | null, accountType?: string | null): Record<string, unknown> {
+  const family = method === 'ach' ? 'check' : method === 'daf' ? 'grant' : 'cc';
+  if (kind === 'void') return { xCommand: family === 'grant' ? 'grant:Void' : `${family}:void`, xRefNum: ref };
+  // A card refund uses cc:voidrefund: before the batch settles it voids the charge, after it refunds it.
+  if (kind === 'refund') return { xCommand: family === 'check' ? 'check:refund' : 'cc:voidrefund', xRefNum: ref };
+  const xCommand = family === 'grant' ? 'grant:Recommendation' : `${family}:${kind}`;
+  if (token) return { xCommand, xToken: token };
+  if (family === 'check') return { xCommand, xRouting: p.routing, xAccount: p.account, xAccountType: accountType ?? p.account_type, xName: p.account_name };
+  if (family === 'grant') {
+    // Donors Fund by account sends the email and PIN in the card fields; to confirm in Sola's sandbox.
+    return p.daf_email ? { xCommand, xCardNum: p.daf_email, xCVV: p.daf_pin }
+      : { xCommand, xCardNum: p.daf_card, xExp: p.daf_exp || undefined, xCVV: p.daf_cvv || undefined };
+  }
+  return { xCommand, xCardNum: p.card_sut, xCVV: p.cvv_sut, xExp: p.exp };
+}
+
+/** The donor's bank authorization as the database keeps it: never the numbers, only type and last four. */
+const achConsent = (p: Pay, agreed: boolean) =>
+  p.method === 'ach' ? { account_type: p.account_type, last4: (p.account ?? '').slice(-4), name: p.account_name, agreed } : null;
+
+const KEEP = ['xResult', 'xStatus', 'xError', 'xErrorCode', 'xRefNum', 'xAuthCode', 'xMaskedCardNumber', 'xMaskedAccountNumber', 'xCardType', 'xExp',
+  'xAvsResult', 'xCvvResult', 'xBatch', 'xAuthAmount', 'xToken'];
+const kept = (result: Record<string, string>) => Object.fromEntries(KEEP.filter(k => result[k] !== undefined).map(k => [k, result[k]]));
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return reply({ error: 'Method not allowed' });
-  let b: Record<string, any>;
+  let b: Record<string, any> & Pay;
   try { b = await req.json(); } catch { return reply({ error: 'Something went wrong. Please try again.' }); }
   const ip = (req.headers.get('cf-connecting-ip') ?? req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || null;
-  if (!b.org || !b.campaign || !b.card_sut || !b.cvv_sut || !/^\d{4}$/.test(String(b.exp ?? ''))) {
-    return reply({ error: 'Enter the card number, expiry and CVV.' });
-  }
+  b.method ??= 'card';
+  if (!b.org || !b.campaign) return reply({ error: 'Something went wrong. Please try again.' });
+  const problem = payProblem(b);
+  if (problem) return reply({ error: problem });
 
   let page: Record<string, any> | null;
   try {
@@ -54,14 +121,15 @@ Deno.serve(async req => {
     return reply({ error: 'This page isn\'t available right now. Please try again shortly.' });
   }
   if (!page) return reply({ error: 'This page isn\'t taking donations.' });
-  if (!await humanCheck(b.turnstile, ip, page.payments?.sandbox)) return reply({ error: 'Please confirm you\'re not a robot and try again.', retry_check: true });
+  if (!await humanCheck(b.org, b.turnstile, ip, page.payments?.sandbox)) return reply({ error: 'Please confirm you\'re not a robot and try again.', retry_check: true });
 
-  // 1. The page's rules and the connection's limits.
+  // 1. The page's rules, the method and the connection's limits.
   let start: { id: string; token: string; total: number; kind: 'sale' | 'save' };
   try {
-    start = await rpc('begin_public_sale', {
+    start = await rpc('begin_public_payment', {
       p_org: b.org, p_campaign: b.campaign, p_amount: Number(b.amount), p_cover_fee: !!b.cover_fee,
       p_donor: b.donor ?? {}, p_custom: b.custom ?? {}, p_ip: ip, p_recurring: b.recurring ?? null,
+      p_method: b.method, p_program: b.method === 'daf' ? b.program : null, p_ach: achConsent(b, !!b.ach_agreed),
     });
   } catch (e) {
     return reply({ error: e instanceof Error ? e.message : String(e) });
@@ -77,12 +145,12 @@ Deno.serve(async req => {
 
   // 3. Sola.
   const d = b.donor ?? {};
-  // A recurring donation starting later only saves the card now; its first charge comes on the start date.
+  // A recurring donation starting later only saves the card or account now; its first charge comes on the start date.
   const later = start.kind === 'save';
   const command = {
-    xKey: c.api_key, xVersion: '5.0.0', xSoftwareName: 'Oizer CRM', xSoftwareVersion: '1.0', xCommand: later ? 'cc:save' : 'cc:sale',
+    xKey: c.api_key, xVersion: '5.0.0', xSoftwareName: 'Oizer CRM', xSoftwareVersion: '1.0',
+    ...solaFields(c.method, later ? 'save' : 'sale', b, null),
     ...(later ? {} : { xAmount: Number(c.amount).toFixed(2) }), xInvoice: c.invoice, xIP: ip ?? undefined,
-    xCardNum: b.card_sut, xCVV: b.cvv_sut, xExp: b.exp,
     xBillFirstName: d.first_name, xBillLastName: d.last_name, xBillPhone: d.phone, xEmail: d.email || undefined,
     xBillStreet: d.address || undefined, xBillZip: d.zip || undefined, xBillCountry: COUNTRY[d.country] ?? undefined,
     xDescription: c.campaign_label ?? undefined,
@@ -92,18 +160,23 @@ Deno.serve(async req => {
     const res = await fetch(GATEWAY, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(command), signal: AbortSignal.timeout(45000) });
     result = await res.json();
   } catch {
-    return reply({ error: 'We didn\'t hear back from the card processor. Please don\'t try again yet: the office will check whether your gift went through.', pending: true });
+    return reply({ error: 'We didn\'t hear back from the payment processor. Please don\'t try again yet: the office will check whether your gift went through.', pending: true });
   }
 
   // 4. Recorded: a donation, or a failed attempt.
   try {
-    const keep = ['xResult', 'xStatus', 'xError', 'xErrorCode', 'xRefNum', 'xAuthCode', 'xMaskedCardNumber', 'xCardType', 'xExp', 'xAvsResult', 'xCvvResult', 'xBatch', 'xToken'];
-    const kept = Object.fromEntries(keep.filter(k => result[k] !== undefined).map(k => [k, result[k]]));
-    const g = await rpc('record_gateway_result', { p_org: b.org, p_id: start.id, p_result: kept });
-    if (g.status !== 'approved') return reply({ declined: true, error: result.xError || 'The card was declined. Please check the details or try another card.' });
-    return reply({ approved: true, scheduled: later, recurring: !!b.recurring, start: b.recurring?.start ?? null, amount: later ? 0 : g.amount, per: c.amount, ref: g.ref_num,
-                   card: `${g.card_type ?? 'Card'} ${String(g.masked_card ?? '').slice(-4)}`, token: later ? null : start.token });
+    const g = await rpc('record_gateway_result', { p_org: b.org, p_id: start.id, p_result: kept(result) });
+    if (g.status !== 'approved') {
+      return reply({ declined: true, error: result.xError || (b.method === 'card' ? 'The card was declined. Please check the details or try another card.' : 'The payment wasn\'t accepted. Please check the details.') });
+    }
+    const last4 = String(g.masked_card ?? '').slice(-4);
+    return reply({
+      approved: true, method: c.method, scheduled: later, recurring: !!b.recurring, recurring_set: !b.recurring || !!g.recurring_id,
+      start: b.recurring?.start ?? null, amount: later ? 0 : g.amount, per: c.amount, ref: g.ref_num,
+      card: c.method === 'ach' ? `${g.card_type ?? 'Bank'} ••${last4}` : c.method === 'daf' ? `${c.daf_program}${last4 ? ` ••${last4}` : ''}` : `${g.card_type ?? 'Card'} ${last4}`,
+      token: later ? null : start.token,
+    });
   } catch {
-    return reply({ approved: true, amount: c.amount, ref: result.xRefNum, token: start.token });
+    return reply({ approved: true, method: c.method, amount: c.amount, ref: result.xRefNum, token: start.token });
   }
 });

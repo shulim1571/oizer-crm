@@ -9,7 +9,16 @@ import { campaignOptions, donorOptions, type Option } from '../lib/lookups';
 import { requestOrgId, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
+import { TurnstileKeys } from './IntegrationKeys';
 import { RecurringDialog, SaveCardDialog, SetupRecurringDialog } from './Recurring';
+import {
+  BankFields, DAF_PROGRAMS, DafFields, MethodTabs, PAY_EN, bankBody, bankProblem, dafBody, dafProblem, emptyBank, emptyDaf, savedLabel,
+  type BankValue, type DafValue, type Method,
+} from './PayMethods';
+
+// In the office the donor isn't ticking the box: the admin confirms the donor authorized the debit.
+export const OFFICE_PAY = { ...PAY_EN, ach_agree: 'The donor authorized this debit with the wording above, in writing or on a recorded call.',
+  ach_agree_needed: 'Confirm the donor authorized the debit.' };
 
 // Card payments through Sola Payments, each organization with its own Sola account. Card number and CVV
 // are typed into Sola's iFields, frames served by Sola, and come back to us only as single-use tokens.
@@ -39,7 +48,10 @@ function loadIfields() {
   });
 }
 
-export interface PaymentConfig { ifields_key: string | null; sandbox: boolean; api_key_set: boolean; pin_set: boolean; updated_at?: string; updated_by?: string }
+export interface PaymentConfig {
+  ifields_key: string | null; sandbox: boolean; api_key_set: boolean; pin_set: boolean; updated_at?: string; updated_by?: string;
+  ach_enabled: boolean; daf_programs: string[]; ach_authorization: string | null; ach_authorization_text: string | null;
+}
 export const usePaymentConfig = () => useQuery(async () => (((await supabase.rpc('payment_config')).data ?? []) as PaymentConfig[])[0] ?? null, []);
 
 /** Calls the payments function for this organization. */
@@ -116,6 +128,10 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [save, setSave] = useState(false);
+  const [method, setMethod] = useState<Method>('card');
+  const [program, setProgram] = useState<string | null>(null);
+  const [bank, setBank] = useState<BankValue>(emptyBank());
+  const [daf, setDaf] = useState<DafValue>(emptyDaf());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Row | null>(null);
@@ -138,14 +154,18 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
     setError(null);
     if (!campaign) return setError('Choose a campaign.');
     if (!(Number(amount) > 0)) return setError('Enter an amount.');
-    if (!card && expDigits.length !== 4) return setError('Enter the expiry as MM/YY.');
-    if (!confirm(`Charge ${money(Number(amount))} to ${card ? 'the saved card' : 'this card'}?`)) return;
+    const problem = card ? null : method === 'ach' ? bankProblem(bank, OFFICE_PAY) : method === 'daf' ? dafProblem(program ?? '', daf, OFFICE_PAY)
+      : expDigits.length !== 4 ? 'Enter the expiry as MM/YY.' : null;
+    if (problem) return setError(problem);
+    const what = card ? `the saved ${savedLabel(cards.find(k => k.id === card) ?? {})}` : method === 'ach' ? 'this bank account' : method === 'daf' ? `this ${program} card` : 'this card';
+    if (!confirm(`Charge ${money(Number(amount))} to ${what}?`)) return;
     setBusy(true);
     try {
-      const t = card ? null : await tokens.current!();
+      const pay = card ? {} : method === 'ach' ? { ...bankBody(bank), ach_authorized: bank.agreed } : method === 'daf' ? dafBody(program!, daf)
+        : await tokens.current!().then(t => ({ method: 'card', card_sut: t.card, cvv_sut: t.cvv, exp: expDigits }));
       const r = await callPayments({
         action: 'sale', campaign_id: campaign, donor_id: donor, amount: Number(amount), card_id: card || null, save_card: save && !card,
-        name, email, notes, zip, card_sut: t?.card, cvv_sut: t?.cvv, exp: card ? undefined : expDigits,
+        name, email, notes, zip, ...pay,
       });
       if (r.error) throw new Error(r.error);
       setResult(r.transaction!);
@@ -159,14 +179,15 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
 
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2><CreditCard size={18} /> Charge a card {cfg?.sandbox && <Pill tone="amber">Sandbox</Pill>}</h2>
+      <div className="form-head"><h2><CreditCard size={18} /> Take a payment {cfg?.sandbox && <Pill tone="amber">Sandbox</Pill>}</h2>
         <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
       {config.loading ? null : !cfg?.ifields_key || !cfg.api_key_set ? (
         <p>Card payments aren't set up yet. The Super Admin adds this organization's Sola keys under <Link to="/payments-settings">Settings → Payments</Link>.</p>
       ) : result ? (
         <>
           {result.status === 'approved'
-            ? <div className="notice">Approved: {money(result.amount)} · {result.card_type} {String(result.masked_card ?? '').slice(-4)} · Sola ref {result.ref_num}{result.card_id ? ' · card saved' : ''}</div>
+            ? <div className="notice">Approved: {money(result.amount)} · {savedLabel({ method: result.method, card_type: result.card_type, masked: result.masked_card, daf_program: result.daf_program })} · Sola ref {result.ref_num}
+                {result.card_id ? ' · saved for next time' : ''}{result.method === 'ach' ? '. The bank debit settles in 1–3 business days; a return from the bank will show up on the Task Sheet.' : ''}</div>
             : <div className="error">{result.status === 'declined' ? 'Declined' : 'Error'}: {result.error ?? 'no reason given'}. It's kept as a failed transaction; nothing was charged.</div>}
           <div className="form-actions"><div className="spacer" />
             {result.status !== 'approved' && <button type="button" className="btn" onClick={() => setResult(null)}>Try again</button>}
@@ -174,7 +195,8 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
         </>
       ) : (
         <>
-          {cfg.sandbox && <p className="muted small">Sandbox keys: only test cards work, such as 4111 1111 1111 1111 with any future expiry. An amount of $9.91 declines.</p>}
+          {cfg.sandbox && <p className="muted small">Sandbox keys: only test details work. Card 4111 1111 1111 1111 with any future expiry ($9.91 declines); bank account 999999999 with routing 021000021;
+            OJC 6900664467242419; Pledger 6599973975864259; Donors Fund 6599992999456587 (under $5).</p>}
           <div className="fields">
             <label className="field"><span>Campaign</span><SearchSelect value={campaign} options={campaigns} onChange={setCampaign} required /></label>
             <label className="field"><span>Donor</span><SearchSelect value={donor} options={donors} onChange={v => { setDonor(v); setCard(''); }} placeholder="Optional" /></label>
@@ -182,28 +204,38 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
             {cards.length > 0 && (
               <label className="field"><span>Card</span>
                 <select value={card} onChange={e => setCard(e.target.value)}>
-                  <option value="">A new card</option>
-                  {cards.map(k => <option key={k.id} value={k.id}>{k.card_type ?? 'Card'} ending {String(k.masked ?? '').slice(-4)}{k.exp ? ` · exp ${k.exp.slice(0, 2)}/${k.exp.slice(2)}` : ''}</option>)}
+                  <option value="">Something new</option>
+                  {cards.map(k => <option key={k.id} value={k.id}>{savedLabel(k)}{k.exp ? ` · exp ${k.exp.slice(0, 2)}/${k.exp.slice(2)}` : ''}</option>)}
                 </select></label>
             )}
           </div>
           {!card && (
             <>
-              <CardFields ifieldsKey={cfg.ifields_key} onTokens={setTokens} />
-              <div className="fields">
-                <label className="field"><span>Expiry (MM/YY)</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" value={exp}
-                  onChange={e => { const d = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d); }} /></label>
-                <label className="field"><span>Name on card</span><input value={name} onChange={e => setName(e.target.value)} /></label>
-                <label className="field"><span>Billing ZIP</span><input value={zip} onChange={e => setZip(e.target.value)} /></label>
-              </div>
-              {donor && <label className="inline-check"><input type="checkbox" checked={save} onChange={e => setSave(e.target.checked)} /> Save this card on the donor for next time</label>}
+              <MethodTabs value={method} program={program} ach={cfg.ach_enabled} daf={cfg.daf_programs ?? []} L={OFFICE_PAY}
+                onChange={(m, p) => { setMethod(m); setProgram(p); setDaf(emptyDaf()); setError(null); if (m === 'ach') setBank(b => ({ ...b, account_name: b.account_name || name })); }} />
+              {method === 'card' && (
+                <>
+                  <CardFields ifieldsKey={cfg.ifields_key} onTokens={setTokens} />
+                  <div className="fields">
+                    <label className="field"><span>Expiry (MM/YY)</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" value={exp}
+                      onChange={e => { const d = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d); }} /></label>
+                    <label className="field"><span>Name on card</span><input value={name} onChange={e => setName(e.target.value)} /></label>
+                    <label className="field"><span>Billing ZIP</span><input value={zip} onChange={e => setZip(e.target.value)} /></label>
+                  </div>
+                </>
+              )}
+              {method === 'ach' && <BankFields value={bank} onChange={setBank} L={OFFICE_PAY} authorization={cfg.ach_authorization_text} />}
+              {method === 'daf' && program && <DafFields program={program} value={daf} onChange={setDaf} L={OFFICE_PAY} />}
+              {donor && <label className="inline-check"><input type="checkbox" checked={save} onChange={e => setSave(e.target.checked)} />
+                Save this {method === 'ach' ? 'bank account' : 'card'} on the donor for next time{method === 'daf' ? ' (if the fund allows it)' : ''}</label>}
             </>
           )}
           <div className="fields">
             <label className="field"><span>Email for Sola's receipt</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
             <label className="field wide"><span>Notes</span><input value={notes} onChange={e => setNotes(e.target.value)} /></label>
           </div>
-          <p className="muted small">The card number and CVV go straight to Sola; this portal never sees them. An approved charge is saved as a completed donation; a decline is kept as a failed one.</p>
+          <p className="muted small">Card numbers go straight to Sola; this portal never sees them. Bank and fund numbers pass through to Sola and aren't kept.
+            An approved payment is saved as a completed donation; a decline is kept as a failed one.</p>
           {error && <div className="error">{error}</div>}
           <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
             <button type="button" className="btn primary" disabled={busy} onClick={charge}>{busy ? 'Charging…' : `Charge ${Number(amount) > 0 ? money(Number(amount)) : ''}`}</button></div>
@@ -226,10 +258,13 @@ export function GatewayActions({ record, onDone, onCharged }: { record: Row; onD
   useEffect(() => { onCharged?.(!!sale); }, [sale, onCharged]);
   if (!steps.length) return null;
   const live = sale && (record.status === 'completed' || record.status === 'collect');
+  const what = sale?.method === 'ach' ? 'bank account' : sale?.method === 'daf' ? `${sale.daf_program} card` : 'card';
   async function reverse(action: 'void' | 'refund') {
     const text = action === 'void'
-      ? `Void ${money(record.amount)} at Sola? A void works only before the day's batch settles; the card is never charged.`
-      : `Refund ${money(record.amount)} to the card at Sola? Before the day's batch settles Sola voids the charge; after, it refunds it. The net comes off the campaign.`;
+      ? `Void ${money(record.amount)} at Sola? A void works only before the day's batch is sent; the ${what} is never charged.`
+      : sale?.method === 'ach'
+        ? `Refund ${money(record.amount)} to the bank account at Sola? A bank refund works only once the debit has settled, and only in full. The net comes off the campaign.`
+        : `Refund ${money(record.amount)} to the card at Sola? Before the day's batch settles Sola voids the charge; after, it refunds it. The net comes off the campaign.`;
     if (!confirm(text)) return;
     setBusy(true);
     setError(null);
@@ -251,16 +286,20 @@ export function GatewayActions({ record, onDone, onCharged }: { record: Row; onD
     <div className="panel-box">
       <b>Sola</b>
       <ul className="plain-list">{steps.map(s => (
-        <li key={s.id}><span>{s.kind === 'sale' ? 'Charge' : s.kind === 'void' ? 'Void' : 'Refund'} {money(s.amount)}{s.masked_card ? ` · ${s.card_type ?? 'card'} ${String(s.masked_card).slice(-4)}` : ''}
+        <li key={s.id}><span>{s.kind === 'sale' ? (s.method === 'ach' ? 'Bank debit' : s.method === 'daf' ? 'Grant' : 'Charge') : s.kind === 'void' ? 'Void' : 'Refund'} {money(s.amount)}
+          {s.masked_card ? ` · ${savedLabel({ method: s.method, card_type: s.card_type, masked: s.masked_card, daf_program: s.daf_program })}` : ''}
           {s.ref_num ? ` · ref ${s.ref_num}` : ''} · {dateTime(s.created_at)} by {s.requested_email}</span>
-          <Pill tone={s.status === 'approved' ? 'green' : s.status === 'pending' ? 'amber' : 'red'}>{s.status}{s.error ? `: ${s.error}` : ''}</Pill></li>
+          <span><Pill tone={s.status === 'approved' ? 'green' : s.status === 'pending' ? 'amber' : 'red'}>{s.status}{s.error ? `: ${s.error}` : ''}</Pill>
+            {s.settlement && <> <Pill tone={s.settlement === 'settled' ? 'green' : s.settlement === 'returned' ? 'red' : 'amber'}>
+              {s.settlement === 'pending' ? 'not settled yet' : s.settlement}{s.return_reason ? `: ${s.return_reason}` : ''}</Pill></>}</span></li>
       ))}</ul>
       {live && (
         <div className="donation-actions">
           <button type="button" className="btn" disabled={busy} onClick={() => reverse('void')}>Void at Sola</button>
-          <button type="button" className="btn" disabled={busy} onClick={() => reverse('refund')}>Refund at Sola</button>
+          {sale?.method !== 'daf' && <button type="button" className="btn" disabled={busy} onClick={() => reverse('refund')}>Refund at Sola</button>}
         </div>
       )}
+      {live && sale?.method === 'daf' && <p className="muted small">A {sale.daf_program} grant can be voided through Sola but not refunded. Once it can't be voided, ask {sale.daf_program} to reverse it.</p>}
       {error && <div className="error">{error}</div>}
     </div>
   );
@@ -291,7 +330,7 @@ export function SavedCards({ donor }: { donor: Row }) {
     const powering = recurring.filter(r => r.card_id === k.id);
     const warning = powering.length
       ? `This card is being used for an active recurring donation on ${powering.map(r => r.campaign_label).join(', ')}. Deleting it will also cancel that recurring donation, and the donor is told. Delete it?`
-      : `Delete the ${k.card_type ?? 'card'} ending ${String(k.masked ?? '').slice(-4)}? It can't be charged again.`;
+      : `Delete the ${savedLabel(k)}? It can't be charged again.`;
     if (!confirm(warning)) return;
     const { error } = await supabase.rpc('delete_donor_card', { p_id: k.id });
     if (error) return alert(error.message);
@@ -299,14 +338,14 @@ export function SavedCards({ donor }: { donor: Row }) {
   }
   return (
     <div className="card">
-      <div className="card-head"><h3>Cards</h3>
-        <span><button type="button" className="btn" onClick={() => setCharging(null)}><CreditCard size={15} /> Charge a card</button>
-          <button type="button" className="link" onClick={() => setSaving(true)}>Save a card</button></span></div>
-      {list.length === 0 ? <p className="muted small">No saved cards. Save one, or tick "Save this card" when charging.</p> : (
+      <div className="card-head"><h3>Cards and accounts</h3>
+        <span><button type="button" className="btn" onClick={() => setCharging(null)}><CreditCard size={15} /> Take a payment</button>
+          <button type="button" className="link" onClick={() => setSaving(true)}>Save a card or account</button></span></div>
+      {list.length === 0 ? <p className="muted small">Nothing saved. Save one, or tick "Save" when taking a payment.</p> : (
         <ul className="plain-list">{list.map(k => {
           const powering = recurring.filter(r => r.card_id === k.id);
           return (
-            <li key={k.id}><span>{k.card_type ?? 'Card'} ending <b>{String(k.masked ?? '').slice(-4)}</b>{k.exp ? ` · exp ${k.exp.slice(0, 2)}/${k.exp.slice(2)}` : ''} · added {dateTime(k.created_at)}
+            <li key={k.id}><span><b>{savedLabel(k)}</b>{k.exp ? ` · exp ${k.exp.slice(0, 2)}/${k.exp.slice(2)}` : ''} · added {dateTime(k.created_at)}
               {powering.length > 0 && <> · <Pill tone="blue">Pays a recurring donation</Pill></>}</span>
               <span><button type="button" className="link" onClick={() => setCharging(k.id)}>Charge</button>
                 <button type="button" className="link" onClick={() => setSettingUp(k.id)}>Recurring</button>
@@ -400,6 +439,44 @@ export function PaymentsSettingsPage() {
           <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" disabled={!ifields.trim()} onClick={save}>Save</button></div>
         </div>
       ) : <p className="muted">Only the Super Admin can change the payment keys.</p>}
+      {isSuperAdmin && cfg && <PaymentOptions cfg={cfg} onSaved={() => void config.reload()} />}
+      <TurnstileKeys />
     </section>
+  );
+}
+
+/** Bank accounts and DAF cards: which ones this organization's Sola account takes. */
+function PaymentOptions({ cfg, onSaved }: { cfg: PaymentConfig; onSaved: () => void }) {
+  const [ach, setAch] = useState(cfg.ach_enabled);
+  const [funds, setFunds] = useState<string[]>(cfg.daf_programs ?? []);
+  const [wording, setWording] = useState(cfg.ach_authorization ?? '');
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function save() {
+    setError(null);
+    setSaved(false);
+    const { error: e } = await supabase.rpc('save_payment_options', { p_ach: ach, p_daf_programs: funds, p_ach_authorization: wording || null });
+    if (e) return setError(e.message);
+    setSaved(true);
+    onSaved();
+  }
+  return (
+    <div className="panel-box">
+      <h2>Bank accounts and donor-advised funds</h2>
+      <p className="muted small">Turn on only what this organization's Sola account is set up to take. Ask Sola to enable ACH and each fund first; they then appear on every payment page and in the office.</p>
+      <label className="inline-check"><input type="checkbox" checked={ach} onChange={e => setAch(e.target.checked)} /> Bank accounts (ACH)</label>
+      {ach && (
+        <label className="field wide"><span>ACH authorization wording</span>
+          <textarea rows={5} value={wording} onChange={e => setWording(e.target.value)} placeholder={cfg.ach_authorization_text ?? ''} />
+          <small className="muted">Leave empty to use the standard wording shown. {'{org}'} becomes the organization's name. Each donor's agreement is kept with the exact wording they saw.</small></label>
+      )}
+      <div className="fields">{DAF_PROGRAMS.map(p => (
+        <label key={p} className="inline-check"><input type="checkbox" checked={funds.includes(p)}
+          onChange={e => setFunds(f => (e.target.checked ? [...f, p] : f.filter(x => x !== p)))} /> {p}</label>
+      ))}</div>
+      {saved && <div className="notice">Saved.</div>}
+      {error && <div className="error">{error}</div>}
+      <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={save}>Save</button></div>
+    </div>
   );
 }

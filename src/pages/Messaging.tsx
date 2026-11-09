@@ -8,6 +8,7 @@ import { dateTime } from '../lib/format';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
+import { KeysPanel, NO_KEYS, ownKeys, ownWebhook, useKeyStatus, type KeyStatus } from './IntegrationKeys';
 
 // Every email and text the system sends goes through the messages table. Until sending is switched on,
 // only the test list gets anything; the rest is held and shows here.
@@ -212,7 +213,8 @@ export function DeliveryFailed({ messageId, onDone }: { messageId: string; onDon
 // Messaging Settings
 // ---------------------------------------------------------------------------
 export function MessagingSettingsPage() {
-  const { org } = useAuth();
+  const { org, isPlatformOwner } = useAuth();
+  const keyQ = useKeyStatus();
   const [version, setVersion] = useState(0);
   const q = useQuery(async () => {
     const [s, p, o] = await Promise.all([
@@ -269,6 +271,7 @@ export function MessagingSettingsPage() {
   }
 
   const p = data?.providers;
+  const keys = (keyQ.data as KeyStatus | undefined) ?? NO_KEYS;
   const fn = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/message-events`;
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm(f => ({ ...f, [k]: e.target.value }));
   return (
@@ -317,20 +320,44 @@ export function MessagingSettingsPage() {
         <div className="form-actions"><div className="spacer" /><button type="button" className="btn" disabled={!testTo.trim()} onClick={sendTest}><Send size={15} /> Send test</button></div>
       </div>
 
-      <div className="panel-box">
-        <h2>Providers</h2>
-        <dl className="record-facts">
-          <dt>Email (SendGrid)</dt><dd>{p?.checked_at ? (p.email_ready ? <Pill tone="green">Key in place</Pill> : <Pill tone="red">Key missing</Pill>) : 'Not checked yet: send a test'}</dd>
-          <dt>Texts (Twilio)</dt><dd>{p?.checked_at ? (p.sms_ready ? <Pill tone="green">Keys in place</Pill> : <Pill tone="red">Keys missing</Pill>) : 'Not checked yet: send a test'}</dd>
-          {p?.checked_at && <><dt>Last checked</dt><dd>{dateTime(p.checked_at)}</dd></>}
-        </dl>
-        <p className="muted small">Delivery reports come back to these addresses. In SendGrid: Settings → Mail Settings → Event Webhook, with signing on.
-          In Twilio: the number's "A message comes in" webhook.</p>
-        <dl className="record-facts">
-          <dt>SendGrid events</dt><dd><code>{fn}?provider=sendgrid</code></dd>
-          <dt>Twilio incoming texts</dt><dd><code>{fn}?provider=twilio</code></dd>
-        </dl>
-      </div>
+      <KeysPanel service="sendgrid" status={keys} onSaved={() => void keyQ.reload()}
+        platformNote={`Email goes out through the platform's SendGrid account${p?.checked_at ? (p.email_ready ? '.' : ', but its key is missing.') : '.'} The From email must be on a domain that account has verified.`}
+        intro={<>In SendGrid: Settings → API Keys → Create API Key, with Mail Send access. For delivery reports: Settings → Mail Settings → Event Webhook,
+          paste the address below, turn signing on, and copy the verification key here.</>}
+        fields={[
+          { name: 'api', label: 'API key', secret: true, set: keys.sendgrid_key_set, placeholder: 'SG.…', help: 'Stored encrypted; only the sender can read it.' },
+          { name: 'hook', label: 'Event Webhook verification key', secret: false, set: keys.sendgrid_webhook_key_set, placeholder: 'MFkwEwYHKoZIzj0…' },
+        ]}>
+        {ownKeys(keys, 'sendgrid') && <dl className="record-facts"><dt>Event Webhook address</dt><dd><code>{ownWebhook('sendgrid', org?.id)}</code></dd></dl>}
+        {!keys.sendgrid_webhook_key_set && ownKeys(keys, 'sendgrid') && <p className="muted small">Without the verification key, delivery reports from your SendGrid account aren't accepted.</p>}
+      </KeysPanel>
+
+      <KeysPanel service="twilio" status={keys} onSaved={() => void keyQ.reload()}
+        platformNote={`Texts go out through the platform's Twilio account${p?.checked_at ? (p.sms_ready ? '.' : ', but its keys are missing.') : '.'} The texting number must belong to that account.`}
+        intro={<>In the Twilio Console: Account Info shows the Account SID and Auth Token. The texting number above must be in this account.</>}
+        fields={[
+          { name: 'sid', label: 'Account SID', secret: false, set: !!keys.twilio_sid, shown: keys.twilio_sid, placeholder: 'AC…' },
+          { name: 'token', label: 'Auth Token', secret: true, set: keys.twilio_token_set, placeholder: '32 letters and numbers', help: 'Stored encrypted; only the sender can read it.' },
+        ]}>
+        {ownKeys(keys, 'twilio') && (
+          <>
+            <dl className="record-facts"><dt>"A message comes in" webhook</dt><dd><code>{ownWebhook('twilio', org?.id)}</code></dd></dl>
+            <p className="muted small">In Twilio: Phone Numbers → your number → Messaging → "A message comes in", as HTTP POST. Delivery reports find their way back on their own.</p>
+          </>
+        )}
+      </KeysPanel>
+
+      {isPlatformOwner && (
+        <div className="panel-box">
+          <h2>Platform accounts</h2>
+          <p className="muted small">For organizations without their own keys. In the platform's SendGrid: Event Webhook. In its Twilio: each number's "A message comes in" webhook.</p>
+          <dl className="record-facts">
+            <dt>SendGrid events</dt><dd><code>{fn}?provider=sendgrid</code></dd>
+            <dt>Twilio incoming texts</dt><dd><code>{fn}?provider=twilio</code></dd>
+            {p?.checked_at && <><dt>Last checked</dt><dd>{dateTime(p.checked_at)}</dd></>}
+          </dl>
+        </div>
+      )}
 
       <div className="panel-box">
         <h2>Opted out of texts</h2>

@@ -100,7 +100,7 @@ describe('card payments through Sola', () => {
     await expect(one(db, `select public.begin_card_reversal($1, 'refund') id`, [donation])).rejects.toThrow(/already being voided/);
     await finish(db, v, { xResult: 'A', xRefNum: '1000002' });
     expect(await one(db, `select status, reversal_reason from public.donations where id = $1`, [donation])).toEqual({ status: 'voided', reversal_reason: 'Voided at Sola' });
-    await expect(one(db, `select public.begin_card_reversal($1, 'refund') id`, [donation])).rejects.toThrow(/Only a completed card payment/);
+    await expect(one(db, `select public.begin_card_reversal($1, 'refund') id`, [donation])).rejects.toThrow(/Only a completed payment/);
     expect((await rows(db, ADMIN, `select kind, status from public.donation_gateway($1)`, [donation])).map(x => `${x.kind}:${x.status}`)).toEqual(['sale:approved', 'void:approved']);
   });
 

@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { resolveOrg } from '../lib/org';
 import { supabase, type Row } from '../lib/supabase';
 import { CardFields } from './Payments';
+import {
+  BankFields, DafFields, MethodTabs, PAY_EN, bankBody, bankProblem, dafBody, dafProblem, emptyBank, emptyDaf,
+  type BankValue, type DafValue, type Method, type PayLabels,
+} from './PayMethods';
 
 // A campaign's public payment page, at #/give/<campaign>. No sign-in. Hebrew and Yiddish switch the text
 // to right to left; the layout itself doesn't mirror. Card number and CVV go straight to Sola.
@@ -45,9 +49,41 @@ const T: Record<Lang, Record<string, string>> = {
     required: 'פארלאנגט', test: 'טעסט: קיין אמת׳ע באצאלונג. ניצט קארטל 4111 1111 1111 1111.', robot: 'ביטע באשטעטיגט אז איר זענט נישט קיין ראבאט.',
   },
 };
+// Bank account and DAF wording. English comes from PayMethods.
+const PAY_T: Record<Lang, Record<string, string>> = {
+  en: {
+    debited: 'Your bank account will be debited within 1–3 business days.',
+    no_repeat: 'Your gift went through, but it couldn\'t be set up to repeat. The office will be in touch.',
+    test_other: 'Test mode: bank account 999999999 with routing 021000021; OJC card 6900664467242419; Pledger card 6599973975864259; Donors Fund card 6599992999456587 (under $5).',
+  },
+  he: {
+    pay_with: 'אמצעי תשלום', credit_card: 'כרטיס אשראי', bank: 'חשבון בנק', account_type: 'סוג חשבון', checking: 'עו״ש', savings: 'חיסכון',
+    choose_one: 'בחרו', account_name: 'שם בעל החשבון', routing: 'מספר ניתוב (Routing)', routing2: 'הקלידו שוב את מספר הניתוב',
+    account: 'מספר חשבון', account2: 'הקלידו שוב את מספר החשבון', ach_auth: 'הרשאה לחיוב חשבון (ACH)', download: 'הורדה',
+    ach_agree: 'קראתי ואני מסכים להרשאה שלמעלה.', ach_agree_needed: 'נא לאשר את ההרשאה לחיוב החשבון.', routing_bad: 'בדקו את מספר הניתוב.',
+    routing_mismatch: 'מספרי הניתוב אינם תואמים.', account_bad: 'בדקו את מספר החשבון.', account_mismatch: 'מספרי החשבון אינם תואמים.',
+    type_needed: 'בחרו עו״ש או חיסכון.', name_needed: 'הזינו את שם בעל החשבון.', daf_card: 'מספר כרטיס {fund}', account_email: 'דוא״ל החשבון',
+    daf_email: 'כתובת הדוא״ל שלכם ב-Donors Fund', pin: 'קוד PIN בן 4 ספרות', daf_bad: 'בדקו את מספר כרטיס {fund}.', exp_bad: 'הזינו תוקף בפורמט MM/YY.',
+    cvv_bad: 'הזינו CVV.', email_pin_bad: 'הזינו את הדוא״ל ואת קוד ה-PIN של Donors Fund.',
+    debited: 'החיוב מחשבון הבנק יתבצע תוך 1–3 ימי עסקים.', no_repeat: 'התרומה התקבלה, אך לא ניתן היה להגדיר אותה כתרומה קבועה. המשרד ייצור קשר.',
+  },
+  yi: {
+    pay_with: 'באצאל מיטל', credit_card: 'קרעדיט קארד', bank: 'באנק אקאונט', account_type: 'סארט אקאונט', checking: 'טשעקינג', savings: 'סעיווינגס',
+    choose_one: 'קלייבט', account_name: 'נאמען אויפן אקאונט', routing: 'ראוטינג נומער', routing2: 'שרייבט נאכאמאל דעם ראוטינג נומער',
+    account: 'אקאונט נומער', account2: 'שרייבט נאכאמאל דעם אקאונט נומער', ach_auth: 'ACH ערלויבעניש', download: 'אראפלאדן',
+    ach_agree: 'איך האב געליינט און בין מסכים צו דער ערלויבעניש אויבן.', ach_agree_needed: 'ביטע זייט מסכים צו דער ACH ערלויבעניש.',
+    routing_bad: 'קוקט איבער דעם ראוטינג נומער.', routing_mismatch: 'די ראוטינג נומערן שטימען נישט.', account_bad: 'קוקט איבער דעם אקאונט נומער.',
+    account_mismatch: 'די אקאונט נומערן שטימען נישט.', type_needed: 'קלייבט טשעקינג אדער סעיווינגס.', name_needed: 'שרייבט דעם נאמען אויפן אקאונט.',
+    daf_card: '{fund} קארטל נומער', account_email: 'אקאונט אימעיל', daf_email: 'אייער Donors Fund אימעיל', pin: '4 ציפער PIN',
+    daf_bad: 'קוקט איבער דעם {fund} קארטל נומער.', exp_bad: 'שרייבט די ביז-דאטום ווי MM/YY.', cvv_bad: 'שרייבט דעם CVV.',
+    email_pin_bad: 'שרייבט אייער Donors Fund אימעיל און 4 ציפער PIN.',
+    debited: 'אייער באנק אקאונט וועט באצאלט ווערן אין 1–3 ביזנעס טעג.', no_repeat: 'אייער נדבה איז דורך, אבער מען האט זי נישט געקענט איינשטעלן צו איבערחזר׳ן. דער אפיס וועט זיך פארבינדן.',
+  },
+};
 const COUNTRIES = ['USA', 'Canada', 'Israel', 'England'];
 const usd = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-const TURNSTILE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+// The organization's own Turnstile site key when it has one, otherwise the platform's.
+const PLATFORM_TURNSTILE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
 type TurnstileApi = { render: (el: HTMLElement, o: Record<string, unknown>) => string; reset: (id?: string) => void };
 let turnstileLoad: Promise<void> | null = null;
@@ -84,7 +120,7 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
     send();
     return () => watch.disconnect();
   }, [framed]);
-  const t = T[lang];
+  const t: Record<string, string> = { ...PAY_EN, ...PAY_T.en, ...T[lang], ...PAY_T[lang] };
   const rtl = lang !== 'en';
   useEffect(() => {
     if (data) {
@@ -147,6 +183,11 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   const [d, setD] = useState({ first_name: '', last_name: '', phone: '', email: '', country: 'USA', address: '', zip: '', notes: '' });
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [exp, setExp] = useState('');
+  const [method, setMethod] = useState<Method>('card');
+  const [program, setProgram] = useState<string | null>(null);
+  const [bank, setBank] = useState<BankValue>(emptyBank());
+  const [daf, setDaf] = useState<DafValue>(emptyDaf());
+  const L = t as unknown as PayLabels;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -155,6 +196,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   const setTokens = useRef((get: () => Promise<{ card: string; cvv: string }>) => { tokens.current = get; }).current;
   const turnstileBox = useRef<HTMLDivElement>(null);
   const turnstileId = useRef<string | null>(null);
+  const TURNSTILE_KEY = (data.payments.turnstile_site_key as string | null) ?? PLATFORM_TURNSTILE_KEY;
 
   const todayIso = new Date().toLocaleDateString('en-CA');
   const [rec, setRec] = useState({ on: false, frequency: 'monthly' as 'weekly' | 'monthly' | 'quarterly' | 'annually', start: todayIso, fixed: false, count: '12', textMe: false, agreed: false });
@@ -162,11 +204,11 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   useEffect(() => {
     if (!p.cover_fee || !cover || !(chosen && chosen > 0)) return setCoverTotal(null);
     const timer = window.setTimeout(() => {
-      supabase.rpc('public_cover_fee', { p_org: orgId, p_campaign: data.campaign.id, p_amount: chosen })
+      supabase.rpc('public_cover_fee', { p_org: orgId, p_campaign: data.campaign.id, p_amount: chosen, p_method: method === 'card' ? null : method === 'ach' ? 'ach' : program })
         .then(({ data: total }) => setCoverTotal(total != null ? Number(total) : null));
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [chosen, cover, p.cover_fee, orgId, data.campaign.id]);
+  }, [chosen, cover, p.cover_fee, orgId, data.campaign.id, method, program]);
   useEffect(() => {
     if (!TURNSTILE_KEY || !turnstileBox.current) return;
     loadTurnstile().then(() => {
@@ -195,14 +237,19 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
     if (rec.on && rec.fixed && !(count && count >= 2)) return setError(t.payments);
     if (!confirmed && chosen > Number(p.confirm_over ?? 5000)) return setConfirming(true);
     setConfirming(false);
+    const problem = method === 'ach' ? bankProblem(bank, L) : method === 'daf' ? dafProblem(program ?? '', daf, L) : expDigits.length !== 4 ? L.exp_bad : null;
+    if (problem) return setError(problem);
     if (TURNSTILE_KEY && !human) return setError(t.robot);
     setBusy(true);
     try {
-      const card = await tokens.current!();
+      const pay = method === 'ach' ? { ...bankBody(bank), ach_agreed: bank.agreed }
+        : method === 'daf' ? dafBody(program!, daf)
+        : await tokens.current!().then(card => ({ method: 'card', card_sut: card.card, cvv_sut: card.cvv, exp: expDigits }));
       const { data: r, error: e } = await supabase.functions.invoke('give', {
         body: {
-          org: orgId, campaign: data.campaign.id, amount: chosen, cover_fee: cover && !!p.cover_fee, donor: d, custom, card_sut: card.card, cvv_sut: card.cvv, exp: expDigits, turnstile: human,
-          recurring: rec.on ? { frequency: rec.frequency, start: rec.start, count, text_me: rec.textMe } : null,
+          org: orgId, campaign: data.campaign.id, amount: chosen, cover_fee: cover && !!p.cover_fee, donor: d, custom, ...pay, turnstile: human,
+          // A fund's recurring grant starts today.
+          recurring: rec.on ? { frequency: rec.frequency, start: method === 'daf' ? todayIso : rec.start, count, text_me: rec.textMe } : null,
         },
       });
       if (e) throw new Error('Something went wrong. Please try again.');
@@ -220,8 +267,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
 
   return (
     <form className="give-form" onSubmit={e => { e.preventDefault(); void submit(); }}>
-      {data.payments.sandbox && <p className="give-test" dir="auto">{t.test}</p>}
-      <div className="give-logos" aria-hidden="true"><span>VISA</span><span>Mastercard</span><span>AMEX</span><span>Discover</span></div>
+      {data.payments.sandbox && <p className="give-test" dir="auto">{method === 'card' ? t.test : t.test_other}</p>}
       <label className="give-label" dir="auto">{t.amount}</label>
       {presets.length > 0 && (
         <div className="give-presets">
@@ -249,7 +295,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
               <select value={rec.frequency} onChange={e => setRec(r => ({ ...r, frequency: e.target.value as typeof r.frequency }))}>
                 {(['weekly', 'monthly', 'quarterly', 'annually'] as const).map(f => <option key={f} value={f}>{t[f]}</option>)}
               </select></label>
-            <label className="field"><span dir="auto">{t.start}</span><input type="date" dir="ltr" min={todayIso} value={rec.start} onChange={e => setRec(r => ({ ...r, start: e.target.value }))} /></label>
+            {method !== 'daf' && <label className="field"><span dir="auto">{t.start}</span><input type="date" dir="ltr" min={todayIso} value={rec.start} onChange={e => setRec(r => ({ ...r, start: e.target.value }))} /></label>}
             <label className="field"><span dir="auto">{t.payments}</span>
               <select value={rec.fixed ? 'n' : 'until'} onChange={e => setRec(r => ({ ...r, fixed: e.target.value === 'n' }))}>
                 <option value="until">{t.until}</option><option value="n">{t.fixed}</option>
@@ -282,9 +328,19 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
         <label className="field wide"><span dir="auto">{t.notes}</span><textarea dir="auto" rows={2} value={d.notes} onChange={set('notes')} /></label>
       </div>
 
-      <CardFields ifieldsKey={data.payments.ifields_key} onTokens={setTokens} labels={{ card: t.card, cvv: t.cvv, loading: t.loading }} />
-      <label className="field give-exp"><span dir="auto">{t.exp}</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" dir="ltr" value={exp} required
-        onChange={e => { const x = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(x.length > 2 ? `${x.slice(0, 2)}/${x.slice(2)}` : x); }} /></label>
+      <label className="give-label" dir="auto">{L.pay_with}</label>
+      <MethodTabs value={method} program={program} ach={!!data.payments.ach} daf={data.payments.daf ?? []} L={L}
+        onChange={(m, prog) => { setMethod(m); setProgram(prog); setDaf(emptyDaf()); setError(null); }} />
+      {method === 'card' && (
+        <>
+          <div className="give-logos" aria-hidden="true"><span>VISA</span><span>Mastercard</span><span>AMEX</span><span>Discover</span></div>
+          <CardFields ifieldsKey={data.payments.ifields_key} onTokens={setTokens} labels={{ card: t.card, cvv: t.cvv, loading: t.loading }} />
+          <label className="field give-exp"><span dir="auto">{t.exp}</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" dir="ltr" value={exp}
+            onChange={e => { const x = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(x.length > 2 ? `${x.slice(0, 2)}/${x.slice(2)}` : x); }} /></label>
+        </>
+      )}
+      {method === 'ach' && <BankFields value={bank} onChange={setBank} L={L} authorization={data.payments.ach_authorization} orgName={data.org.name} />}
+      {method === 'daf' && program && <DafFields program={program} value={daf} onChange={setDaf} L={L} />}
 
       {TURNSTILE_KEY && <div ref={turnstileBox} className="give-turnstile" />}
       {chosen ? <div className="give-total" dir="auto">{t.total}: <b>{usd(total)}</b></div> : null}
@@ -294,7 +350,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
             <button type="button" className="btn" onClick={() => setConfirming(false)}>{t.no}</button></div></div>
       )}
       {error && <div className="error" dir="auto">{error}</div>}
-      <button type="submit" className="btn primary give-submit" disabled={busy || expDigits.length !== 4}>{busy ? t.processing : `${t.donate}${chosen ? ` ${usd(total)}` : ''}`}</button>
+      <button type="submit" className="btn primary give-submit" disabled={busy || (method === 'card' && expDigits.length !== 4)}>{busy ? t.processing : `${t.donate}${chosen ? ` ${usd(total)}` : ''}`}</button>
     </form>
   );
 }
@@ -319,6 +375,8 @@ function Thanks({ t, data, result, onAgain }: { t: Record<string, string>; data:
       {result.scheduled
         ? <p dir="auto">{t.saved.replace('{amount}', usd(Number(result.per))).replace('{date}', result.start ? new Date(`${result.start}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : '')}</p>
         : <p dir="auto">{t.charged}: <b>{amount}</b>{result.card ? ` · ${result.card}` : ''}</p>}
+      {result.method === 'ach' && !result.scheduled && <p dir="auto">{t.debited}</p>}
+      {result.recurring && result.recurring_set === false && <p className="error" dir="auto">{t.no_repeat}</p>}
       {!result.token ? null : sent ? <p dir="auto">{t.receipt_sent}</p> : asking ? (
         <div className="give-grid">
           <label className="field"><span dir="auto">{t.email}</span><input type="email" dir="ltr" value={email} onChange={e => setEmail(e.target.value)} /></label>

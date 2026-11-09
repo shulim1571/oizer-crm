@@ -38,7 +38,7 @@ describe('public payment pages', () => {
     expect(Number(p.campaign.raised)).toBeGreaterThan(0);
     expect(p.org).toMatchObject({ name: 'Oizer Umoshia', check_payee: 'Cong. Oizer', zelle: 'give@oizer.org', ein: '99-0000000' });
     expect(p.page).toMatchObject({ language: 'he', presets: [180, 360, 500], min: 18, cover_fee: true, confirm_over: 5000 });
-    expect(p.payments).toEqual({ ready: true, ifields_key: 'ifields_public', sandbox: true });
+    expect(p.payments).toEqual({ ready: true, ifields_key: 'ifields_public', sandbox: true, ach: false, daf: [], ach_authorization: null, turnstile_site_key: null });
     expect(JSON.stringify(p)).not.toContain('api_secret');
     expect(p.page.donor_wall[0]).toHaveProperty('amount');
     await db.query(`update public.campaigns set status = 'closed' where id = '1002'`);

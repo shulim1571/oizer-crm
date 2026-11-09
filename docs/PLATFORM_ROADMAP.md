@@ -383,8 +383,69 @@ Planned parts:
 ### Phase 9: Donary and DAF integrations (L, needs vendors)
 Donary reference APIs and all four webhooks with idempotency. OJC, Matbia, The Donors Fund and Pledger integrations,
 each with its own fields, error mapping, and void or refund rules.
-**Needs:** production credentials from each. The spec lists open questions for Pledger (sandbox, error catalog, void
-token) and The Donors Fund (who the validation token is issued to).
+
+**Changed on 2026-11-04: DAF cards and ACH go through Sola where Sola supports them.** The owner reports that each
+organization's Sola account accepts most DAF payments and ACH. That replaces most of the separate DAF integrations.
+
+DAF cards:
+- Sola's gateway takes DAF cards with `xCommand` `grant:Recommendation`, and cancels them with `grant:Void`. A
+  `grant:refund` event appears in the webhook list but isn't documented.
+- Sola picks the DAF program from the card. The docs name DonorsFund, OJC and Pledger, and `xCardType` returns
+  "DonorsFund", "OJC" and "Pledger".
+- Matbia isn't in Sola's docs, but the owner's current payment page already sends Matbia to Sola, so it goes
+  through Sola too. Fidelity and PayPal Giving aren't covered.
+- **Fields, from the owner's current payment page (all sent to Sola):**
+
+  | Program | Fields |
+  |---|---|
+  | OJC | card number, MM/YY |
+  | Pledger | card number, MM/YY, CVV |
+  | Matbia | card number, MM/YY |
+  | The Donors Fund | either card number + CVV, or account email + 4-digit PIN |
+
+  Each method has a button on the page, beside Credit Card, and each can be made recurring.
+- **To confirm with Sola:**
+  - which request fields carry these (especially the Donors Fund email and PIN)
+  - whether iFields captures DAF card numbers
+  - the response format, and refund rules
+  - how DAF is enabled per account
+  - the sandbox test cards (Donors Fund amounts must be under $5)
+- DAF gifts get no receipt, as the spec says, and keep the fee rules of their payment method.
+
+ACH:
+- **Commands:** `check:sale` (`xRouting`, `xAccount`, `xName`, optional `xAccountType`), `check:save` (gives a token),
+  `check:void` (before the day's batch is sent), `check:refund` (full only, after settlement), and `check:VoidRefund`
+  (ACHQ accounts only).
+- **Card fields:** iFields has an ACH field (`data-ifields-id="ach"`, token in `xACH`). How it maps to `xAccount`
+  needs confirming with Sola, and routing is typed in plainly.
+- **Results:** come 2–3 days later as `xStatus` 16 Settled, 18 Returned or 14 Chargeback. ACHQ accounts also get
+  `xStatusReason` codes such as "R01 - Insufficient Funds". A returned ACH payment becomes the existing Returned status,
+  with its Task Sheet item.
+- **Confirm with Sola:** whether returns trigger a webhook. Otherwise poll the reporting API daily.
+- **Form, from the owner's current payment page:** a Credit Card / Check switch; Account Type (checking or savings),
+  Name on Account, Routing Number and Account Number, each typed twice to confirm; then the ACH authorization text
+  (downloadable) with a required "I acknowledge" box, before the human check.
+- **Compliance:** Nacha requires the donor's authorization (signature or electronic consent) to be captured and kept.
+  Store the exact authorization wording shown, the time, and the IP with each gift and saved account.
+- **Recurring and saved accounts:** ACH tokens work with `check:sale` + `xToken`, so recurring donations and saved
+  accounts can use bank accounts too.
+
+**Built (part 1, migration `20261126000000_daf_and_ach.sql`):**
+- The Super Admin turns on ACH and each fund under Settings → Payments, and can replace the ACH authorization wording.
+- The payment page shows the method buttons; the office's "Take a payment" and "Save a card or account" do the same.
+- Gifts are recorded as `ACH` or `<Fund> Online`, so fees and the no-receipt rule follow the existing payment methods.
+  Cover-the-fee uses the chosen method's fee.
+- Each bank debit keeps the wording agreed to, the time, the IP and who agreed (donor, or the admin attesting).
+- The webhook marks a bank debit settled, or returned with its reason; a return puts "Bank Payment Returned" on the
+  Task Sheet. DAF grants void only; refunds are refused with a note to ask the fund.
+- Recurring: bank accounts work like cards. A fund's recurring grant starts today and repeats only if Sola returns a
+  token on the first grant; otherwise the donor is told it wasn't set up.
+- Field mapping guessed until Sola confirms: DAF cards in `xCardNum`/`xExp`/`xCVV`; Donors Fund email and PIN in
+  `xCardNum`/`xCVV`; bank numbers typed plainly (both numbers twice) rather than through the iFields ACH field. ACH
+  returns rely on the webhook; a daily report check is still to do if Sola doesn't post returns.
+
+**Needs:** production credentials from Donary, and Sola's answers above. The spec's open questions for
+Pledger and The Donors Fund move to Sola.
 
 ### Phase 10: Phone and SMS lookup (L, needs vendors)
 SMS campaign lookup, then every IVR flow. Evaluate Twilio's PCI payment feature for card entry rather than handling

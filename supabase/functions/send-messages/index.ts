@@ -1,12 +1,16 @@
 // Sends queued emails through SendGrid and texts through Twilio. The database calls this right after
 // queueing and once a minute, with a token only it knows. Deployed with JWT verification off.
-// Keys are Edge Function secrets: SENDGRID_API_KEY, TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.
+// Each organization's own SendGrid and Twilio keys are used when it has set them (Messaging Settings);
+// otherwise the platform's, which are Edge Function secrets: SENDGRID_API_KEY, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN.
 
 const url = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const sendgridKey = Deno.env.get('SENDGRID_API_KEY');
-const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+const platform = {
+  sendgridKey: Deno.env.get('SENDGRID_API_KEY') ?? null,
+  twilioSid: Deno.env.get('TWILIO_ACCOUNT_SID') ?? null,
+  twilioToken: Deno.env.get('TWILIO_AUTH_TOKEN') ?? null,
+};
+interface Keys { sendgridKey: string | null; twilioSid: string | null; twilioToken: string | null; ownSms: boolean }
 
 interface Message {
   org_id: string; id: string; channel: 'email' | 'sms'; to_address: string; to_name: string | null;
@@ -26,7 +30,22 @@ async function rpc(name: string, args: unknown): Promise<unknown> {
   return res.status === 204 ? null : res.json();
 }
 
-async function sendEmail(m: Message): Promise<Result> {
+// One lookup per organization per run.
+const keyCache = new Map<string, Promise<Keys>>();
+function keysFor(org: string): Promise<Keys> {
+  if (!keyCache.has(org)) {
+    keyCache.set(org, (rpc('org_messaging_keys', { p_org: org }) as Promise<{ sendgrid_key: string | null; twilio_sid: string | null; twilio_token: string | null }[]>)
+      .then(([k]) => ({
+        sendgridKey: k?.sendgrid_key ?? platform.sendgridKey,
+        ...(k?.twilio_sid && k?.twilio_token
+          ? { twilioSid: k.twilio_sid, twilioToken: k.twilio_token, ownSms: true }
+          : { twilioSid: platform.twilioSid, twilioToken: platform.twilioToken, ownSms: false }),
+      })));
+  }
+  return keyCache.get(org)!;
+}
+
+async function sendEmail(m: Message, { sendgridKey }: Keys): Promise<Result> {
   if (!sendgridKey) return { ok: false, error: 'Email isn\'t set up: the SendGrid key is missing' };
   // Opens and clicks are tracked for outreach only; other messages go out as written.
   const track = m.kind === 'outreach';
@@ -53,14 +72,15 @@ async function sendEmail(m: Message): Promise<Result> {
   return { ok: false, error: body?.errors?.map((e: { message: string }) => e.message).join('; ') || `SendGrid answered ${res.status}` };
 }
 
-async function sendSms(m: Message): Promise<Result> {
+async function sendSms(m: Message, { twilioSid, twilioToken, ownSms }: Keys): Promise<Result> {
   if (!twilioSid || !twilioToken) return { ok: false, error: 'Texting isn\'t set up: the Twilio keys are missing' };
   if (!m.sms_from) return { ok: false, error: 'No texting number is set in Messaging Settings' };
   const form = new URLSearchParams({
     To: m.to_address,
     From: m.sms_from,
     Body: m.body,
-    StatusCallback: `${url}/functions/v1/message-events?provider=twilio`,
+    // Reports for an organization's own Twilio account come back to its own address, checked with its own token.
+    StatusCallback: `${url}/functions/v1/message-events?provider=twilio${ownSms ? `&org=${m.org_id}` : ''}`,
   });
   const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
     method: 'POST',
@@ -76,7 +96,8 @@ async function sendSms(m: Message): Promise<Result> {
 async function send(m: Message) {
   let r: Result;
   try {
-    r = m.channel === 'sms' ? await sendSms(m) : await sendEmail(m);
+    const keys = await keysFor(m.org_id);
+    r = m.channel === 'sms' ? await sendSms(m, keys) : await sendEmail(m, keys);
   } catch (e) {
     r = { ok: false, error: `Couldn't reach the provider: ${e instanceof Error ? e.message : e}` };
   }
@@ -89,7 +110,9 @@ Deno.serve(async req => {
   const token = req.headers.get('x-cron-token') ?? '';
   if (!token || await rpc('check_cron_token', { p_token: token }) !== true) return new Response('Forbidden', { status: 403 });
 
-  await rpc('messaging_ready', { p_email: !!sendgridKey, p_sms: !!(twilioSid && twilioToken) });
+  keyCache.clear();
+  // Whether the platform's own keys are in place; organizations with their own keys don't need them.
+  await rpc('messaging_ready', { p_email: !!platform.sendgridKey, p_sms: !!(platform.twilioSid && platform.twilioToken) });
   let sent = 0, failed = 0;
   // Several rounds, so a large outreach send doesn't wait for the next minute.
   for (let round = 0; round < 10; round++) {

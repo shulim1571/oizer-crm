@@ -262,7 +262,17 @@ input:focus, select:focus, textarea:focus {
 }
 .logo-text { font-weight: 650; font-size: 16px; letter-spacing: -.02em; }
 .logo-text small { display: block; font-weight: 450; font-size: 11px; color: var(--muted); letter-spacing: 0; }
-.nav-section { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 14px 10px 6px; }
+.nav-section {
+  display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: none; cursor: pointer; font: inherit; text-align: left;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 12px 10px 6px; border-radius: var(--radius-sm);
+}
+.nav-section:hover { color: var(--text-2); }
+.nav-section:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.nav-section .nav-count { margin-left: auto; letter-spacing: 0; }
+.nav-chev { margin-left: auto; flex: none; transition: transform .15s; }
+.nav-section .nav-count + .nav-chev { margin-left: 0; }
+.nav-chev.shut { transform: rotate(-90deg); }
+.sidebar .me a.icon-btn { padding: 0; margin: 0; display: inline-grid; place-items: center; }
 .sidebar a {
   display: flex; align-items: center; gap: 11px; padding: 7px 10px; border-radius: var(--radius-sm);
   color: var(--text-2); text-decoration: none; font-weight: 500; margin-bottom: 1px; transition: background .12s, color .12s;
@@ -685,3 +695,16 @@ ul.plain li { padding: 6px 0; }
 .give-recurring { border: 1px solid #e7e9ee; background: #fafbfc; border-radius: 10px; padding: 10px 12px; margin: 6px 0 12px; }
 .give-recurring .inline-check { align-items: flex-start; margin: 4px 0; }
 .give.give-framed { min-height: 0; }
+
+/* Payment method buttons, bank and DAF fields (payment page and office) */
+.pay-methods { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.pay-methods button { border: 1.5px solid #d9dce3; background: #fff; border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; color: #111; }
+.pay-methods button.on { background: var(--give-accent, var(--accent)); border-color: var(--give-accent, var(--accent)); color: #fff; }
+.pay-methods.small button { padding: 6px 12px; font-size: 14px; }
+.daf-row { display: flex; gap: 10px; margin: 8px 0; }
+.daf-row input { min-width: 0; flex: 0 0 110px; border: 1px solid #d9dce3; border-radius: 8px; padding: 8px 10px; font-size: 15px; }
+.daf-row input.wide { flex: 1 1 auto; }
+.ach-auth { background: #f5f6f8; border: 1px solid #e3e5ea; border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+.ach-auth-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ach-auth p { max-height: 160px; overflow-y: auto; font-size: 13px; line-height: 1.5; margin: 8px 0; }
+@media (max-width: 560px) { .daf-row { flex-wrap: wrap; } .daf-row input.wide { flex-basis: 100%; } }

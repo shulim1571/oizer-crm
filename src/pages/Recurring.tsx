@@ -10,7 +10,8 @@ import { dateTime, money } from '../lib/format';
 import { campaignOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
-import { CardFields, callPayments, usePaymentConfig, type PaymentConfig } from './Payments';
+import { CardFields, OFFICE_PAY, callPayments, usePaymentConfig, type PaymentConfig } from './Payments';
+import { BankFields, bankBody, bankProblem, emptyBank, savedLabel, type BankValue } from './PayMethods';
 import { Overlay } from './Pledges';
 
 // Recurring donations: set up on the payment page or by the office on a saved card, charged on their dates by
@@ -36,18 +37,22 @@ export function SaveCardDialog({ donorId, onClose, onSaved }: { donorId: string;
   const [exp, setExp] = useState('');
   const [name, setName] = useState('');
   const [zip, setZip] = useState('');
+  const [kind, setKind] = useState<'card' | 'ach'>('card');
+  const [bank, setBank] = useState<BankValue>(emptyBank());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tokens = useRef<() => Promise<{ card: string; cvv: string }>>();
   const setTokens = useRef((get: () => Promise<{ card: string; cvv: string }>) => { tokens.current = get; }).current;
   async function save() {
     setError(null);
+    if (kind === 'ach') { const p = bankProblem(bank, OFFICE_PAY); if (p) return setError(p); }
     setBusy(true);
     try {
-      const t = await tokens.current!();
-      const r = await callPayments({ action: 'save', donor_id: donorId, name, zip, card_sut: t.card, cvv_sut: t.cvv, exp: exp.replace(/\D/g, '') });
+      const pay = kind === 'ach' ? { ...bankBody(bank), ach_authorized: bank.agreed, name: bank.account_name }
+        : await tokens.current!().then(t => ({ method: 'card', name, zip, card_sut: t.card, cvv_sut: t.cvv, exp: exp.replace(/\D/g, '') }));
+      const r = await callPayments({ action: 'save', donor_id: donorId, ...pay });
       if (r.error) throw new Error(r.error);
-      if (r.transaction?.status !== 'approved') throw new Error(`Sola didn't accept the card: ${r.transaction?.error ?? 'no reason given'}`);
+      if (r.transaction?.status !== 'approved') throw new Error(`Sola didn't accept it: ${r.transaction?.error ?? 'no reason given'}`);
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -57,20 +62,30 @@ export function SaveCardDialog({ donorId, onClose, onSaved }: { donorId: string;
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2><CreditCard size={18} /> Save a card</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2><CreditCard size={18} /> Save a card or account</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
       {!cfg?.ifields_key ? <p>Card payments aren't set up yet.</p> : (
         <>
-          <p className="muted small">Saved with Sola for later charges and recurring donations. Nothing is charged now.</p>
-          <CardFields ifieldsKey={cfg.ifields_key} onTokens={setTokens} />
-          <div className="fields">
-            <label className="field"><span>Expiry (MM/YY)</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" value={exp}
-              onChange={e => { const d = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d); }} /></label>
-            <label className="field"><span>Name on card</span><input value={name} onChange={e => setName(e.target.value)} /></label>
-            <label className="field"><span>Billing ZIP</span><input value={zip} onChange={e => setZip(e.target.value)} /></label>
-          </div>
+          <p className="muted small">Saved with Sola for later payments and recurring donations. Nothing is charged now. A DAF card is saved by ticking "Save" on its first grant.</p>
+          {cfg.ach_enabled && (
+            <div className="pay-methods">
+              <button type="button" className={kind === 'card' ? 'on' : ''} onClick={() => setKind('card')}>Credit Card</button>
+              <button type="button" className={kind === 'ach' ? 'on' : ''} onClick={() => setKind('ach')}>Bank account</button>
+            </div>
+          )}
+          {kind === 'ach' ? <BankFields value={bank} onChange={setBank} L={OFFICE_PAY} authorization={cfg.ach_authorization_text} /> : (
+            <>
+              <CardFields ifieldsKey={cfg.ifields_key} onTokens={setTokens} />
+              <div className="fields">
+                <label className="field"><span>Expiry (MM/YY)</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" value={exp}
+                  onChange={e => { const d = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d); }} /></label>
+                <label className="field"><span>Name on card</span><input value={name} onChange={e => setName(e.target.value)} /></label>
+                <label className="field"><span>Billing ZIP</span><input value={zip} onChange={e => setZip(e.target.value)} /></label>
+              </div>
+            </>
+          )}
           {error && <div className="error">{error}</div>}
           <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
-            <button type="button" className="btn primary" disabled={busy || exp.replace(/\D/g, '').length !== 4} onClick={save}>{busy ? 'Saving…' : 'Save card'}</button></div>
+            <button type="button" className="btn primary" disabled={busy || (kind === 'card' && exp.replace(/\D/g, '').length !== 4)} onClick={save}>{busy ? 'Saving…' : 'Save'}</button></div>
         </>
       )}
     </Overlay>
@@ -106,7 +121,7 @@ export function SetupRecurringDialog({ donor, cards, cardId, onClose, onDone }: 
         <label className="field"><span>Campaign</span><SearchSelect value={f.campaign} options={campaigns} onChange={v => set('campaign', v)} required /></label>
         <label className="field"><span>Card</span>
           <select value={f.card} onChange={e => set('card', e.target.value)}>
-            {cards.map(k => <option key={k.id} value={k.id}>{k.card_type ?? 'Card'} ending {String(k.masked ?? '').slice(-4)}</option>)}
+            {cards.map(k => <option key={k.id} value={k.id}>{savedLabel(k)}</option>)}
           </select></label>
         <label className="field"><span>Amount each time</span><input type="number" min="0.01" step="0.01" value={f.amount} onChange={e => set('amount', e.target.value)} /></label>
         <label className="field"><span>How often</span>
@@ -200,7 +215,7 @@ export function RecurringDialog({ id, onClose, onChanged }: { id: string; onClos
                   <select value={edit.frequency} onChange={e => setEdit({ ...edit, frequency: e.target.value })}>{FREQUENCIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
                 <label className="field"><span>Card</span>
                   <select value={edit.card} onChange={e => setEdit({ ...edit, card: e.target.value })}>
-                    {data!.cards.map(k => <option key={k.id} value={k.id}>{k.card_type ?? 'Card'} ending {String(k.masked ?? '').slice(-4)}</option>)}
+                    {data!.cards.map(k => <option key={k.id} value={k.id}>{savedLabel(k)}</option>)}
                   </select>
                   <small><button type="button" className="link" onClick={() => setSavingCard(true)}>Add a new card</button></small></label>
                 <label className="field"><span>Next charge</span><input type="date" value={String(edit.next ?? '').slice(0, 10)} onChange={e => setEdit({ ...edit, next: e.target.value })} /></label>
