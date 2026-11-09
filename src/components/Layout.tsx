@@ -45,7 +45,6 @@ const NAV: NavSection[] = [
       { to: '/source-report', label: 'Reports', icon: <PieChart size={I} />,
         tabs: [{ to: '/source-report', label: 'Sources' }, { to: '/sources', label: 'Source list', admin: true }, { to: '/balance-summary', label: 'Balances', admin: true },
           { to: '/machine-report', label: 'Bookings', admin: true }] },
-      { to: '/calendar', label: 'Jewish Calendar', icon: <CalendarDays size={I} />, admin: true },
     ],
   },
   {
@@ -55,7 +54,9 @@ const NAV: NavSection[] = [
         tabs: [{ to: '/campaigns/active', label: 'Active' }, { to: '/campaigns/all', label: 'All' }, { to: '/campaigns/archived', label: 'Archived' },
           { to: '/campaigns/closed', label: 'Closed' }, { to: '/campaigns/exchange', label: 'Exchange', admin: true }] },
       { to: '/requests', label: 'Campaign Requests', icon: <FilePlus size={I} /> },
-      { to: '/machines', label: 'Machine Bookings', icon: <CreditCard size={I} /> },
+      // Admins open the calendar, where bookings show on their day; fundraisers go straight to their bookings.
+      { to: '/machines', label: 'Machine Bookings', icon: <CalendarDays size={I} />,
+        tabs: [{ to: '/calendar', label: 'Calendar', admin: true }, { to: '/machines', label: 'Bookings' }] },
     ],
   },
   {

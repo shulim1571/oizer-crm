@@ -91,6 +91,15 @@ export default function CalendarPage() {
               {(payoutsByDay.get(d.iso) ?? []).length > 0 && (
                 <span className="calendar-line payout">{(payoutsByDay.get(d.iso) ?? []).length === 1 ? 'Payout' : `${(payoutsByDay.get(d.iso) ?? []).length} payouts`} {money((payoutsByDay.get(d.iso) ?? []).reduce((s, p) => s + Number(p.amount), 0))}</span>
               )}
+              {mode === 'month' && bookings.slice(0, 2).map(b => (
+                <span key={b.id} className={`calendar-line booking ${b.status}`} title={`${b.fundraiser ?? 'No fundraiser'} · ${b.campaign_name} - ${b.campaign_id} · ${b.status}`}>
+                  {b.machine_nickname ? `#${b.machine_nickname} ` : ''}{b.fundraiser ?? b.campaign_name}
+                </span>
+              ))}
+              {mode === 'month' && bookings.length > 2 && <span className="calendar-line muted">+{bookings.length - 2} more</span>}
+              {mode === 'week' && bookings.map(b => (
+                <span key={b.id} className={`calendar-line booking ${b.status}`}>{b.machine_nickname ? `#${b.machine_nickname} ` : ''}{b.fundraiser ?? 'No fundraiser'} · {b.campaign_id}</span>
+              ))}
               {bookings.length > 0 && (
                 <span className={`calendar-count${over ? ' over' : ''}`}>{bookings.length} of {machines} machines{over ? ' · Over Capacity' : ''}</span>
               )}
@@ -98,7 +107,7 @@ export default function CalendarPage() {
           );
         })}
       </div>
-      <p className="muted small">Shabbos and Yom Tov are shaded. Times are for New York. Scheduled payouts show on the day they're due.</p>
+      <p className="muted small">Machine bookings show on their day; click a day to confirm, move or cancel them. Shabbos and Yom Tov are shaded. Times are for New York. Scheduled payouts show on the day they're due.</p>
       {open && <DayDialog day={open} machines={machines} bookings={byDay.get(open.iso) ?? []} payouts={payoutsByDay.get(open.iso) ?? []} onClose={() => setOpen(null)} onChanged={() => setVersion(v => v + 1)} />}
     </section>
   );

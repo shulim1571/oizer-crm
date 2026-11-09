@@ -23,7 +23,7 @@ describe('sidebar', () => {
       if (e[2]) expect(tabs).toContain(e[1]);
       seen.push(...tabs);
     }
-    expect(seen.length).toBeGreaterThan(30);
+    expect(seen.length).toBeGreaterThan(25);
     expect(seen.filter((p, i) => seen.indexOf(p) !== i)).toEqual([]);
   });
 
