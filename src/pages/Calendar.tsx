@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { dateTime, localToday, money } from '../lib/format';
 import { dateOf, isoOf, jewishDays, type JewishDay } from '../lib/jewishCalendar';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
-import { BookingActions, BookingPill } from './Machines';
+import { BookingActions, BookingPill, RequestForm } from './Machines';
 
 const WEEK_HEAD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'];
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
@@ -116,7 +116,8 @@ export default function CalendarPage() {
 function DayDialog({ day, machines, bookings, payouts, onClose, onChanged }: { day: JewishDay; machines: number; bookings: Row[]; payouts: Row[]; onClose: () => void; onChanged: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
-  useEffect(() => setError(null), [day.iso]);
+  const [adding, setAdding] = useState(false);
+  useEffect(() => { setError(null); setAdding(false); }, [day.iso]);
   const past = day.iso < localToday();
   async function act(call: PromiseLike<{ error: { message: string } | null }>) {
     setError(null);
@@ -163,6 +164,9 @@ function DayDialog({ day, machines, bookings, payouts, onClose, onChanged }: { d
         </div>
       ))}
       {bookings.length === 0 && <p className="muted">No requests for this day.</p>}
+      {!past && (adding
+        ? <RequestForm initialDate={day.iso} title="Add a booking for this day" onDone={() => { setVersion(v => v + 1); onChanged(); window.dispatchEvent(new Event('task-sheet-changed')); }} />
+        : <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> Add a booking for this day</button></div>)}
     </Overlay>
   );
 }

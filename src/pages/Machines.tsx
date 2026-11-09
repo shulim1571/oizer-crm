@@ -82,8 +82,9 @@ export function BookingActions({ booking, onAct, version = 0 }: {
 
 const availabilityText = (a: Row) => `${a.available} machine${a.available === 1 ? '' : 's'} available · ${a.booked} already booked · ${a.waitlisted} waitlisted`;
 
-function RequestForm({ onDone }: { onDone: () => void }) {
-  const [date, setDate] = useState(localToday());
+/** Request (book) a machine for a day. From the calendar, the day is already chosen. */
+export function RequestForm({ onDone, initialDate, title = 'Request a machine' }: { onDone: () => void; initialDate?: string; title?: string }) {
+  const [date, setDate] = useState(initialDate ?? localToday());
   const [campaign, setCampaign] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [options, setOptions] = useState<Option[]>([]);
@@ -112,7 +113,7 @@ function RequestForm({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="card">
-      <h3>Request a machine</h3>
+      <h3>{title}</h3>
       <div className="fields">
         <label className="field"><span>Date needed *</span>
           <input type="date" min={localToday()} value={date} onChange={e => { setDate(e.target.value); setPlaced(null); }} />
