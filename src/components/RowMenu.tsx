@@ -5,7 +5,7 @@ import { MoreHorizontal } from 'lucide-react';
 
 export interface RowAction { label: string; onClick: () => void; danger?: boolean; hidden?: boolean; disabled?: boolean; icon?: ReactNode }
 
-export default function RowMenu({ items, label = 'Actions' }: { items: RowAction[]; label?: string }) {
+export default function RowMenu({ items, label = 'Actions', text }: { items: RowAction[]; label?: string; /** Shows a labeled button (e.g. "More") instead of the bare ⋯. */ text?: string }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const shown = items.filter(i => !i.hidden);
@@ -20,8 +20,8 @@ export default function RowMenu({ items, label = 'Actions' }: { items: RowAction
   if (!shown.length) return null;
   return (
     <div className="row-menu" ref={box} onClick={e => e.stopPropagation()}>
-      <button type="button" className="icon-btn" aria-label={label} aria-haspopup="menu" aria-expanded={open} title={label} onClick={() => setOpen(o => !o)}>
-        <MoreHorizontal size={16} />
+      <button type="button" className={text ? 'btn' : 'icon-btn'} aria-label={label} aria-haspopup="menu" aria-expanded={open} title={label} onClick={() => setOpen(o => !o)}>
+        <MoreHorizontal size={16} />{text && ` ${text}`}
       </button>
       {open && (
         <div className="menu-pop" role="menu">

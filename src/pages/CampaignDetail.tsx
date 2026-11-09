@@ -1,3 +1,4 @@
+import RowMenu from '../components/RowMenu';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -132,12 +133,12 @@ export default function CampaignDetail() {
         { key: 'status', label: 'Status', value: payoutStatus, render: (r: Row) => <PayoutStatusPill row={r} /> },
         { key: 'payee', label: 'To' },
         { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
-        { key: 'reference', label: 'Reference' },
+        { key: 'reference', label: 'Reference', optional: true },
         { key: 'method', label: 'Method' },
-        { key: 'check_number', label: 'Check #' },
-        { key: 'memo', label: 'Memo' },
-        { key: 'description', label: 'Description' },
-        { key: 'account', label: 'Account', value: (r: Row) => r.accounts?.name },
+        { key: 'check_number', label: 'Check #', optional: true },
+        { key: 'memo', label: 'Memo', optional: true, long: true },
+        { key: 'description', label: 'Description', long: true },
+        { key: 'account', label: 'Account', optional: true, value: (r: Row) => r.accounts?.name },
         { key: 'cleared', label: 'Cleared', render: (r: Row) => yn(r.cleared) },
         { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
       ],
@@ -201,7 +202,7 @@ export default function CampaignDetail() {
           </h1>
           <div className="sub">
             {c.parent_campaign_id && <span>Sub-campaign of <Link to={`/campaigns/${encodeURIComponent(c.parent_campaign_id)}`}>#{c.parent_campaign_id}</Link> ·</span>}
-            {c.external_name && <span>{c.external_name}</span>}
+            {c.external_name && c.external_name !== (c.internal_name || c.campaign_name) && <span>{c.external_name}</span>}
             {c.manager_name && <span>· Primary: <b><AdminLink to={`/managers/${encodeURIComponent(c.manager_id)}`}>{c.manager_name}</AdminLink></b></span>}
             {c.sub_managers.length > 0 && <span>· with {c.sub_managers.map((m: Row) => m.full_name).join(', ')}</span>}
             {c.archived_at && <span>· archived {dateTime(c.archived_at)}</span>}
@@ -209,36 +210,28 @@ export default function CampaignDetail() {
           </div>
         </div>
         <div className="spacer" />
-        <a className="btn" href={paymentUrl(c)} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>
-        {canWork && c.status !== 'closed' && <button className="btn" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>}
-        {canEnter && c.status !== 'closed' && <Link className="btn" to={`/campaigns/${encodeURIComponent(id)}/batch`}>Batch entry</Link>}
-        {isAdmin && c.status === 'draft' && (
-          <button className="btn" onClick={() => setStatus('active', 'Publish this campaign?')}>Publish</button>
-        )}
-        {isAdmin && c.status === 'active' && (
-          <button className="btn" onClick={() => setStatus('archived', 'Archive this campaign? It leaves the active list, but a new donation brings it back.')}>Archive</button>
-        )}
-        {isAdmin && c.status === 'archived' && (
-          <button className="btn" onClick={() => setStatus('active', 'Reactivate this campaign?')}>Reactivate</button>
-        )}
-        {isAdmin && c.status !== 'closed' && (
-          <button className="btn danger" onClick={() => setStatus('closed', 'This will lock this campaign. No new transactions can be entered. Only the Super Admin can reopen it.')}>Close</button>
-        )}
-        {c.status === 'closed' && permissions.includes('reopen_campaigns') && (
-          <button className="btn" onClick={() => setStatus('active', 'Reopen this closed campaign?')}>Reopen</button>
-        )}
-        {!isAdmin && isPrimary && <button className="btn" onClick={() => setRequestingTeam(true)}>Request team member</button>}
-        {canWork && <button className="btn" onClick={() => setReporting('report')}>Report</button>}
-        {canWork && <button className="btn" onClick={() => setReporting('donors')}>Donor list</button>}
-        {canWork && c.status !== 'closed' && <button className="btn" onClick={() => setReporting('contacts')}>Import contacts</button>}
-        {isAdmin && c.parent_campaign_id && (
-          <button className="btn" onClick={() => setChangingMode(true)}>Change balance mode</button>
-        )}
         {isAdmin && (
           <button className="btn" onClick={() => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c })}>
             <Pencil size={16} /> Edit
           </button>
         )}
+        {canWork && c.status !== 'closed'
+          ? <button className="btn primary" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>
+          : <a className="btn primary" href={paymentUrl(c)} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>}
+        <RowMenu label="More campaign actions" text="More" items={[
+          { label: 'Open the payment page', onClick: () => window.open(paymentUrl(c), '_blank', 'noopener'), hidden: !(canWork && c.status !== 'closed') },
+          { label: 'Batch entry', onClick: () => nav(`/campaigns/${encodeURIComponent(id)}/batch`), hidden: !(canEnter && c.status !== 'closed') },
+          { label: 'Report', onClick: () => setReporting('report'), hidden: !canWork },
+          { label: 'Donor list', onClick: () => setReporting('donors'), hidden: !canWork },
+          { label: 'Import contacts', onClick: () => setReporting('contacts'), hidden: !(canWork && c.status !== 'closed') },
+          { label: 'Request a team member', onClick: () => setRequestingTeam(true), hidden: !(!isAdmin && isPrimary) },
+          { label: 'Change balance mode', onClick: () => setChangingMode(true), hidden: !(isAdmin && c.parent_campaign_id) },
+          { label: 'Publish', onClick: () => setStatus('active', 'Publish this campaign?'), hidden: !(isAdmin && c.status === 'draft') },
+          { label: 'Archive', onClick: () => setStatus('archived', 'Archive this campaign? It leaves the active list, but a new donation brings it back.'), hidden: !(isAdmin && c.status === 'active') },
+          { label: 'Reactivate', onClick: () => setStatus('active', 'Reactivate this campaign?'), hidden: !(isAdmin && c.status === 'archived') },
+          { label: 'Reopen', onClick: () => setStatus('active', 'Reopen this closed campaign?'), hidden: !(c.status === 'closed' && permissions.includes('reopen_campaigns')) },
+          { label: 'Close campaign', danger: true, onClick: () => setStatus('closed', 'This will lock this campaign. No new transactions can be entered. Only the Super Admin can reopen it.'), hidden: !(isAdmin && c.status !== 'closed') },
+        ]} />
       </div>
 
       <div className="kpis">
@@ -286,7 +279,14 @@ export default function CampaignDetail() {
           tab === 'transfers' ? isAdmin && c.status === 'active' && c.balance_mode !== 'shared' && (
             <button className="btn primary" onClick={() => setTransferStart({ from_campaign_id: id })}><Plus size={16} /> New transfer</button>
           )
-          : tab === 'expenses' ? canRequestPayout && <button type="button" className="btn" onClick={() => setRequesting(true)}>Request payout</button>
+          : tab === 'expenses' ? <>
+              {canRequestPayout && <button type="button" className={isAdmin ? 'btn' : 'btn primary'} onClick={() => setRequesting(true)}>Request payout</button>}
+              {tabConfig.add && c.status !== 'closed' && (
+                <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
+                  <Plus size={16} /> New payout
+                </button>
+              )}
+            </>
           : tab === 'pledges' ? canWork && c.status !== 'closed' && <NewPledgeButtons campaignId={id} onSaved={() => setVersion(v => v + 1)} />
           : tab === 'vouchers' ? isAdmin && c.status !== 'closed' && <NewVoucherButton campaignId={id} onSaved={() => setVersion(v => v + 1)} />
           : tabConfig.add && (

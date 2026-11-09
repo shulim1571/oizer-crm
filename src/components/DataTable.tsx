@@ -134,6 +134,13 @@ export default function DataTable(p: Props) {
   const [page, setPage] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportMenu, setExportMenu] = useState(false);
+  // Summary cards can be folded away; each person's choice is kept in their browser.
+  const summaryKey = `summary-shut:${p.viewKey ?? p.title}`;
+  const [summaryOpen, setSummaryOpen] = useState(() => { try { return localStorage.getItem(summaryKey) !== '1'; } catch { return true; } });
+  const toggleSummary = () => setSummaryOpen(o => {
+    try { if (o) localStorage.setItem(summaryKey, '1'); else localStorage.removeItem(summaryKey); } catch { /* private window */ }
+    return !o;
+  });
 
   useEffect(() => { if (activeFilters) setShowFilters(true); }, [activeFilters]);
 
@@ -342,7 +349,14 @@ export default function DataTable(p: Props) {
         </div>
       </div>
 
-      {p.summary}
+      {p.summary && (
+        <div className={`table-summary ${summaryOpen ? '' : 'shut'}`}>
+          <button type="button" className="link summary-toggle" aria-expanded={summaryOpen} onClick={() => toggleSummary()}>
+            {summaryOpen ? 'Hide summary' : 'Show summary'}
+          </button>
+          {summaryOpen && p.summary}
+        </div>
+      )}
 
       {groups && groups.length > 1 && (
         groups.length <= 8 ? (

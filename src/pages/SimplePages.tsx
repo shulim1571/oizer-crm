@@ -1,3 +1,6 @@
+import { useNavigate } from 'react-router-dom';
+import { RequestPayoutDialog } from './Payouts';
+import { Plus } from 'lucide-react';
 import CrudPage, { campLabel } from '../components/CrudPage';
 import AdminLink from '../components/AdminLink';
 import { useState } from 'react';
@@ -13,8 +16,11 @@ import {
 const CAMP = 'id, internal_name, campaign_name, external_name';
 
 export function ExpensesPage() {
-  const { defaultAccountId } = useAuth();
+  const { defaultAccountId, isAdmin, canWork } = useAuth();
+  const [requesting, setRequesting] = useState(false);
+  const nav = useNavigate();
   return (
+    <>
     <CrudPage
       title="Payouts" noun="Payout"
       table="expenses"
@@ -40,7 +46,16 @@ export function ExpensesPage() {
       ]}
       fields={expenseFields}
       defaults={{ account_id: defaultAccountId }}
+      // Admins enter payouts directly ("New payout"); fundraisers ask the office for one.
+      extraActions={!isAdmin && canWork && (
+        <button className="btn primary" onClick={() => setRequesting(true)}><Plus size={16} /> New payout request</button>
+      )}
     />
+    {requesting && (
+      <RequestPayoutDialog onClose={() => setRequesting(false)}
+        onSaved={() => { setRequesting(false); nav('/payout-requests'); }} />
+    )}
+    </>
   );
 }
 

@@ -1,3 +1,4 @@
+import PageTabs, { usePageTab } from '../components/PageTabs';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, HandCoins, Landmark, Pencil, Plus, TrendingUp } from 'lucide-react';
@@ -123,7 +124,10 @@ function FundraiserNewDonor({ onClose, onError }: { onClose: () => void; onError
   );
 }
 
+const DONOR_TABS = [['overview', 'Overview'], ['giving', 'Giving history'], ['pledges', 'Pledges'], ['tasks', 'Tasks & contact log'], ['receipts', 'Receipts & cards']] as const;
+
 export function DonorDetail() {
+  const [tab, setTab] = usePageTab(DONOR_TABS.map(([k]) => k));
   const { id = '' } = useParams();
   const nav = useNavigate();
   const { isAdmin, canWork } = useAuth();
@@ -186,11 +190,7 @@ export function DonorDetail() {
           </div>
         </div>
         <div className="spacer" />
-        {canWork && (
-          <button className="btn" onClick={() => setAddingTask(true)}><Plus size={16} /> Follow-up task</button>
-        )}
-        {canWork && <NewPledgeButtons donorId={d.id} onSaved={() => setVersion(v => v + 1)} />}
-        {canWork && <button className="btn" onClick={() => setEditing(true)}><Pencil size={16} /> Edit</button>}
+        {canWork && <button className="btn" onClick={() => setEditing(true)}><Pencil size={16} /> Edit donor</button>}
       </div>
 
       <div className="kpis">
@@ -201,7 +201,9 @@ export function DonorDetail() {
         <Kpi label="Last gift" value={dateTime(d.last_gift_at) || '—'} icon={<CalendarDays size={18} />} tone="amber" small />
       </div>
 
-      <div className="cards">
+      <PageTabs tabs={DONOR_TABS} value={tab} onChange={setTab} />
+
+      {tab === 'overview' && <div className="cards">
         <div className="card">
           <h3>Contact</h3>
           <dl>
@@ -240,24 +242,36 @@ export function DonorDetail() {
           <table className="mini">
             <tbody>{byYear.map(([y, t]) => <tr key={y}><td>{y}</td><td className="right">{money(t)}</td></tr>)}</tbody>
           </table>
-          <h3>Open tasks</h3>
-          <ul className="plain">
-            {(tasks.data ?? []).filter(t => t.status !== 'Done').map(t => (
-              <li key={t.id}>{t.title} <span className="muted">· {campLabel(t.campaigns)} · {t.status}</span></li>
-            ))}
-            {(tasks.data ?? []).filter(t => t.status !== 'Done').length === 0 && <li className="muted">None</li>}
-          </ul>
         </div>
-      </div>
+      </div>}
 
-      <div className="cards">
-        <ContactLog donorId={d.id} />
+      {tab === 'tasks' && <>
+        {canWork && <div className="tab-actions"><button className="btn primary" onClick={() => setAddingTask(true)}><Plus size={16} /> Follow-up task</button></div>}
+        <div className="cards">
+          <div className="card">
+            <h3>Open tasks</h3>
+            <ul className="plain">
+              {(tasks.data ?? []).filter(t => t.status !== 'Done').map(t => (
+                <li key={t.id}>{t.title} <span className="muted">· {campLabel(t.campaigns)} · {t.status}</span></li>
+              ))}
+              {(tasks.data ?? []).filter(t => t.status !== 'Done').length === 0 && <li className="muted">None</li>}
+            </ul>
+          </div>
+          <ContactLog donorId={d.id} />
+        </div>
+      </>}
+
+      {tab === 'pledges' && <>
+        {canWork && <div className="tab-actions"><NewPledgeButtons donorId={d.id} onSaved={() => setVersion(v => v + 1)} /></div>}
+        <div className="cards"><DonorPledges donorId={d.id} onChanged={() => setVersion(v => v + 1)} /></div>
+      </>}
+
+      {tab === 'receipts' && <div className="cards">
         <DonorReceipts donor={d} />
         <SavedCards donor={d} />
-        <DonorPledges donorId={d.id} onChanged={() => setVersion(v => v + 1)} />
-      </div>
+      </div>}
 
-      <DataTable
+      {tab === 'giving' && <DataTable
         title="Giving history"
         exportName={`donor-${d.id}`}
         rows={gifts.data ?? []}
@@ -265,7 +279,7 @@ export function DonorDetail() {
         error={gifts.error}
         columns={donationColumns().filter(c => c.key !== 'donor')}
         serverSearch
-      />
+      />}
       <p className="muted pad">Last updated {dateTime(d.updated_at)}</p>
 
       {editing && (
