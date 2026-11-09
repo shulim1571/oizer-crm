@@ -467,6 +467,36 @@ digits in our own functions.
 Plaid feed, auto-matching, discrepancy handling, check clearing and stale checks, bank-to-bank transfers, period
 sign-off. Manual reconciliation can ship before Plaid is contracted.
 
+**Part 1, manual reconciliation, is built (migration `20261128000000_bank_reconciliation.sql`, not yet applied).**
+Admin only, under Payouts → Bank Reconciliation, per bank account:
+- **Bank lines:** a statement export (CSV or Excel) from any bank. The header row and columns are guessed (one amount
+  column, or debit and credit) and can be changed; dates and amounts in the usual US formats are read. A file brought in
+  twice, or overlapping statements, only adds new lines; two identical lines in one file both count. A file can be undone
+  until one of its lines is matched. Lines can also be typed in. Plaid will feed the same table later.
+- **The books for an account:** gifts deposited there (post-dated checks on their check date), refunds and returned
+  checks taken back out, payouts (printed checks on the check's date; a payout whose only check was voided is left out),
+  and transfers between accounts. An item that never passes through the bank, such as an opening balance, can be set
+  aside with a reason.
+- **Matching:** any number of bank lines to any number of book items. Amounts always come from the books. A difference
+  has to be named: processor fees kept back, bank fee, interest, or something else with a note. A bank-only line (a fee,
+  interest) is matched with no book items. Matching a payout clears its check; unmatching puts it back to outstanding.
+- **Matching automatically**, only where there is exactly one answer: a check by its number and amount; one line and one
+  item with the same amount, the item no more than `recon_match_days` (default 10) days before a deposit or 120 before a
+  withdrawal; and a deposit equal to a day's gifts by one method or all of that day's gifts, in full or less their fees.
+- **Between accounts:** transfers between the organization's own banks, with no campaign balance change. A cross-account
+  campaign transfer puts "Bank Transfer Needed" on the Task Sheet until its bank transfer is recorded (new transfers
+  only; earlier ones aren't backfilled).
+- **Periods:** sign-off needs every bank line through the end date matched or explained, and opening balance plus the
+  lines to equal the statement's ending balance, to the cent. The first period takes the statement's start date and
+  opening balance; each later one starts the day after the last, from its ending balance. The report keeps deposits in
+  transit, outstanding payments, the adjusted bank balance and the differences by kind, and prints. A signed-off period
+  locks its lines and matches; only the Super Admin can reopen it, latest first, with a reason.
+- Each import, match, unmatch and sign-off is in the activity log.
+
+Still to come: the Plaid feed, a book balance per account (the books have no opening balance per bank account yet, so
+the report reconciles the bank side), stale-check handling beyond today's Task Sheet item, and a daily ACH-return report
+check if Sola doesn't post returns.
+
 ### Phase 12: Platform operations (M)
 Public API with scoped keys and rate limits, independent uptime monitoring and status page, org onboarding, custom
 domains, "Powered by" footer.

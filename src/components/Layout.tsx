@@ -70,6 +70,7 @@ const NAV: NavSection[] = [
       { to: '/payout-requests', label: 'Payout Requests', icon: <Send size={I} /> },
       { to: '/checks', label: 'Check Register', icon: <Printer size={I} />, admin: true },
       { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} />, admin: true },
+      { to: '/reconciliation', label: 'Bank Reconciliation', icon: <Scale size={I} />, admin: true },
     ],
   },
   {

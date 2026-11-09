@@ -43,6 +43,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   receipt_requested: { label: 'Receipt Requested', tone: 'blue' },
   recurring_failed: { label: 'Recurring Charge Failed', tone: 'red' },
   ach_returned: { label: 'Bank Payment Returned', tone: 'red' },
+  bank_move_needed: { label: 'Bank Transfer Needed', tone: 'amber' },
 };
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
@@ -241,6 +242,12 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
         <>
           <DeliveryFailed messageId={item.record_id} onDone={() => { void log('resent').then(onDone); }} />
           <div className="donation-actions">{dismiss('Handled another way', 'Take this off the sheet? Say how it was handled, for example "called the donor":')}</div>
+        </>
+      )}
+      {item.task_type === 'bank_move_needed' && (
+        <>
+          <p className="muted">This campaign transfer moved money between campaigns on different bank accounts, so the money has to move between the banks too. Record it under <Link to="/reconciliation">Bank Reconciliation → Between accounts</Link>; this leaves the sheet once it's recorded.</p>
+          <div className="donation-actions">{dismiss('Not needed', 'Take this off the sheet without recording a bank transfer? Say why:')}</div>
         </>
       )}
       {item.task_type === 'bank_reassign' && (

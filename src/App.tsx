@@ -27,6 +27,7 @@ import { DuplicatesPage } from './pages/DonorExtras';
 import { PayoutMethodsPage, PayoutRequestsPage } from './pages/Payouts';
 import { PayeesPage } from './pages/Payees';
 import { ChecksPage } from './pages/Checks';
+import ReconciliationPage from './pages/Reconciliation';
 import { ReceiptTextPage, ReceiptsPage } from './pages/Receipts';
 import { MessagesPage, MessagingSettingsPage, SharedDocumentPage } from './pages/Messaging';
 import NotificationsPage from './pages/Notifications';
@@ -167,6 +168,7 @@ export default function App() {
         <Route path="payout-requests" element={<PayoutRequestsPage />} />
         <Route path="payees" element={<PayeesPage />} />
         <Route path="checks" element={<AdminOnly><ChecksPage /></AdminOnly>} />
+        <Route path="reconciliation" element={<AdminOnly><ReconciliationPage /></AdminOnly>} />
         <Route path="receipts" element={<AdminOnly><ReceiptsPage /></AdminOnly>} />
         <Route path="source-report" element={<SourceReportPage />} />
         <Route path="fundraiser-directory" element={<AdminOnly><FundraiserDirectoryPage /></AdminOnly>} />
