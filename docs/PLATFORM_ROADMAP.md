@@ -516,7 +516,7 @@ by default plus the organization's own domain through Cloudflare; the "Powered b
   scheduled jobs (the `health` function), sign-in, and the public API. 90 days kept in Workers KV; the Worker serves the
   page at `/` and JSON at `/status.json`, and emails Shulim on a change through the platform's SendGrid key. Stays at
   its `oizer-status.<subdomain>.workers.dev` address for now. **Not deployed yet:** it needs a Cloudflare token with
-  Workers Scripts and Workers KV Storage edit, then the `SENDGRID_KEY` secret and a verified `ALERT_FROM`. Free on
+  Workers Scripts and Workers KV Storage edit, then the `SENDGRID_KEY` secret. Alerts come from `status@mail.trubase.org` (verified in SendGrid). Free on
   the Workers Free plan (one cron trigger, about 576 KV writes a day of the 1,000 allowed).
 - **Web addresses** (`domains` Edge Function; Settings → Organization → Web Addresses). The Super Admin sets up the
   default `<slug>.trubase.org` and up to five of their own (a subdomain such as `donate.example.org`; a bare domain can't

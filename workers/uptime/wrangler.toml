@@ -6,7 +6,7 @@
 #   npx wrangler deploy --config workers/uptime/wrangler.toml
 # Email alerts go to ALERT_EMAIL through the platform's SendGrid account (decided 2026-11-09):
 #   npx wrangler secret put SENDGRID_KEY --config workers/uptime/wrangler.toml   (the platform SENDGRID_API_KEY)
-#   and set ALERT_FROM to a sender verified in that SendGrid account.
+#   ALERT_FROM is on mail.trubase.org, which is verified in that SendGrid account.
 
 name = "oizer-status"
 main = "src/index.ts"
@@ -27,4 +27,4 @@ SUPABASE_URL = "https://wwaknikpdquwnphhwzsm.supabase.co"
 SUPABASE_ANON_KEY = "REPLACE_WITH_ANON_KEY"
 APP_URLS = "https://oizer.trubase.org/,https://oizer-drm.pages.dev/"
 ALERT_EMAIL = "smueller@trubase.org"
-ALERT_FROM = ""
+ALERT_FROM = "status@mail.trubase.org"
