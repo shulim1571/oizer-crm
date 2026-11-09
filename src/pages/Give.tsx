@@ -1,3 +1,4 @@
+import { PoweredBy } from '../components/PoweredBy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { resolveOrg } from '../lib/org';
 import { supabase, type Row } from '../lib/supabase';
@@ -168,7 +169,7 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
           </section>
         )}
       </main>
-      <footer className="give-foot">{t.secure} · {data.org.name}</footer>
+      <footer className="give-foot">{t.secure} · {data.org.name}<PoweredBy orgId={orgId} /></footer>
     </div>
   );
 }

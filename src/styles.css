@@ -722,3 +722,20 @@ ul.plain li { padding: 6px 0; }
 .field.inline { flex-direction: row; align-items: center; gap: 6px; }
 .plain-list { margin: 8px 0; padding-left: 18px; display: grid; gap: 4px; }
 @media (max-width: 900px) { .recon-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Tabs above a page for views of the same thing (Campaigns: Active, All, Archived…). */
+.tabs.page-tabs { display: flex; width: max-content; margin: 20px 28px -8px; }
+@media (max-width: 760px) { .tabs.page-tabs { margin: 14px 16px -6px; } }
+.tabs.page-tabs a {
+  padding: 6px 12px; border-radius: 7px; color: var(--muted); text-decoration: none; font-weight: 500; font-size: 13px; white-space: nowrap;
+}
+.tabs.page-tabs a:hover { color: var(--text); }
+.tabs.page-tabs a.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(15, 23, 42, .1); }
+.sidebar a { padding: 6px 10px; }
+.nav-section { padding: 10px 10px 4px; }
+.powered-by { text-align: center; font-size: 12px; color: var(--muted); padding: 18px 0 4px; }
+.powered-by a { color: inherit; }
+.give-foot .powered-by { padding: 6px 0 0; }
+.api-key { display: inline-block; padding: 6px 8px; background: var(--surface-2); border-radius: 6px; font-size: 13px; word-break: break-all; }
+.api-example { background: var(--surface-2); padding: 10px 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; white-space: pre; }
+table.dns code { word-break: break-all; }

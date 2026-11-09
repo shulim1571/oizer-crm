@@ -1,3 +1,4 @@
+import { PoweredBy } from '../components/PoweredBy';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { OrgLogo } from '../components/Layout';
@@ -31,7 +32,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
           <div><b>Anywhere</b><span>desktop &amp; phone</span></div>
         </div>
       </div>
-      <div className="auth-main">{children}</div>
+      <div className="auth-main">{children}<PoweredBy orgId={org?.id} /></div>
     </div>
   );
 }

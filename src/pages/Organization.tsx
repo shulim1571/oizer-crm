@@ -1,6 +1,7 @@
 import RecordForm, { type Field } from '../components/RecordForm';
 import { useAuth } from '../lib/auth';
 import { useState } from 'react';
+import { FooterSettings } from '../components/PoweredBy';
 
 const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Asia/Jerusalem', 'Europe/London']
   .map(v => ({ value: v, label: v }));
@@ -39,6 +40,7 @@ export default function OrganizationPage() {
         onClose={() => setSaved(false)}
         onSaved={() => { setSaved(true); refresh(); }}
       />
+      <FooterSettings />
     </section>
   );
 }

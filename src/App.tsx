@@ -10,6 +10,8 @@ import { AllDonations, NewDonation, RecentDonations } from './pages/Donations';
 import { DonorDetail, DonorsPage } from './pages/Donors';
 import UsersPage from './pages/Users';
 import ActivityPage from './pages/Activity';
+import WebAddressesPage from './pages/WebAddresses';
+import ApiKeysPage from './pages/ApiKeys';
 import OrganizationPage from './pages/Organization';
 import PlatformPage from './pages/Platform';
 import GuestPage from './pages/Guest';
@@ -201,6 +203,8 @@ export default function App() {
         <Route path="users" element={<AdminOnly><UsersPage /></AdminOnly>} />
         <Route path="activity" element={<AdminOnly><ActivityPage /></AdminOnly>} />
         <Route path="organization" element={<AdminOnly><OrganizationPage /></AdminOnly>} />
+        <Route path="web-addresses" element={<AdminOnly><WebAddressesPage /></AdminOnly>} />
+        <Route path="api-keys" element={<AdminOnly><ApiKeysPage /></AdminOnly>} />
         {isPlatformOwner && <Route path="platform" element={<PlatformPage />} />}
         <Route path="*" element={<Navigate to={isAdmin ? '/task-sheet' : '/dashboard'} replace />} />
       </Route>

@@ -501,6 +501,39 @@ check if Sola doesn't post returns.
 Public API with scoped keys and rate limits, independent uptime monitoring and status page, org onboarding, custom
 domains, "Powered by" footer.
 
+**Built (migration `20261129000000_platform_operations.sql`).** Decisions from Shulim, 2026-11-09: read-only API with
+per-organization keys made by the Super Admin, 60 requests a minute per key; a Cloudflare scheduled Worker and our own
+status page, no paid service; only the Platform Owner creates organizations (already the case); `<slug>.trubase.org`
+by default plus the organization's own domain through Cloudflare; the "Powered by" footer is a per-organization setting.
+
+- **Public API** (`api` Edge Function, `GET /functions/v1/api/v1/{campaigns,donors,donations}[/<id>]`). Keys look like
+  `oz_live_<8>_<48>`, are shown once and kept only as a SHA-256 hash, and each reads only the kinds of records it was
+  given. Lists page 50 at a time (`limit` up to 100, `after`, `updated_since`; donations also by `campaign_id` and
+  `donor_id`). The database checks the key, scope and rate limit in `api_request()`; errors carry their HTTP status
+  (401, 403, 404, 422, 429 with `Retry-After`). No CORS: keys belong on servers. Settings → Organization → API Keys.
+- **Uptime and status page** (`workers/uptime`). Every 5 minutes, from Cloudflare: the app's addresses, the database and
+  scheduled jobs (the `health` function), sign-in, and the public API. 90 days kept in Workers KV; the Worker serves the
+  page at `/` and JSON at `/status.json`, and emails on a change when `ALERT_EMAIL` and `SENDGRID_KEY` are set. Free on
+  the Workers Free plan (one cron trigger, about 576 KV writes a day of the 1,000 allowed).
+- **Web addresses** (`domains` Edge Function; Settings → Organization → Web Addresses). The Super Admin sets up the
+  default `<slug>.trubase.org` and up to five of their own (a subdomain such as `donate.example.org`; a bare domain can't
+  CNAME here). The screen shows the DNS records to add; Cloudflare verifies the domain and issues and renews the
+  certificate; "Check now", the open screen every 30 seconds and a job every 10 minutes ask again. An address leads to
+  the organization only when the address and its certificate are both active, and stops the moment it is removed.
+  Addresses under trubase.org can't be claimed as an organization's own.
+  - `DOMAIN_PROVIDER=pages` (default): custom domains on the Pages project. Free, up to 100 per project on the Free plan.
+    Works with trubase.org's DNS where it is today (Google Cloud DNS).
+  - `DOMAIN_PROVIDER=saas`: Cloudflare for SaaS custom hostnames, routed to the app by `workers/router`. Needs a zone
+    hosted at Cloudflare (`CF_SAAS_ZONE_ID`, `CF_SAAS_TARGET`). 100 hostnames included on Free/Pro/Business, then $0.10
+    per hostname per month; Cloudflare may ask for a payment method on the account before enabling it.
+  - Nothing happens until the Edge Function secrets `CF_DOMAINS_TOKEN` and `CF_ACCOUNT_ID` are set.
+- **"Powered by" footer** (Settings → Organization). On or off, its words (80 characters) and an optional `https://`
+  link; shown on payment pages, the sign-in page and the portal. Off until the Super Admin turns it on.
+- **Sidebar.** Entries went from about 50 to 30: views of the same list are now tabs above the page (Campaigns: Active,
+  All, Archived, Closed, Exchange; Transactions: Last 7 Days, All; Outreach; Reports; Payouts and Requests; Fundraisers
+  and Directory; and the settings grouped under Organization, Users & Access, Payments, Messaging, Sources & Machines).
+  Every page keeps its address.
+
 ## Spec coverage
 
 | Spec section | Phase |

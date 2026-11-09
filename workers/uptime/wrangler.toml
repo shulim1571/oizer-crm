@@ -1,0 +1,28 @@
+# Independent uptime monitoring and status page for Oizer DRM. Free on the Workers Free plan:
+# one cron trigger, and about 576 KV writes a day (the free allowance is 1,000).
+#
+# First deploy (needs a Cloudflare token with Workers Scripts and Workers KV Storage edit):
+#   npx wrangler kv namespace create oizer-status      -> put its id below
+#   npx wrangler deploy --config workers/uptime/wrangler.toml
+# Optional email alerts:
+#   npx wrangler secret put SENDGRID_KEY --config workers/uptime/wrangler.toml   (and set ALERT_EMAIL below)
+
+name = "oizer-status"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[kv_namespaces]]
+binding = "STATUS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[vars]
+TITLE = "Oizer status"
+SUPABASE_URL = "https://wwaknikpdquwnphhwzsm.supabase.co"
+# The anon key is public (it ships in the web app); it only lets the health checks through the API gateway.
+SUPABASE_ANON_KEY = "REPLACE_WITH_ANON_KEY"
+APP_URLS = "https://oizer.trubase.org/,https://oizer-drm.pages.dev/"
+ALERT_EMAIL = ""

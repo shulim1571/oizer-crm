@@ -1,14 +1,14 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Archive, ArrowLeftRight, ChevronDown, Banknote, BookOpen, BookUser, Building, Building2, CalendarDays, ChartColumn, CircleDollarSign, ClipboardCheck, Contact, CreditCard, FileCheck, FileText, Globe, FilePlus, HandCoins, Handshake, History, Landmark, Layers, LayoutDashboard, LayoutTemplate, ListChecks, ListPlus, Lock, LogOut, Menu, Percent, PieChart, Printer,
-  Bell, Mail, MessageSquare, MessagesSquare, PlusCircle, Receipt, RefreshCw, Repeat, Scale, Send, Smartphone, Ticket, Search, ShieldCheck, Upload, UserCircle, Users, Wallet,
+  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, CreditCard, FileCheck, FilePlus, Globe, Handshake, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Printer, Receipt, RefreshCw, Repeat, Scale, Search, Send, ShieldCheck, Smartphone, Ticket, Upload, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
 import { useUnreadMessages } from '../pages/Inbox';
 import { supabase } from '../lib/supabase';
 import { leavePlatformOrg, type Org } from '../lib/org';
+import { PoweredBy } from './PoweredBy';
 
 export function OrgLogo({ org }: { org: Org | null }) {
   return org?.logo_url
@@ -23,40 +23,47 @@ export const ROLE_LABEL: Record<string, string> = {
 const SearchContext = createContext<{ q: string; setQ: (v: string) => void }>({ q: '', setQ: () => {} });
 export const useSearch = () => useContext(SearchContext);
 
-interface NavItem { to: string; label: string; icon: ReactNode; admin?: boolean; platform?: boolean }
+interface Tab { to: string; label: string; admin?: boolean }
+interface NavItem { to: string; label: string; icon: ReactNode; admin?: boolean; platform?: boolean; tabs?: Tab[]; badge?: 'tasks' | 'inbox' }
 interface NavSection { title: string; items: NavItem[] }
 
+// One entry per kind of work. Views of the same list (active/archived campaigns, last 7 days/all transactions…)
+// are tabs above the page instead of separate entries; every page keeps its own address.
 const I = 18;
 const NAV: NavSection[] = [
   {
     title: 'Home',
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={I} /> },
-      { to: '/inbox', label: 'Messages', icon: <MessagesSquare size={I} /> },
-      { to: '/task-sheet', label: 'Task Sheet', icon: <ListChecks size={I} />, admin: true },
-      { to: '/tasks', label: 'Tasks', icon: <ClipboardCheck size={I} /> },
+      { to: '/task-sheet', label: 'Tasks', icon: <ListChecks size={I} />, badge: 'tasks',
+        tabs: [{ to: '/task-sheet', label: 'Task Sheet', admin: true }, { to: '/tasks', label: 'Campaign Tasks' }] },
+      { to: '/inbox', label: 'Messages', icon: <MessagesSquare size={I} />, badge: 'inbox' },
+      { to: '/outreach', label: 'Outreach', icon: <Send size={I} />, admin: true,
+        tabs: [{ to: '/outreach', label: 'New Message' }, { to: '/outreach/history', label: 'History' },
+          { to: '/outreach/templates', label: 'Templates' }, { to: '/messages', label: 'Sent Messages' }] },
+      { to: '/source-report', label: 'Reports', icon: <PieChart size={I} />,
+        tabs: [{ to: '/source-report', label: 'Sources' }, { to: '/balance-summary', label: 'Balances', admin: true },
+          { to: '/machine-report', label: 'Bookings', admin: true }] },
       { to: '/calendar', label: 'Jewish Calendar', icon: <CalendarDays size={I} />, admin: true },
     ],
   },
   {
     title: 'Campaigns',
     items: [
-      { to: '/campaigns/active', label: 'Active Campaigns', icon: <Landmark size={I} /> },
-      { to: '/campaigns/all', label: 'All Campaigns', icon: <Layers size={I} /> },
-      { to: '/campaigns/archived', label: 'Archived', icon: <Archive size={I} /> },
-      { to: '/campaigns/closed', label: 'Closed', icon: <Lock size={I} /> },
+      { to: '/campaigns/active', label: 'Campaigns', icon: <Landmark size={I} />,
+        tabs: [{ to: '/campaigns/active', label: 'Active' }, { to: '/campaigns/all', label: 'All' }, { to: '/campaigns/archived', label: 'Archived' },
+          { to: '/campaigns/closed', label: 'Closed' }, { to: '/campaigns/exchange', label: 'Exchange', admin: true }] },
       { to: '/requests', label: 'Campaign Requests', icon: <FilePlus size={I} /> },
       { to: '/machines', label: 'Machine Bookings', icon: <CreditCard size={I} /> },
-      { to: '/campaigns/exchange', label: 'Exchange', icon: <Repeat size={I} />, admin: true },
     ],
   },
   {
     title: 'Donations',
     items: [
-      { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true },
-      { to: '/donations/batch', label: 'Batch Entry', icon: <ListPlus size={I} />, admin: true },
-      { to: '/donations/recent', label: 'Last 7 Days', icon: <HandCoins size={I} /> },
-      { to: '/donations/all', label: 'All Transactions', icon: <CircleDollarSign size={I} /> },
+      { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true,
+        tabs: [{ to: '/donations/new', label: 'One donation' }, { to: '/donations/batch', label: 'Batch Entry' }] },
+      { to: '/donations/recent', label: 'Transactions', icon: <CircleDollarSign size={I} />,
+        tabs: [{ to: '/donations/recent', label: 'Last 7 Days' }, { to: '/donations/all', label: 'All' }] },
       { to: '/recurring', label: 'Recurring', icon: <Repeat size={I} /> },
       { to: '/pledges', label: 'Pledges', icon: <Handshake size={I} /> },
       { to: '/vouchers', label: 'Vouchers', icon: <Ticket size={I} />, admin: true },
@@ -66,8 +73,8 @@ const NAV: NavSection[] = [
   {
     title: 'Payouts',
     items: [
-      { to: '/expenses', label: 'Payouts', icon: <Receipt size={I} /> },
-      { to: '/payout-requests', label: 'Payout Requests', icon: <Send size={I} /> },
+      { to: '/expenses', label: 'Payouts', icon: <Receipt size={I} />,
+        tabs: [{ to: '/expenses', label: 'Payouts' }, { to: '/payout-requests', label: 'Requests' }] },
       { to: '/checks', label: 'Check Register', icon: <Printer size={I} />, admin: true },
       { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} />, admin: true },
       { to: '/reconciliation', label: 'Bank Reconciliation', icon: <Scale size={I} />, admin: true },
@@ -77,45 +84,28 @@ const NAV: NavSection[] = [
     title: 'People',
     items: [
       { to: '/donors', label: 'Donors', icon: <Contact size={I} /> },
-      { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true },
-      { to: '/fundraiser-directory', label: 'Fundraiser Directory', icon: <BookOpen size={I} />, admin: true },
+      { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true,
+        tabs: [{ to: '/managers', label: 'Fundraisers' }, { to: '/fundraiser-directory', label: 'Directory' }] },
       { to: '/collectors', label: 'Collectors', icon: <Users size={I} />, admin: true },
       { to: '/payees', label: 'Payees', icon: <BookUser size={I} /> },
     ],
   },
   {
-    title: 'Outreach',
-    items: [
-      { to: '/outreach', label: 'New Message', icon: <Send size={I} />, admin: true },
-      { to: '/outreach/history', label: 'Outreach History', icon: <History size={I} />, admin: true },
-      { to: '/outreach/templates', label: 'Outreach Templates', icon: <FileText size={I} />, admin: true },
-      { to: '/messages', label: 'Sent Messages', icon: <Mail size={I} />, admin: true },
-    ],
-  },
-  {
-    title: 'Reports',
-    items: [
-      { to: '/source-report', label: 'Source Report', icon: <PieChart size={I} /> },
-      { to: '/balance-summary', label: 'Balance Summary', icon: <Scale size={I} />, admin: true },
-      { to: '/machine-report', label: 'Booking Reports', icon: <ChartColumn size={I} />, admin: true },
-    ],
-  },
-  {
     title: 'Settings',
     items: [
-      { to: '/organization', label: 'Organization', icon: <Building size={I} />, admin: true },
-      { to: '/users', label: 'Users & Access', icon: <ShieldCheck size={I} />, admin: true },
-      { to: '/accounts', label: 'Accounts', icon: <Building2 size={I} />, admin: true },
-      { to: '/payments-settings', label: 'Payments', icon: <CreditCard size={I} />, admin: true },
-      { to: '/fees', label: 'Methods & Fees', icon: <Percent size={I} />, admin: true },
-      { to: '/payout-methods', label: 'Payout Methods', icon: <Banknote size={I} />, admin: true },
-      { to: '/receipt-text', label: 'Receipt Text', icon: <FileText size={I} />, admin: true },
-      { to: '/messaging-settings', label: 'Messaging', icon: <MessageSquare size={I} />, admin: true },
-      { to: '/sources', label: 'Sources', icon: <Wallet size={I} />, admin: true },
+      { to: '/organization', label: 'Organization', icon: <Building size={I} />, admin: true,
+        tabs: [{ to: '/organization', label: 'Details' }, { to: '/web-addresses', label: 'Web Addresses' }, { to: '/api-keys', label: 'API Keys' }] },
+      { to: '/users', label: 'Users & Access', icon: <ShieldCheck size={I} />, admin: true,
+        tabs: [{ to: '/users', label: 'Users' }, { to: '/activity', label: 'Activity Log' }] },
+      { to: '/payments-settings', label: 'Payments', icon: <Wallet size={I} />, admin: true,
+        tabs: [{ to: '/payments-settings', label: 'Card Processing' }, { to: '/fees', label: 'Methods & Fees' },
+          { to: '/payout-methods', label: 'Payout Methods' }, { to: '/accounts', label: 'Bank Accounts' }] },
+      { to: '/messaging-settings', label: 'Messaging', icon: <MessageSquare size={I} />, admin: true,
+        tabs: [{ to: '/messaging-settings', label: 'Email & Text' }, { to: '/receipt-text', label: 'Receipt Text' }] },
+      { to: '/sources', label: 'Sources & Machines', icon: <Smartphone size={I} />, admin: true,
+        tabs: [{ to: '/sources', label: 'Sources' }, { to: '/machine-registry', label: 'Donary Machines' }] },
       { to: '/templates', label: 'Campaign Templates', icon: <LayoutTemplate size={I} />, admin: true },
-      { to: '/machine-registry', label: 'Donary Machines', icon: <Smartphone size={I} />, admin: true },
       { to: '/data-import', label: 'Data Import', icon: <Upload size={I} />, admin: true },
-      { to: '/activity', label: 'Activity Log', icon: <History size={I} />, admin: true },
     ],
   },
   {
@@ -128,9 +118,11 @@ const NAV: NavSection[] = [
 // Pages reached from elsewhere (the sidebar footer), named here for the top bar.
 const OTHER: NavItem[] = [{ to: '/notifications', label: 'My Notifications', icon: null }];
 
+const onPath = (path: string, to: string) => path === to || path.startsWith(`${to}/`);
+
 // Which sections are folded away, kept per browser. The section holding the open page always shows.
 const FOLD_KEY = 'nav-folded';
-const DEFAULT_FOLDED = ['Reports', 'Settings'];
+const DEFAULT_FOLDED = ['Settings'];
 function readFolded(): string[] {
   try { const v = JSON.parse(localStorage.getItem(FOLD_KEY) ?? 'null'); return Array.isArray(v) ? v : DEFAULT_FOLDED; } catch { return DEFAULT_FOLDED; }
 }
@@ -167,11 +159,22 @@ export default function Layout() {
   const [folded, setFolded] = useState<string[]>(readFolded);
   const toggle = (title: string) => setFolded(f => { const v = f.includes(title) ? f.filter(t => t !== title) : [...f, title]; saveFolded(v); return v; });
 
-  const all = [...NAV.flatMap(s => s.items.map(i => ({ ...i, section: s.title }))), ...OTHER.map(i => ({ ...i, section: 'Settings' }))];
-  // The longest matching path wins, so /outreach/history isn't taken for /outreach.
-  const current = all.filter(n => loc.pathname === n.to || loc.pathname.startsWith(`${n.to}/`)).sort((a, b) => b.to.length - a.to.length)[0]
-    ?? (loc.pathname.startsWith('/campaigns/') ? { section: 'Campaigns', label: 'Campaign' }
-      : loc.pathname.startsWith('/donors/') ? { section: 'People', label: 'Donor' } : undefined);
+  const allowed = (t: { admin?: boolean }) => !t.admin || isAdmin;
+  const visible = (n: NavItem) => (n.platform ? isPlatformOwner : canWork && (!n.admin || isAdmin));
+  // An entry's tabs this person may open; the entry opens the first of them.
+  const tabsOf = (n: NavItem) => (n.tabs ?? []).filter(allowed);
+  const entryTo = (n: NavItem) => tabsOf(n)[0]?.to ?? n.to;
+  const paths = (n: NavItem) => (n.tabs ? tabsOf(n).map(t => t.to) : [n.to]);
+  const all = [...NAV.flatMap(s => s.items.filter(visible).map(i => ({ ...i, section: s.title }))), ...OTHER.map(i => ({ ...i, section: 'Settings' }))];
+  // The longest matching path wins, so /outreach/history is the History tab, not New Message.
+  const matches = all.flatMap(n => paths(n).filter(p => onPath(loc.pathname, p)).map(p => ({ n, p })))
+    .sort((a, b) => b.p.length - a.p.length)[0];
+  const tab = matches?.n.tabs?.find(t => t.to === matches.p);
+  const current = matches ? { section: matches.n.section, label: tab && tab.label !== matches.n.label ? `${matches.n.label} · ${tab.label}` : matches.n.label, item: matches.n }
+    : loc.pathname.startsWith('/campaigns/') ? { section: 'Campaigns', label: 'Campaign', item: undefined }
+      : loc.pathname.startsWith('/donors/') ? { section: 'People', label: 'Donor', item: undefined } : undefined;
+  const pageTabs = current?.item ? tabsOf(current.item) : [];
+  const badge = (n: NavItem) => (n.badge === 'tasks' && isAdmin ? taskCount : n.badge === 'inbox' ? unread : 0);
   const email = profile?.email ?? '';
 
   return (
@@ -183,11 +186,11 @@ export default function Layout() {
             <div className="logo-text">{org?.name ?? 'Campaign CRM'}{org && <small>Campaign CRM</small>}</div>
           </div>
           {NAV.map(section => {
-            const items = section.items.filter(n => (n.platform ? isPlatformOwner : canWork && (!n.admin || isAdmin)));
+            const items = section.items.filter(visible);
             if (!items.length) return null;
             const here = current?.section === section.title;
             const shut = folded.includes(section.title) && !here;
-            const count = items.reduce((t, n) => t + (n.to === '/task-sheet' ? taskCount : n.to === '/inbox' ? unread : 0), 0);
+            const count = items.reduce((t, n) => t + badge(n), 0);
             return (
               <div key={section.title} className="nav-group">
                 <button type="button" className="nav-section" aria-expanded={!shut} onClick={() => toggle(section.title)}
@@ -197,10 +200,9 @@ export default function Layout() {
                   <ChevronDown size={14} className={`nav-chev ${shut ? 'shut' : ''}`} />
                 </button>
                 {!shut && items.map(n => (
-                  <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'active' : '')}>
+                  <NavLink key={n.label} to={entryTo(n)} className={() => (current?.item?.label === n.label ? 'active' : '')}>
                     {n.icon}<span>{n.label}</span>
-                    {n.to === '/task-sheet' && taskCount > 0 && <span className="nav-count">{taskCount}</span>}
-                    {n.to === '/inbox' && unread > 0 && <span className="nav-count">{unread}</span>}
+                    {badge(n) > 0 && <span className="nav-count">{badge(n)}</span>}
                   </NavLink>
                 ))}
               </div>
@@ -253,7 +255,13 @@ export default function Layout() {
               <button className="btn" onClick={async () => { await supabase.rpc('platform_exit_org'); leavePlatformOrg(); }}>Exit</button>
             </div>
           )}
+          {pageTabs.length > 1 && (
+            <nav className="tabs page-tabs" aria-label={current?.item?.label}>
+              {pageTabs.map(t => <NavLink key={t.to} to={t.to} end className={({ isActive }) => (isActive ? 'active' : '')}>{t.label}</NavLink>)}
+            </nav>
+          )}
           <Outlet key={tick} />
+          <PoweredBy orgId={org?.id} />
         </main>
       </div>
     </SearchContext.Provider>
