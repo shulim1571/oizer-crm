@@ -6,3 +6,4 @@ dist
 *.csv
 data/
 *.tsbuildinfo
+supabase/.temp/
