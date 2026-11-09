@@ -459,6 +459,37 @@ ACH:
 **Needs:** production credentials from Donary, and Sola's answers above. The spec's open questions for
 Pledger and The Donors Fund move to Sola.
 
+**Donary Enterprise is built against its published docs (migration `20261202000000_donary_enterprise.sql`), not yet
+connected.** Docs: https://developers.donary.com/docs/enterprise/. Settings → Sources & Machines → Donary Connection.
+- **Out** (`donary-sync`, every 5 minutes): donors, collectors and campaigns go to `PUT https://webapi.donary.com/v1/External/
+  Save{Donor,Collector,Campaign,Reason}` with the `APIKey` header and the organization's `orgGuid`, whenever they're added
+  or their names, phones, emails or addresses change. Sub-campaigns go as Donary reasons under their parent campaign.
+  Our IDs are Donary's IDs (Donary creates a record with an ID it doesn't know); campaigns must have numeric IDs, which
+  ours do. Phones, emails and addresses go under the label "Main" and only when we have one, because Donary deletes any
+  labelled entry missing from a list. No delete call exists, so deleted records just stop being sent. Failures retry
+  with back-off (5 minutes doubling to 6 hours, 8 tries); records Donary can't take (no name) stop at once and are listed.
+  "Send everything" queues the whole list for a first sync (Donary's portal import is the other way).
+- **In** (`donary-webhook?event=charge|void|pledge|schedule&token=…`): Donary's webhooks aren't signed and must work
+  without a login, so each organization's addresses carry a 48-character random token (changeable on the screen). Each
+  event is kept once (Donary retries up to three times). A charge becomes a donation on the campaign (or the reason's
+  sub-campaign), with the payment number in `donary_id`, the gateway reference, method, card brand and last four, the
+  machine's source when the device is in the registry, and a donor made on the device added under Donary's ID. A void
+  voids it; a pledge becomes a pledge; a schedule is noted and its first payment, when taken, becomes a donation.
+  Anything unmatched (unknown campaign, another currency) is kept with the reason and can be run again after the fix;
+  Donary gets a 200 either way so it doesn't email about it.
+
+**Needed from Donary** (nothing has been sent to them):
+1. The Enterprise **API key** (they email a "unique token") and our **orgGuid**, for Oizer, and later per organization.
+2. A **test account**: a sandbox base URL or test orgGuid and key, a Donary DRM test login, and a test device (or a way
+   to fire test webhooks), so nothing reaches live devices while we test.
+3. Answers to gaps in the docs: the error body and codes; the exact field casing they accept (`donorID` vs `donorId`,
+   `maskedApiKey` vs `maskedAPIKey`); whether phone lists are required on every save and which `countryCode` values
+   they take besides `USA`; and whether `processedDateTime` is always UTC.
+4. Webhooks: they set `PaymentWebhookEndpoint`, `PaymentStatusUpdateWebhookEndpoint`, `PledgeWebhookEndpoint` and
+   `ScheduleWebhookEndpoint` to the four addresses on the screen. We'd ask for `ScheduleHandlingMode` = `Donary`
+   (Donary runs schedules and sends each payment). Also ask whether they can sign webhooks or send from fixed IP addresses.
+5. How `deviceName` relates to the device IDs in our machine registry, so payments land on the right machine's source.
+
 ### Phase 10: Phone and SMS lookup (L, needs vendors)
 SMS campaign lookup, then every IVR flow. Evaluate Twilio's PCI payment feature for card entry rather than handling
 digits in our own functions.
