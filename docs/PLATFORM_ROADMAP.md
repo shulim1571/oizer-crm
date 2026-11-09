@@ -7,7 +7,8 @@ spec (v1.0, June 2026). The spec itself is not committed here because it contain
 Status: Phases 0 to 6 are live. On 2026-11-02 the "Oizer DRM" project (`wwaknikpdquwnphhwzsm`, Trubase Live org),
 until then staging, became production, served from Cloudflare Pages (`oizer-drm`). The old `oizer-crm` project and
 GitHub Pages site are retired. It still holds test data; the real data is reimported once the final version is ready.
-Phases 7 to 10 haven't started.
+Phases 7 and 8 are live (Apple Pay, Google Pay and 3-D Secure deferred). Phase 9 part 1, DAF cards and ACH through
+Sola, is live; the Donary part waits for Donary's API documents and credentials. Phases 10 to 12 haven't started.
 
 Still open for Phase 1:
 - Supabase's built-in email only reaches the project's team members, a few messages an hour. Inviting anyone else needs
@@ -190,6 +191,17 @@ valid for a year).
 
 Provider keys are Edge Function secrets the owner enters: `SENDGRID_API_KEY`, `SENDGRID_WEBHOOK_PUBLIC_KEY`,
 `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`. The project's URL is the Vault entry `project_url`.
+
+**Per-organization keys (migration `20261127000000_org_integration_keys.sql`, approved direction).** Each
+organization can bring its own SendGrid, Twilio and Turnstile keys, like its Sola keys:
+- The Super Admin enters them on the Messaging and Payments settings screens. Secret parts are encrypted with the
+  Vault key `payment_keys_key`; the screens only learn whether a key is set (and the last four of the Twilio SID).
+- Until an organization sets its own, the platform's Edge Function secrets above are used, so nothing stops working.
+  "Use the platform's keys" clears one service.
+- Delivery reports and texts signed with an organization's own keys arrive at its own webhook address (`?org=<id>`)
+  and can only touch that organization's messages.
+- The payment page uses the organization's Turnstile site key, and the `give` function its secret, falling back to
+  `VITE_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`.
 
 Part 2, notifications, is built. The `run_notifications` job runs every minute and handles:
 - **Donation alerts:** sent to the campaign's fundraisers and to the parent campaign's primary. Donary machine payments,
