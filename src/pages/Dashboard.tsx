@@ -50,7 +50,8 @@ function DailyChart({ daily, from, to }: { daily: Row[]; from: string; to: strin
     return out;
   }, [daily, from, to]);
   const [hover, setHover] = useState<{ day: string; total: number } | null>(null);
-  const max = Math.max(...days.map(d => d.total), 1);
+  const top = Math.max(0, ...days.map(d => d.total));
+  const max = top || 1;
   return (
     <div className="chart">
       <div className="chart-readout">{hover ? <><b>{money(hover.total)}</b> on {hover.day}</> : <span className="muted">Hover a bar for that day's total</span>}</div>
@@ -67,7 +68,7 @@ function DailyChart({ daily, from, to }: { daily: Row[]; from: string; to: strin
           </div>
         ))}
       </div>
-      <div className="chart-axis"><span>{days[0]?.day}</span><span>{money(max)} peak</span><span>{days[days.length - 1]?.day}</span></div>
+      <div className="chart-axis"><span>{days[0]?.day}</span><span>{top ? `${money(top)} peak` : 'No gifts in this period'}</span><span>{days[days.length - 1]?.day}</span></div>
     </div>
   );
 }
@@ -125,7 +126,9 @@ export default function DashboardPage() {
   );
   const myTasks = useQuery(async () => (isAdmin ? [] : (await supabase.from('tasks').select('id, status, due_date').neq('status', 'Done')).data ?? []) as Row[], [isAdmin]);
 
-  const s = q.data;
+  // Any part missing reads as zero rather than breaking the page.
+  const s = q.data as Row | undefined;
+  const per = (k: string) => (s?.periods as Row | undefined)?.[k] as Row | undefined;
   const list = (campaigns.data as Row[]) ?? [];
   const nearGoal = list.filter(c => Number(c.goal) > 0 && Number(c.combined_raised) >= Number(c.goal) * 0.9 && Number(c.combined_raised) < Number(c.goal));
   const overdueByCampaign = [...((overdue.data as Row[]) ?? []).reduce((m, p) => {
@@ -143,10 +146,10 @@ export default function DashboardPage() {
       {q.error && <div className="error">{q.error}</div>}
 
       <div className="kpis">
-        <Kpi label="Today" value={money(s?.periods.today.raised ?? 0)} icon={<Clock size={18} />} tone="green" sub={period(s?.periods.today)} />
-        <Kpi label="This week" value={money(s?.periods.week.raised ?? 0)} icon={<CalendarDays size={18} />} tone="green" sub={period(s?.periods.week)} />
-        <Kpi label="This month" value={money(s?.periods.month.raised ?? 0)} icon={<CalendarRange size={18} />} tone="green" sub={period(s?.periods.month)} />
-        {isAdmin && <Kpi label="This year" value={money(s?.periods.year.raised ?? 0)} icon={<TrendingUp size={18} />} tone="green" sub={period(s?.periods.year)} />}
+        <Kpi label="Today" value={money(per('today')?.raised ?? 0)} icon={<Clock size={18} />} tone="green" sub={period(per('today'))} />
+        <Kpi label="This week" value={money(per('week')?.raised ?? 0)} icon={<CalendarDays size={18} />} tone="green" sub={period(per('week'))} />
+        <Kpi label="This month" value={money(per('month')?.raised ?? 0)} icon={<CalendarRange size={18} />} tone="green" sub={period(per('month'))} />
+        {isAdmin && <Kpi label="This year" value={money(per('year')?.raised ?? 0)} icon={<TrendingUp size={18} />} tone="green" sub={period(per('year'))} />}
         <Kpi label="Pledged (open)" value={money(s?.pledged ?? 0)} icon={<Handshake size={18} />} tone="blue" sub="Not confirmed income" />
         <Kpi label="Recurring pledges" value={money(s?.scheduled_30 ?? 0)} icon={<CalendarClock size={18} />} tone="violet" sub={`next 30 days · ${money(s?.scheduled_90 ?? 0)} next 90`} />
         {isAdmin && <Kpi label="Tasks waiting" value={<Link to="/task-sheet">{taskCount}</Link>} icon={<AlertTriangle size={18} />} tone="amber" sub="On the Task Sheet" />}
@@ -177,8 +180,8 @@ export default function DashboardPage() {
       <div className="card">
         <h3>Donations over time</h3>
         <p className="range-total">
-          <b>{money(s?.range.raised ?? 0)}</b> raised · {money(s?.range.fees ?? 0)} fees · {money(Number(s?.range.raised ?? 0) - Number(s?.range.fees ?? 0))} net · {s?.range.count ?? 0} gifts
-          {compare && prior.data && <span className="muted"> · {change(Number(s?.range.raised ?? 0), Number((prior.data as Row).range.raised))}</span>}
+          <b>{money(s?.range?.raised ?? 0)}</b> raised · {money(s?.range?.fees ?? 0)} fees · {money(Number(s?.range?.raised ?? 0) - Number(s?.range?.fees ?? 0))} net · {s?.range?.count ?? 0} gifts
+          {compare && prior.data && <span className="muted"> · {change(Number(s?.range?.raised ?? 0), Number((prior.data as Row).range?.raised))}</span>}
         </p>
         <DailyChart daily={s?.daily ?? []} from={from} to={to} />
       </div>

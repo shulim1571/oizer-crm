@@ -7,3 +7,4 @@ dist
 data/
 *.tsbuildinfo
 supabase/.temp/
+functions/_config.ts

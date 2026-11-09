@@ -61,7 +61,10 @@ const unsubscribeToken = /^#\/u\/([0-9a-f]{32})$/.exec(window.location.hash)?.[1
 // The page other websites may frame for the donate widget.
 const embedded = /\/embed(\.html)?$/.test(window.location.pathname);
 // A campaign's public payment page.
-const giveCampaign = /^#\/give\/([A-Za-z0-9-]{1,40})\/?$/.exec(window.location.hash)?.[1] ?? null;
+// A campaign's public payment page: #/give/<campaign>, or /give/<campaign>, the address shared links use so
+// that link previews (served by functions/give/[id].ts) can show the campaign.
+const giveCampaign = /^#\/give\/([A-Za-z0-9-]{1,40})\/?$/.exec(window.location.hash)?.[1]
+  ?? (!window.location.hash || window.location.hash === '#' ? /^\/give\/([A-Za-z0-9-]{1,40})\/?$/.exec(window.location.pathname)?.[1] : undefined) ?? null;
 
 function AdminOnly({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();

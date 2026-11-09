@@ -61,7 +61,7 @@ export function FooterSettings() {
               <input value={v.url ?? ''} placeholder="https://…" onChange={e => setV({ ...v, url: e.target.value })} /></label>
           </div>
           {msg && <div className={msg.ok ? 'notice' : 'error'}>{msg.text}</div>}
-          <div className="form-actions"><div className="spacer" /><button className="btn primary" onClick={save}>Save</button></div>
+          <div className="form-actions"><div className="spacer" /><button className="btn primary" onClick={save}>Save footer</button></div>
         </>
       ) : (
         <p className="muted small">{v.enabled ? `Showing: ${v.text}` : 'Not shown.'} Only the Super Admin can change it.</p>

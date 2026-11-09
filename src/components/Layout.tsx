@@ -9,6 +9,7 @@ import { useUnreadMessages } from '../pages/Inbox';
 import { supabase } from '../lib/supabase';
 import { leavePlatformOrg, type Org } from '../lib/org';
 import { PoweredBy } from './PoweredBy';
+import PageErrorBoundary from './PageErrorBoundary';
 
 export function OrgLogo({ org }: { org: Org | null }) {
   return org?.logo_url
@@ -260,7 +261,7 @@ export default function Layout() {
               {pageTabs.map(t => <NavLink key={t.to} to={t.to} end className={({ isActive }) => (isActive ? 'active' : '')}>{t.label}</NavLink>)}
             </nav>
           )}
-          <Outlet key={tick} />
+          <PageErrorBoundary resetKey={loc.pathname + tick}><Outlet key={tick} /></PageErrorBoundary>
           <PoweredBy orgId={org?.id} />
         </main>
       </div>

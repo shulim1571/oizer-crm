@@ -83,7 +83,7 @@ export function KeysPanel({ service, status, onSaved, intro, fields, platformNot
           <div className="form-actions">
             {own && <button type="button" className="btn" onClick={clear}>Use the platform's keys</button>}
             <div className="spacer" />
-            <button type="button" className="btn primary" disabled={!Object.values(v).some(x => x.trim())} onClick={save}>Save</button>
+            <button type="button" className="btn primary" disabled={!Object.values(v).some(x => x.trim())} onClick={save}>Save {NAME[service]} keys</button>
           </div>
         </>
       ) : <p className="muted small">Only the Super Admin can change these keys.</p>}

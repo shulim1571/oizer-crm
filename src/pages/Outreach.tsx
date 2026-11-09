@@ -40,7 +40,7 @@ async function copy(text: string, done: (m: string) => void) {
 
 /** The campaign's payment link: its Payment Link when that's a web address, otherwise its own payment page. */
 export const paymentUrl = (c: Row) => (/^https?:\/\/\S+$/i.test(String(c.payment_link ?? '').trim())
-  ? String(c.payment_link).trim() : `${window.location.origin}${import.meta.env.BASE_URL}#/give/${encodeURIComponent(c.id)}`);
+  ? String(c.payment_link).trim() : `${window.location.origin}${import.meta.env.BASE_URL}give/${encodeURIComponent(c.id)}`);
 
 // ---------------------------------------------------------------------------
 // Sharing a campaign's payment link
@@ -342,14 +342,14 @@ export function OutreachHistoryPage() {
     { key: 'created_at', label: 'Created', render: r => dateTime(r.created_at), value: r => r.created_at },
     { key: 'status', label: 'Status', value: sendStatus, render: r => <Pill tone={r.cancelled_at ? '' : sendStatus(r) === 'Sent' ? 'green' : 'blue'}>{sendStatus(r)}</Pill> },
     { key: 'channel', label: 'By', value: r => (r.channel === 'both' ? 'Email and text' : r.channel === 'sms' ? 'Text' : 'Email') },
-    { key: 'subject', label: 'Subject or text', width: 260, value: r => r.subject ?? r.sms_body },
+    { key: 'subject', label: 'Subject or text', long: true, width: 260, value: r => r.subject ?? r.sms_body },
     { key: 'queued_count', label: 'Messages', align: 'right' },
     { key: 'delivered', label: 'Delivered', align: 'right' },
     { key: 'failed', label: 'Failed', align: 'right' },
     { key: 'opened', label: 'Opened', align: 'right', value: r => rate(r.opened, r.emails) },
     { key: 'clicked', label: 'Clicked', align: 'right', value: r => rate(r.clicked, r.emails) },
     { key: 'send_after', label: 'Send time', render: r => dateTime(r.send_after) },
-    { key: 'created_by', label: 'Sent by' },
+    { key: 'created_by', label: 'Sent by', optional: true },
   ];
   return (
     <section className="view">

@@ -309,7 +309,8 @@ export function FundraiserDirectoryPage() {
     { key: 'email', label: 'Email' },
     { key: 'status', label: 'Status' },
     { key: 'last_login', label: 'Last sign-in', render: r => dateTime(r.last_login), value: r => dateTime(r.last_login) },
-    { key: 'campaigns', label: 'Campaigns', width: 360, value: r => (r.campaigns as Row[]).map(c => `${c.id} ${c.name} (${c.role})`).join('; ') },
+    { key: 'campaigns', label: 'Campaigns', width: 360, long: true, value: r => (r.campaigns as Row[]).map(c => `${c.id} ${c.name} (${c.role})`).join('; '),
+      render: r => `${(r.campaigns as Row[]).length} campaign${(r.campaigns as Row[]).length === 1 ? '' : 's'}: ${(r.campaigns as Row[]).map(c => `${c.id} ${c.name} (${c.role})`).join('; ')}` },
   ];
   if (!isAdmin) return null;
   return (

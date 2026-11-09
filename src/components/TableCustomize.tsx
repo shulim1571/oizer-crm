@@ -43,7 +43,9 @@ export function useSavedViews(tableKey: string, enabled: boolean): SavedViews {
   }, [tableKey]);
 
   useEffect(() => {
-    if (!enabled || !userId) return;
+    if (!enabled) return;
+    // No profile yet: show the table as it is; a saved default applies once the profile arrives.
+    if (!userId) { setReady(true); return; }
     let live = true;
     load().then(list => {
       if (!live) return;

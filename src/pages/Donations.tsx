@@ -178,7 +178,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
       .order(sortColumn || 'created_at', { ascending: sortColumn ? query.sort!.dir === 'asc' : false })
       .range(page * size, page * size + size - 1);
     if (error) throw new Error(error.message);
-    return { rows: (data ?? []) as Row[], count: count ?? 0 };
+    return { rows: (data ?? []) as Row[], count: count ?? (data ?? []).length };
   }, [queryKey, page]);
 
   // Voided, refunded and failed gifts don't count, unless that's what's being looked at.
@@ -253,6 +253,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
             )}
           </>
         }
+        more={[{ label: 'Batch entry', onClick: () => nav('/donations/batch'), hidden: !isAdmin || !!filter }]}
         actions={
           <>
             <select value={kindFilter} onChange={e => setKindFilter(e.target.value)} aria-label="Type">
@@ -261,7 +262,6 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
               <option>{UNATTRIBUTED}</option>
               <option>{DUPLICATES}</option>
             </select>
-            {isAdmin && !filter && <button className="btn" onClick={() => nav('/donations/batch')}>Batch entry</button>}
             {isAdmin && !filter && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
           </>
         }

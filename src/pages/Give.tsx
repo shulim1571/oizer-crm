@@ -24,6 +24,7 @@ const T: Record<Lang, Record<string, string>> = {
     confirm: 'You\'re about to donate {amount}. Please confirm this is correct.', min: 'The smallest gift here is {amount}.', choose: 'Choose an amount.',
     unavailable: 'This page isn\'t taking donations right now.', yes: 'Yes', no: 'No', send: 'Send', secure: 'Secured by Sola Payments',
     required: 'required', test: 'Test mode: no real charges. Use card 4111 1111 1111 1111.', robot: 'Please confirm you\'re not a robot.',
+    details: 'Your details', read_more: 'Read more', safe: 'Your card details go straight to the payment processor. We never see or store them.', of_goal: 'of {goal} goal',
   },
   he: {
     recurring: 'תרומה קבועה', often: 'תדירות', weekly: 'שבועי', monthly: 'חודשי', quarterly: 'רבעוני', annually: 'שנתי', start: 'תאריך התחלה', payments: 'מספר תשלומים', until: 'עד שאבטל', fixed: 'מספר קבוע', series: '{n} תשלומים של {amount}: סה״כ {total}', agree: 'אני מסכים לחיוב של {amount} בכל {period}{until}. המשרד יפסיק בכל עת לבקשתי.', agree_until: ' עד שאבקש להפסיק', agree_n: ' למשך {n} תשלומים', agree_needed: 'נא לאשר את תנאי התרומה הקבועה.', week: 'שבוע', month: 'חודש', quarter: 'רבעון', year: 'שנה', text_me: 'שלחו לי הודעות על התרומה הקבועה', saved: 'הכרטיס נשמר. החיוב הראשון של {amount} יהיה ב-{date}.', per: 'בכל',
@@ -36,6 +37,7 @@ const T: Record<Lang, Record<string, string>> = {
     confirm: 'אתה עומד לתרום {amount}. נא לאשר שהסכום נכון.', min: 'התרומה המינימלית היא {amount}.', choose: 'נא לבחור סכום.',
     unavailable: 'דף זה אינו מקבל תרומות כעת.', yes: 'כן', no: 'לא', send: 'שליחה', secure: 'מאובטח על ידי Sola Payments',
     required: 'חובה', test: 'מצב בדיקה: אין חיוב אמיתי. השתמשו בכרטיס 4111 1111 1111 1111.', robot: 'נא לאשר שאינך רובוט.',
+    details: 'הפרטים שלך', read_more: 'קרא עוד', safe: 'פרטי הכרטיס עוברים ישירות לחברת הסליקה. איננו רואים או שומרים אותם.', of_goal: 'מתוך יעד של {goal}',
   },
   yi: {
     recurring: 'א קבועה נדבה', often: 'ווי אפט', weekly: 'וועכנטליך', monthly: 'כל חודש', quarterly: 'יעדע דריי חדשים', annually: 'יערליך', start: 'אנהייב דאטום', payments: 'צאל באצאלונגען', until: 'ביז איך שטעל אפ', fixed: 'א געוויסע צאל', series: '{n} באצאלונגען פון {amount}: סך הכל {total}', agree: 'איך בין מסכים צו באצאלן {amount} יעדע {period}{until}. דער אפיס קען עס אפשטעלן ווען איך בעט.', agree_until: ' ביז איך בעט אפצושטעלן', agree_n: ' פאר {n} באצאלונגען', agree_needed: 'ביטע באשטעטיגט די תנאים פון דער קבועה נדבה.', week: 'וואך', month: 'חודש', quarter: 'דריי חדשים', year: 'יאר', text_me: 'שיקט מיר מעסעדזשעס וועגן די קבועה נדבה', saved: 'די קארטל איז געהאלטן. די ערשטע באצאלונג פון {amount} וועט זיין {date}.', per: 'יעדע',
@@ -48,6 +50,7 @@ const T: Record<Lang, Record<string, string>> = {
     confirm: 'איר גייט געבן {amount}. ביטע באשטעטיגט אז דאס איז ריכטיג.', min: 'די קלענסטע נדבה דא איז {amount}.', choose: 'ביטע קלייבט א סכום.',
     unavailable: 'דער בלאט נעמט נישט יעצט קיין נדבות.', yes: 'יא', no: 'ניין', send: 'שיקן', secure: 'באשיצט דורך Sola Payments',
     required: 'פארלאנגט', test: 'טעסט: קיין אמת׳ע באצאלונג. ניצט קארטל 4111 1111 1111 1111.', robot: 'ביטע באשטעטיגט אז איר זענט נישט קיין ראבאט.',
+    details: 'אייערע פרטים', read_more: 'לייענט מער', safe: 'אייערע קארטל פרטים גייען גלייך צום באצאלונג פראצעסאר. מיר זעען און האלטן זיי נישט.', of_goal: 'פון {goal} ציל',
   },
 };
 // Bank account and DAF wording. English comes from PayMethods.
@@ -136,41 +139,68 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
   const pct = c.goal ? Math.min(100, Math.round((Number(c.raised ?? 0) / Number(c.goal)) * 100)) : 0;
   return (
     <div className={`give ${rtl ? 'give-rtl' : ''} ${framed ? 'give-framed' : ''}`} lang={lang === 'en' ? 'en' : lang === 'he' ? 'he' : 'yi'}>
-      <header className="give-head">
-        {data.org.logo_url ? <img src={data.org.logo_url} alt={data.org.name} /> : <b>{data.org.name}</b>}
-      </header>
-      {data.page.banner_url && <img className="give-banner" src={data.page.banner_url} alt="" />}
-      <main className="give-main">
-        <h1 dir="auto">{c.name}</h1>
-        {data.page.description && <p className="give-story" dir="auto">{data.page.description}</p>}
-        {c.goal && (
-          <div className="give-progress">
-            <div className="bar"><span style={{ width: `${pct}%` }} /></div>
-            <div dir="auto"><b>{usd(Number(c.raised ?? 0))}</b> {t.raised} {usd(Number(c.goal))} {t.goal} · {pct}%</div>
+      <header className={`give-hero ${data.page.banner_url ? 'has-banner' : ''}`}
+        style={data.page.banner_url ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.6)), url("${encodeURI(String(data.page.banner_url))}")` } : undefined}>
+        <div className="give-hero-in">
+          <div className="give-org">
+            {data.org.logo_url ? <img src={data.org.logo_url} alt="" /> : <span className="give-org-mark">{String(data.org.name ?? '?')[0]}</span>}
+            <span dir="auto">{data.org.name}</span>
           </div>
-        )}
-        {thanks ? (
-          <Thanks t={t} data={data} result={thanks} onAgain={() => { setThanks(null); setRound(r => r + 1); void load(); }} />
-        ) : !data.payments.ready ? (
-          <p className="error" dir="auto">{t.unavailable}</p>
-        ) : (
-          <GiveForm key={round} t={t} data={data} orgId={orgId} onDone={setThanks} />
-        )}
-        <section className="give-other">
-          <h2 dir="auto">{t.other_ways}</h2>
-          {data.org.check_payee && <div dir="auto">{t.checks}: <b>{data.org.check_payee}</b></div>}
-          {data.org.zelle && <div dir="auto">{t.zelle}: <b>{data.org.zelle}</b></div>}
-          {data.org.ein && <div dir="auto">{t.ein}: <b>{data.org.ein}</b></div>}
-        </section>
-        {Array.isArray(data.page.donor_wall) && data.page.donor_wall.length > 0 && (
-          <section className="give-wall">
-            <h2 dir="auto">{t.wall}</h2>
-            <ul>{data.page.donor_wall.map((w: Row, i: number) => <li key={i}><span dir="auto">{w.name || t.anonymous}</span><b>{usd(Number(w.amount))}</b></li>)}</ul>
-          </section>
-        )}
+          <h1 dir="auto">{c.name}</h1>
+        </div>
+      </header>
+      <main className="give-main">
+        <aside className="give-side">
+          {c.goal ? (
+            <div className="give-card give-progress">
+              <div className="give-raised" dir="auto"><b>{usd(Number(c.raised ?? 0))}</b> <span>{t.of_goal.replace('{goal}', usd(Number(c.goal)))}</span></div>
+              <div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${pct}%` }} /></div>
+              <div className="give-pct">{pct}%</div>
+            </div>
+          ) : null}
+          {data.page.description && <Story text={String(data.page.description)} more={t.read_more} />}
+          {Array.isArray(data.page.donor_wall) && data.page.donor_wall.length > 0 && (
+            <section className="give-card give-wall">
+              <h2 dir="auto">{t.wall}</h2>
+              <ul>{data.page.donor_wall.map((w: Row, i: number) => <li key={i}><span dir="auto">{w.name || t.anonymous}</span><b>{usd(Number(w.amount))}</b></li>)}</ul>
+            </section>
+          )}
+          {(data.org.check_payee || data.org.zelle || data.org.ein) && (
+            <section className="give-card give-other">
+              <h2 dir="auto">{t.other_ways}</h2>
+              {data.org.check_payee && <div dir="auto">{t.checks}: <b>{data.org.check_payee}</b></div>}
+              {data.org.zelle && <div dir="auto">{t.zelle}: <b>{data.org.zelle}</b></div>}
+              {data.org.ein && <div dir="auto">{t.ein}: <b>{data.org.ein}</b></div>}
+            </section>
+          )}
+        </aside>
+        <div className="give-card give-form-card">
+          {thanks ? (
+            <Thanks t={t} data={data} result={thanks} onAgain={() => { setThanks(null); setRound(r => r + 1); void load(); }} />
+          ) : !data.payments.ready ? (
+            <p className="error" dir="auto">{t.unavailable}</p>
+          ) : (
+            <GiveForm key={round} t={t} data={data} orgId={orgId} onDone={setThanks} />
+          )}
+        </div>
       </main>
-      <footer className="give-foot">{t.secure} · {data.org.name}<PoweredBy orgId={orgId} /></footer>
+      <footer className="give-foot">
+        <span className="give-lock" aria-hidden="true">🔒</span> {t.secure} · {data.org.name}
+        <PoweredBy orgId={orgId} />
+      </footer>
     </div>
+  );
+}
+
+/** The campaign's story: a few lines, with the rest a click away. */
+function Story({ text, more }: { text: string; more: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 320;
+  return (
+    <section className="give-card give-story-card">
+      <p className={`give-story ${long && !open ? 'clamped' : ''}`} dir="auto">{text}</p>
+      {long && !open && <button type="button" className="give-more" onClick={() => setOpen(true)} dir="auto">{more}</button>}
+    </section>
   );
 }
 
@@ -269,7 +299,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   return (
     <form className="give-form" onSubmit={e => { e.preventDefault(); void submit(); }}>
       {data.payments.sandbox && <p className="give-test" dir="auto">{method === 'card' ? t.test : t.test_other}</p>}
-      <label className="give-label" dir="auto">{t.amount}</label>
+      <h2 className="give-step" dir="auto"><span>1</span>{t.amount}</h2>
       {presets.length > 0 && (
         <div className="give-presets">
           {presets.map(a => (
@@ -279,8 +309,11 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
         </div>
       )}
       {p.allow_other && (
-        <input className="give-other-amount" type="number" inputMode="decimal" min={p.min ?? 1} step="0.01" placeholder={t.other} value={other}
-          onChange={e => setOther(e.target.value)} dir="auto" />
+        <label className={`give-other-amount ${other ? 'on' : ''}`}>
+          <span aria-hidden="true">$</span>
+          <input type="number" inputMode="decimal" min={p.min ?? 1} step="0.01" placeholder={t.other} aria-label={t.other} value={other}
+            onChange={e => setOther(e.target.value)} dir="ltr" />
+        </label>
       )}
       {p.cover_fee && (
         <label className="inline-check give-cover"><input type="checkbox" checked={cover} onChange={e => setCover(e.target.checked)} />
@@ -309,6 +342,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
         </div>
       )}
 
+      <h2 className="give-step" dir="auto"><span>2</span>{t.details}</h2>
       <div className="give-grid">
         <label className="field"><span dir="auto">{t.first} *</span><input required dir="auto" value={d.first_name} onChange={set('first_name')} autoComplete="given-name" /></label>
         <label className="field"><span dir="auto">{t.last} *</span><input required dir="auto" value={d.last_name} onChange={set('last_name')} autoComplete="family-name" /></label>
@@ -329,12 +363,13 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
         <label className="field wide"><span dir="auto">{t.notes}</span><textarea dir="auto" rows={2} value={d.notes} onChange={set('notes')} /></label>
       </div>
 
-      <label className="give-label" dir="auto">{L.pay_with}</label>
+      <h2 className="give-step" dir="auto"><span>3</span>{L.pay_with}</h2>
       <MethodTabs value={method} program={program} ach={!!data.payments.ach} daf={data.payments.daf ?? []} L={L}
         onChange={(m, prog) => { setMethod(m); setProgram(prog); setDaf(emptyDaf()); setError(null); }} />
       {method === 'card' && (
         <>
           <div className="give-logos" aria-hidden="true"><span>VISA</span><span>Mastercard</span><span>AMEX</span><span>Discover</span></div>
+          <p className="give-safe" dir="auto"><span aria-hidden="true">🔒</span> {t.safe}</p>
           <CardFields ifieldsKey={data.payments.ifields_key} onTokens={setTokens} labels={{ card: t.card, cvv: t.cvv, loading: t.loading }} />
           <label className="field give-exp"><span dir="auto">{t.exp}</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" dir="ltr" value={exp}
             onChange={e => { const x = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(x.length > 2 ? `${x.slice(0, 2)}/${x.slice(2)}` : x); }} /></label>
@@ -351,7 +386,9 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
             <button type="button" className="btn" onClick={() => setConfirming(false)}>{t.no}</button></div></div>
       )}
       {error && <div className="error" dir="auto">{error}</div>}
+      <div className="give-submit-bar">
       <button type="submit" className="btn primary give-submit" disabled={busy || (method === 'card' && expDigits.length !== 4)}>{busy ? t.processing : `${t.donate}${chosen ? ` ${usd(total)}` : ''}`}</button>
+      </div>
     </form>
   );
 }

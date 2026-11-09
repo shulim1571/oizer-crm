@@ -110,8 +110,8 @@ export default function ApiKeysPage() {
         </div>
       ) : <p className="muted small">Only the Super Admin can create or revoke keys.</p>}
 
-      <div className="panel-box">
-        <h2>Using the API</h2>
+      <details className="help">
+        <summary>Using the API (reference)</summary>
         <p className="muted small">Every request sends the key. Each key may make 60 requests a minute; lists come 50 at a time (up to 100 with <code>limit</code>), and <code>next</code> is the <code>after</code> for the following page.</p>
         <pre className="api-example">{`curl -H "Authorization: Bearer oz_live_…" \\
   "${API_BASE}/donations?limit=100&updated_since=2026-11-01T00:00:00Z"`}</pre>
@@ -120,7 +120,7 @@ export default function ApiKeysPage() {
           <li><code>GET /donors</code>, <code>/donors/&lt;id&gt;</code>: names; email, phone and address only for a key allowed them</li>
           <li><code>GET /donations</code>, <code>/donations/&lt;id&gt;</code>, also <code>?campaign_id=</code> and <code>?donor_id=</code></li>
         </ul>
-      </div>
+      </details>
     </section>
   );
 }

@@ -29,11 +29,11 @@ export const pledgeColumns = (hideCampaign = false): Column[] => [
   { key: 'received', label: 'Received', render: (r: Row) => money(r.received), align: 'right' as const },
   { key: 'balance', label: 'Remaining', render: (r: Row) => money(r.balance), align: 'right' as const },
   { key: 'status', label: 'Status', value: (r: Row) => PLEDGE_STATUS[r.status], render: (r: Row) => <StatusPill value={PLEDGE_STATUS[r.status]} /> },
-  { key: 'kind', label: 'Kind', value: (r: Row) => (r.is_recurring ? `Recurring, ${r.frequency}` : 'One time') },
+  { key: 'kind', label: 'Kind', optional: true, value: (r: Row) => (r.is_recurring ? `Recurring, ${r.frequency}` : 'One time') },
   { key: 'date_pledged', label: 'Pledged on' },
   { key: 'due', label: 'Next due', value: (r: Row) => (r.is_recurring ? r.next_due_date : r.expected_date) ?? '' },
-  { key: 'days_outstanding', label: 'Days outstanding', value: (r: Row) => (r.status === 'fulfilled' || r.status === 'cancelled' ? '' : r.days_outstanding), align: 'right' as const },
-  { key: 'notes', label: 'Notes' },
+  { key: 'days_outstanding', label: 'Days outstanding', optional: true, value: (r: Row) => (r.status === 'fulfilled' || r.status === 'cancelled' ? '' : r.days_outstanding), align: 'right' as const },
+  { key: 'notes', label: 'Notes', long: true, optional: true },
 ];
 
 /** Add buttons for a one-time or recurring pledge, and the form that goes with them. */

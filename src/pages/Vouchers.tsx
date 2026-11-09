@@ -37,21 +37,21 @@ const feeOn = (r: Row, amount: number) => {
 export const voucherColumns = (hideCampaign = false): Column[] => [
   { key: 'id', label: 'Ref', width: 150 },
   { key: 'issuer', label: 'Issuer', value: (r: Row) => issuerName(r.issuer) },
-  { key: 'issuer_number', label: 'Issuer #' },
-  { key: 'account_number', label: 'Account #' },
+  { key: 'issuer_number', label: 'Issuer #', optional: true },
+  { key: 'account_number', label: 'Account #', optional: true },
   { key: 'donor_name', label: 'Donor', width: 170 },
   ...(hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', value: (r: Row) => `${r.campaign_internal || r.campaign_external || ''} - ${r.campaign_id}`, width: 200 }]),
   { key: 'face_value', label: 'Face value', render: (r: Row) => money(r.face_value), align: 'right' as const },
   { key: 'total_funded', label: 'Funded', render: (r: Row) => money(r.total_funded), align: 'right' as const },
-  { key: 'total_fees', label: 'Fees', render: (r: Row) => money(r.total_fees), align: 'right' as const },
-  { key: 'total_net', label: 'Net credited', render: (r: Row) => money(r.total_net), align: 'right' as const },
+  { key: 'total_fees', label: 'Fees', optional: true, render: (r: Row) => money(r.total_fees), align: 'right' as const },
+  { key: 'total_net', label: 'Net credited', optional: true, render: (r: Row) => money(r.total_net), align: 'right' as const },
   { key: 'remaining', label: 'Remaining', render: (r: Row) => money(r.remaining), align: 'right' as const },
   {
     key: 'status', label: 'Status', value: (r: Row) => VOUCHER_STATUS[r.status],
     render: (r: Row) => <><StatusPill value={VOUCHER_STATUS[r.status]} />{r.overdue && <> <Pill tone="red">Overdue</Pill></>}</>,
   },
-  { key: 'submission', label: 'Submitted', value: (r: Row) => (r.submission === 'mailed' ? 'Mailed in' : 'Online') },
-  { key: 'date_received', label: 'Received' },
+  { key: 'submission', label: 'Submitted', optional: true, value: (r: Row) => (r.submission === 'mailed' ? 'Mailed in' : 'Online') },
+  { key: 'date_received', label: 'Received', optional: true },
   { key: 'expected_date', label: 'Expected' },
 ];
 

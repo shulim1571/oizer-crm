@@ -63,6 +63,7 @@ export default function PlatformPage() {
         <table className="grid">
           <thead><tr><th>Name</th><th>Web address</th><th>Status</th><th>People</th><th>Campaigns</th><th>Donors</th><th>Donations</th><th>Created</th><th /></tr></thead>
           <tbody>
+            {!orgs.loading && (orgs.data ?? []).length === 0 && <tr><td colSpan={9} className="muted">No organizations yet. Add the first one below.</td></tr>}
             {(orgs.data ?? []).map(o => (
               <tr key={o.id}>
                 <td><b>{o.name}</b><div className="muted small">{o.slug}</div></td>

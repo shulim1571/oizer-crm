@@ -65,14 +65,14 @@ export default function PhoneLookupPage() {
         ) : <p className="muted small">Only the Super Admin can turn these on or off.</p>}
       </div>
 
-      <div className="panel-box">
-        <h2>Twilio setup for {s?.sms_number ?? 'the number'}</h2>
+      <details className="help">
+        <summary>Twilio setup for {s?.sms_number ?? 'the number'}</summary>
         <p className="muted small">In Twilio, under the number’s settings (both HTTP POST):</p>
         <ul className="muted small">
           <li>A message comes in: <code>{smsUrl}</code> (already in place for STOP and START)</li>
           <li>A call comes in: <code>{voiceUrl}</code></li>
         </ul>
-      </div>
+      </details>
 
       <h2>Recent lookups</h2>
       <div className="table-card"><div className="table-wrap">

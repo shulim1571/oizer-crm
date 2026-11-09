@@ -29,13 +29,13 @@ export const campaignColumns: Column[] = [
     render: r => r.manager_id && <AdminLink to={`/managers/${encodeURIComponent(r.manager_id)}`}>{r.manager_name}</AdminLink>,
   },
   { key: 'raised', label: 'Raised', render: r => money(r.raised), align: 'right' },
-  { key: 'fees', label: 'Fees', render: r => money(r.fees), align: 'right' },
-  { key: 'fee_percent', label: 'Fee %', render: r => pct(r.fee_percent), align: 'right' },
+  { key: 'fees', label: 'Fees', optional: true, render: r => money(r.fees), align: 'right' },
+  { key: 'fee_percent', label: 'Fee %', optional: true, render: r => pct(r.fee_percent), align: 'right' },
   { key: 'expenses', label: 'Expenses', render: r => money(r.expenses), align: 'right' },
   { key: 'balance', label: 'Balance', render: r => (r.balance_mode === 'shared' ? <span className="muted">Shared</span> : <Balance value={r.balance} />), align: 'right' },
   { key: 'pending_balance', label: 'Pending', render: r => money(r.pending_balance), align: 'right' },
-  { key: 'pin', label: 'Pin' },
-  { key: 'parent_campaign_id', label: 'Under', render: r => r.parent_campaign_id && <span className="id-tag">{r.parent_campaign_id}</span> },
+  { key: 'pin', label: 'Pin', optional: true },
+  { key: 'parent_campaign_id', label: 'Under', optional: true, render: r => r.parent_campaign_id && <span className="id-tag">{r.parent_campaign_id}</span> },
 ];
 
 export const STATUS_LABEL: Record<string, string> = { draft: 'Draft', active: 'Active', archived: 'Archived', closed: 'Closed' };

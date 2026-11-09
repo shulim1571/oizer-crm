@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Download, Filter, Printer, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Columns3, Filter, MoreHorizontal, Printer, X } from 'lucide-react';
 import { logActivity, type Row } from '../lib/supabase';
 import { dateTime, download, money, toCsv } from '../lib/format';
 import { printReport } from '../lib/printReport';
@@ -18,7 +18,14 @@ export interface Column {
   width?: number;
   /** For tables filtered on the server: the column to filter and sort on, and how. */
   filter?: { column: string; type: 'text' | 'number' | 'date' };
+  /** Left out of the default layout; still offered under Columns. */
+  optional?: boolean;
+  /** Long text (notes, details): shown on one line, click to read it all. */
+  long?: boolean;
 }
+
+/** A secondary action for the table's "More" menu. */
+export interface MoreAction { label: string; onClick: () => void; icon?: ReactNode; hidden?: boolean; danger?: boolean }
 
 export interface GroupBy {
   /** Filter name, e.g. "Fundraiser". */
@@ -45,6 +52,8 @@ interface Props {
   groupBy?: GroupBy;
   onOpen?: (row: Row) => void;
   actions?: ReactNode;
+  /** Secondary actions, kept in the "More" menu with export and print. */
+  more?: MoreAction[];
   initialSort?: { key: string; dir: 'asc' | 'desc' };
   exportName?: string;
   /** Skip the global search filter (when the page searches server-side). */
@@ -132,7 +141,7 @@ export default function DataTable(p: Props) {
 
   // Saved layouts name columns by key: keep their order, drop any that no longer exist.
   const columns = useMemo(() => {
-    if (!config.columns) return p.columns;
+    if (!config.columns) return p.columns.filter(c => !c.optional);
     const byKey = new Map(p.columns.map(c => [c.key, c]));
     return config.columns.flatMap(k => byKey.get(k) ?? []);
   }, [config.columns, p.columns]);
@@ -261,6 +270,19 @@ export default function DataTable(p: Props) {
     document.addEventListener('mouseup', up);
   }
 
+  // Long text stays on one line until clicked; the full text is also in the tooltip.
+  const cell = (c: Column, r: Row) => {
+    if (c.render && !c.long) return c.render(r);
+    const text = display(val(c, r));
+    if (!c.long && text.length <= 80) return text;
+    return (
+      <span className="clip" title={text.length > 80 ? text : undefined}
+        onClick={e => { const el = e.currentTarget; if (!el.classList.contains('open')) { e.stopPropagation(); el.classList.add('open'); } }}>
+        {c.render ? c.render(r) : text}
+      </span>
+    );
+  };
+
   const pick = (g: string | null) => setGroup(g);
   const badge = (rows: Row[]) => (p.groupBy!.badge ? p.groupBy!.badge(rows) : rows.length.toLocaleString());
   const pageRowsSelected = selectable && shown.length > 0 && shown.every(r => p.selected?.has(String(r.id)));
@@ -283,8 +305,8 @@ export default function DataTable(p: Props) {
                 <Filter size={16} /> Filter{activeFilters ? ` (${activeFilters})` : ''}
               </button>
               <div className="popover-wrap">
-                <button className={`btn ${saved.activeName ? 'on' : ''}`} onClick={() => setShowCustomize(s => !s)} title="Customize view">
-                  <SlidersHorizontal size={16} /> {saved.activeName ?? 'View'}
+                <button className={`btn ${saved.activeName ? 'on' : ''}`} onClick={() => setShowCustomize(s => !s)} title="Choose columns, saved views and layout">
+                  <Columns3 size={16} /> {saved.activeName ?? 'Columns'}
                 </button>
                 {showCustomize && (
                   <TableCustomize
@@ -297,16 +319,22 @@ export default function DataTable(p: Props) {
               </div>
             </>
           )}
-          {!inPlatformSession && (
+          {(!inPlatformSession || (p.more ?? []).some(m => !m.hidden)) && (
             <div className="export-menu">
-              <button className="btn" title="Export or print" onClick={() => setExportMenu(m => !m)} disabled={exporting}>
-                <Download size={16} /> {exporting ? 'Exporting…' : 'Export'}
+              <button className="btn" title="More: export, print and other actions" aria-label="More" onClick={() => setExportMenu(m => !m)} disabled={exporting}>
+                <MoreHorizontal size={16} /> {exporting ? 'Exporting…' : 'More'}
               </button>
               {exportMenu && (
                 <div className="menu-pop" onMouseLeave={() => setExportMenu(false)}>
-                  <button onClick={() => exportAs('xlsx')}>Excel (.xlsx)</button>
-                  <button onClick={() => exportAs('csv')}>CSV</button>
-                  <button onClick={() => exportAs('print')}><Printer size={14} /> Print or save as PDF</button>
+                  {(p.more ?? []).filter(m => !m.hidden).map(m => (
+                    <button key={m.label} className={m.danger ? 'danger' : ''} onClick={() => { setExportMenu(false); m.onClick(); }}>{m.icon}{m.label}</button>
+                  ))}
+                  {(p.more ?? []).some(m => !m.hidden) && !inPlatformSession && <hr />}
+                  {!inPlatformSession && <>
+                    <button onClick={() => exportAs('xlsx')}>Export to Excel</button>
+                    <button onClick={() => exportAs('csv')}>Export to CSV</button>
+                    <button onClick={() => exportAs('print')}><Printer size={14} /> Print or save as PDF</button>
+                  </>}
                 </div>
               )}
             </div>
@@ -404,7 +432,7 @@ export default function DataTable(p: Props) {
                     </td>
                   )}
                   {columns.map((c, ci) => (
-                    <td key={c.key} className={`${c.align ?? ''} ${frozenClass(ci)}`} style={stick(ci)}>{c.render ? c.render(r) : display(val(c, r))}</td>
+                    <td key={c.key} className={`${c.align ?? ''} ${frozenClass(ci)}`} style={stick(ci)}>{cell(c, r)}</td>
                   ))}
                   {p.onOpen && <td className="chev"><ChevronRight size={16} /></td>}
                 </tr>

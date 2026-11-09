@@ -1,3 +1,4 @@
+import RowMenu from '../components/RowMenu';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Printer, TriangleAlert, X } from 'lucide-react';
@@ -305,20 +306,18 @@ export function ChecksPage() {
     { key: 'status', label: 'Status', value: r => STATUS[r.status]?.label, render: r => <CheckPill status={r.status} /> },
     { key: 'days_outstanding', label: 'Days out', align: 'right' },
     { key: 'campaign', label: 'Campaign', value: r => (r.campaign_id ? `${r.campaign_name ?? ''} - ${r.campaign_id}` : '') },
-    { key: 'memo', label: 'Memo' },
-    { key: 'status_reason', label: 'Reason' },
-    { key: 'issued_by', label: 'Printed by' },
+    { key: 'memo', label: 'Memo', long: true, optional: true },
+    { key: 'status_reason', label: 'Reason', optional: true },
+    { key: 'issued_by', label: 'Printed by', optional: true },
     {
       key: 'actions', label: '', render: r => (
-        <span className="row-actions" onClick={e => e.stopPropagation()}>
-          <button type="button" className="link" onClick={() => reprintCheck(r.id).catch(e => setError(e.message))}>Print</button>
-          {r.status === 'outstanding' && <>
-            {' · '}<button type="button" className="link" onClick={() => setTo(r, 'cleared')}>Cleared</button>
-            {' · '}<button type="button" className="link" onClick={() => setTo(r, 'voided')}>Void</button>
-            {' · '}<button type="button" className="link" onClick={() => setTo(r, 'lost')}>Lost</button>
-          </>}
-          {r.status === 'cleared' && <>{' · '}<button type="button" className="link" onClick={() => setTo(r, 'outstanding')}>Not cleared</button></>}
-        </span>
+        <RowMenu label="Check actions" items={[
+          { label: 'Print again', onClick: () => { reprintCheck(r.id).catch(e => setError(e.message)); } },
+          { label: 'Mark cleared', onClick: () => setTo(r, 'cleared'), hidden: r.status !== 'outstanding' },
+          { label: 'Mark not cleared', onClick: () => setTo(r, 'outstanding'), hidden: r.status !== 'cleared' },
+          { label: 'Mark lost', onClick: () => setTo(r, 'lost'), hidden: r.status !== 'outstanding' },
+          { label: 'Void', onClick: () => setTo(r, 'voided'), hidden: r.status !== 'outstanding', danger: true },
+        ]} />
       ),
     },
   ];
@@ -341,7 +340,10 @@ export function ChecksPage() {
           </select>
         }
       />
-      <MicrFontCard />
+      <details className="help">
+        <summary>Check printing settings (MICR font)</summary>
+        <MicrFontCard />
+      </details>
     </section>
   );
 }

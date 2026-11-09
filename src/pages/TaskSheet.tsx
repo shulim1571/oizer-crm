@@ -58,7 +58,7 @@ const columns: Column[] = [
   { key: 'fundraiser', label: 'Fundraiser', width: 140 },
   { key: 'campaign', label: 'Campaign', value: r => (r.campaign_id ? `${r.campaign_name ?? ''} - ${r.campaign_id}` : ''), width: 190 },
   { key: 'amount', label: 'Amount', render: r => r.amount != null && money(r.amount), align: 'right' },
-  { key: 'summary', label: 'Details', width: 280 },
+  { key: 'summary', label: 'Details', width: 280, long: true },
   { key: 'submitted_at', label: 'Date', render: r => dateTime(r.submitted_at) },
   { key: 'age', label: 'Age', value: r => age(r.submitted_at) },
 ];
@@ -66,7 +66,7 @@ const columns: Column[] = [
 const historyColumns: Column[] = [
   { key: 'created_at', label: 'When', render: r => dateTime(r.created_at) },
   { key: 'task_type', label: 'Type', value: r => TYPES[r.task_type]?.label, render: r => <TypePill type={r.task_type} /> },
-  { key: 'summary', label: 'Details', width: 280 },
+  { key: 'summary', label: 'Details', width: 280, long: true },
   { key: 'action', label: 'Action', value: r => r.action[0].toUpperCase() + r.action.slice(1) },
   { key: 'note', label: 'Note' },
   { key: 'acted_by', label: 'By' },
@@ -125,10 +125,10 @@ export default function TaskSheetPage() {
           onOpen={setOpen}
           actions={
             <>
-              <select aria-label="Type" value={type} onChange={e => setType(e.target.value)}>
-                <option value="">All types</option>
-                {Object.entries(TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
+              <div className="type-pick">
+                <SearchSelect value={type || null} placeholder="All types"
+                  options={Object.entries(TYPES).map(([k, v]) => ({ value: k, label: v.label }))} onChange={v => setType(v ?? '')} />
+              </div>
               <select aria-label="Fundraiser" value={fundraiser} onChange={e => setFundraiser(e.target.value)}>
                 <option value="">All fundraisers</option>
                 {fundraisers.map(f => <option key={f}>{f}</option>)}

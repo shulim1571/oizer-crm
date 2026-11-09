@@ -35,7 +35,11 @@ export default function WebAddressesPage() {
     if (error) throw new Error(error.message);
     return data as Row[];
   });
-  const service = useQuery(async () => callDomains({ action: 'status' }).catch(() => ({ ready: false })), []);
+  // The status call can't hold the page up: after 8 seconds it counts as not switched on.
+  const service = useQuery(async () => Promise.race([
+    callDomains({ action: 'status' }).catch(() => ({ ready: false })),
+    new Promise<Row>(res => setTimeout(() => res({ ready: false }), 8000)),
+  ]), []);
   const [host, setHost] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -76,6 +80,13 @@ export default function WebAddressesPage() {
         <div className="notice">Setting up new addresses isn’t switched on for the platform yet. Addresses already working keep working.</div>
       )}
 
+      {list.loading && !list.data && <div className="panel-box muted small">Loading addresses…</div>}
+      {!list.loading && !list.error && rows.length === 0 && (
+        <div className="panel-box">
+          <h2><Globe size={16} /> No web addresses yet</h2>
+          <p className="muted small">This organization doesn’t have an address of its own yet. {isSuperAdmin ? 'Set one up below once address setup is switched on.' : 'Ask the Super Admin to set one up.'}</p>
+        </div>
+      )}
       {rows.map(a => {
         const s = state(a);
         return (

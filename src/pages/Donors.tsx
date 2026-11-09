@@ -53,22 +53,18 @@ export function DonorsPage() {
           { key: 'total_given', label: 'Total Given', render: r => <b className="num">{money(r.total_given)}</b>, align: 'right' },
           { key: 'gift_count', label: 'Gifts', align: 'right' },
           { key: 'open_pledges', label: 'Open Pledges', render: r => money(r.open_pledges), align: 'right' },
-          { key: 'id', label: 'Donor ID' },
-          { key: 'country', label: 'Country' },
+          { key: 'id', label: 'Donor ID', optional: true },
+          { key: 'country', label: 'Country', optional: true },
           { key: 'phone', label: 'Phone' },
           { key: 'email', label: 'Email' },
-          { key: 'address', label: 'Address' },
-          { key: 'campaign_count', label: 'Campaigns', align: 'right' },
+          { key: 'address', label: 'Address', long: true, optional: true },
+          { key: 'campaign_count', label: 'Campaigns', optional: true, align: 'right' },
           { key: 'last_gift_at', label: 'Last Gift', render: r => dateTime(r.last_gift_at) },
-          { key: 'matbia_id', label: 'Matbia ID' },
-          { key: 'ojc_id', label: 'OJC ID' },
+          { key: 'matbia_id', label: 'Matbia ID', optional: true },
+          { key: 'ojc_id', label: 'OJC ID', optional: true },
         ]}
-        actions={
-          <>
-            {isAdmin && <button className="btn" onClick={() => nav('/donors/duplicates')}>Possible duplicates</button>}
-            {canWork && <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New donor</button>}
-          </>
-        }
+        more={[{ label: 'Possible duplicates', onClick: () => nav('/donors/duplicates'), hidden: !isAdmin }]}
+        actions={canWork && <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New donor</button>}
       />
       {adding && !isAdmin && (
         <FundraiserNewDonor onClose={() => setAdding(false)} onError={setAddError} />

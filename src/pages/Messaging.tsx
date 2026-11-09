@@ -1,3 +1,4 @@
+import PageTabs, { usePageTab } from '../components/PageTabs';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, MessageSquare, Send, X } from 'lucide-react';
@@ -127,9 +128,9 @@ export function MessagesPage() {
     { key: 'kind', label: 'What', value: r => kindLabel(r.kind) },
     { key: 'to_name', label: 'To', width: 160 },
     { key: 'to_address', label: 'Address', width: 200 },
-    { key: 'subject', label: 'Subject or text', width: 260, value: r => r.subject ?? r.body },
-    { key: 'error', label: 'Problem', width: 220 },
-    { key: 'created_by', label: 'Sent by' },
+    { key: 'subject', label: 'Subject or text', long: true, width: 260, value: r => r.subject ?? r.body },
+    { key: 'error', label: 'Problem', long: true, width: 220 },
+    { key: 'created_by', label: 'Sent by', optional: true },
   ];
   return (
     <section className="view">
@@ -212,7 +213,10 @@ export function DeliveryFailed({ messageId, onDone }: { messageId: string; onDon
 // ---------------------------------------------------------------------------
 // Messaging Settings
 // ---------------------------------------------------------------------------
+const MSG_TABS = [['sending', 'Sending'], ['accounts', 'Your accounts'], ['platform', 'Platform accounts'], ['opt-outs', 'Opt-outs']] as const;
+
 export function MessagingSettingsPage() {
+  const [tab, setTab] = usePageTab(MSG_TABS.map(([k]) => k));
   const { org, isPlatformOwner } = useAuth();
   const keyQ = useKeyStatus();
   const [version, setVersion] = useState(0);
@@ -279,6 +283,9 @@ export function MessagingSettingsPage() {
       <div className="view-head">
         <div className="view-title"><h1>Messaging Settings</h1><span className="count">Email and text sending</span></div>
       </div>
+      <PageTabs tabs={MSG_TABS.filter(([k]) => k !== 'platform' || isPlatformOwner)} value={tab} onChange={setTab} />
+
+      {tab === 'sending' && <>
 
       <div className="panel-box">
         <h2>{form.live ? <Pill tone="green">Sending is on</Pill> : <Pill tone="amber">Test mode</Pill>}</h2>
@@ -306,7 +313,7 @@ export function MessagingSettingsPage() {
         </div>
         {saved && <div className="notice">Saved.</div>}
         {error && <div className="error">{error}</div>}
-        <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={() => save()}>Save</button></div>
+        <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={() => save()}>Save sender</button></div>
       </div>
 
       <div className="panel-box">
@@ -320,6 +327,10 @@ export function MessagingSettingsPage() {
         <div className="form-actions"><div className="spacer" /><button type="button" className="btn" disabled={!testTo.trim()} onClick={sendTest}><Send size={15} /> Send test</button></div>
       </div>
 
+      </>}
+
+      {tab === 'accounts' && <>
+      <p className="muted small">Your organization's own SendGrid and Twilio accounts. Until you add them, the platform's accounts send for you.</p>
       <KeysPanel service="sendgrid" status={keys} onSaved={() => void keyQ.reload()}
         platformNote={`Email goes out through the platform's SendGrid account${p?.checked_at ? (p.email_ready ? '.' : ', but its key is missing.') : '.'} The From email must be on a domain that account has verified.`}
         intro={<>In SendGrid: Settings → API Keys → Create API Key, with Mail Send access. For delivery reports: Settings → Mail Settings → Event Webhook,
@@ -347,7 +358,9 @@ export function MessagingSettingsPage() {
         )}
       </KeysPanel>
 
-      {isPlatformOwner && (
+      </>}
+
+      {tab === 'platform' && isPlatformOwner && (
         <div className="panel-box">
           <h2>Platform accounts</h2>
           <p className="muted small">For organizations without their own keys. In the platform's SendGrid: Event Webhook. In its Twilio: each number's "A message comes in" webhook.</p>
@@ -359,7 +372,7 @@ export function MessagingSettingsPage() {
         </div>
       )}
 
-      <div className="panel-box">
+      {tab === 'opt-outs' && <div className="panel-box">
         <h2>Opted out of texts</h2>
         {data?.optOuts.length ? (
           <table className="grid"><thead><tr><th>Number</th><th>Since</th><th>How</th><th /></tr></thead>
@@ -368,7 +381,7 @@ export function MessagingSettingsPage() {
                 <td><button type="button" className="link" onClick={() => removeOptOut(o)}>Allow texts again</button></td></tr>
             ))}</tbody></table>
         ) : <p className="muted small">Nobody has replied STOP.</p>}
-      </div>
+      </div>}
     </section>
   );
 }

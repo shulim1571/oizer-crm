@@ -246,7 +246,7 @@ function PageContentCard({ campaignId, current, onSaved }: { campaignId: string;
       thank_you: current?.thank_you ?? '', banner_url: current?.banner_url ?? '',
     });
   }, [current]);
-  const link = `${window.location.origin}${import.meta.env.BASE_URL}#/give/${encodeURIComponent(campaignId)}`;
+  const link = `${window.location.origin}${import.meta.env.BASE_URL}give/${encodeURIComponent(campaignId)}`;
   async function save() {
     setMessage(null);
     setError(null);

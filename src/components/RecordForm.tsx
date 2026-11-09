@@ -39,6 +39,10 @@ interface Props {
   /** Bulk edit: hands back only the fields filled in, instead of saving a record. */
   onBulk?: (patch: Row) => void;
   bulkError?: string | null;
+  /** Says what the button saves, e.g. "Save branding". */
+  saveLabel?: string;
+  /** A line under the title. */
+  description?: string;
 }
 
 const NEW_OPTION = '__create_new__';
@@ -143,6 +147,7 @@ export default function RecordForm(p: Props) {
         <h2>{p.title}</h2>
         {!p.inline && <button type="button" className="icon-btn" onClick={p.onClose}><X size={20} /></button>}
       </div>
+      {p.description && <p className="muted small form-desc">{p.description}</p>}
       <div className="fields">
         {p.fields.map(f => (
           <label key={f.name} className={`field ${f.type === 'textarea' ? 'wide' : ''} ${f.type === 'checkbox' ? 'check' : ''}`}>
@@ -161,7 +166,7 @@ export default function RecordForm(p: Props) {
         {!isNew && p.allowDelete && p.table !== 'donations' && <button type="button" className="btn danger" onClick={remove}>Delete</button>}
         <div className="spacer" />
         {!p.inline && <button type="button" className="btn" onClick={p.onClose}>Cancel</button>}
-        <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : p.onBulk ? 'Review changes' : 'Save'}</button>
+        <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : p.onBulk ? 'Review changes' : p.saveLabel ?? 'Save'}</button>
       </div>
     </form>
   );

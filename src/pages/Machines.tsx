@@ -163,12 +163,12 @@ export function MachinesPage() {
     { key: 'booking_date', label: 'Date' },
     { key: 'status', label: 'Status', value: r => STATUS[r.status]?.label, render: r => <BookingPill status={r.status} /> },
     { key: 'machine_nickname', label: 'Machine', value: machineLabel },
-    { key: 'queue_position', label: 'In line', align: 'right' },
+    { key: 'queue_position', label: 'In line', optional: true, align: 'right' },
     { key: 'campaign', label: 'Campaign', value: r => `${r.campaign_name ?? ''} - ${r.campaign_id}`, width: 190 },
     ...(isAdmin ? [{ key: 'fundraiser', label: 'Fundraiser' }] : []),
-    { key: 'notes', label: 'Notes' },
-    { key: 'admin_notes', label: 'From the office', width: 200 },
-    { key: 'requested_at', label: 'Requested', render: r => dateTime(r.requested_at) },
+    { key: 'notes', label: 'Notes', long: true },
+    { key: 'admin_notes', label: 'From the office', long: true, width: 200 },
+    { key: 'requested_at', label: 'Requested', optional: true, render: r => dateTime(r.requested_at) },
     { key: 'cancel', label: '', render: r => !r.past && r.status !== 'cancelled' && <button type="button" className="link" onClick={e => { e.stopPropagation(); cancel(r); }}>Cancel</button> },
   ];
 
