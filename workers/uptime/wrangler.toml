@@ -2,8 +2,9 @@
 # one cron trigger, and about 576 KV writes a day (the free allowance is 1,000).
 #
 # First deploy (needs a Cloudflare token with Workers Scripts and Workers KV Storage edit):
-#   npx wrangler kv namespace create oizer-status      -> put its id below
-#   npx wrangler deploy --config workers/uptime/wrangler.toml
+#   npx wrangler kv namespace create oizer-status      -> put its id below (done: oizer-status)
+#   npx wrangler secret put SUPABASE_ANON_KEY            (the project's anon key; lets the health checks through the API gateway)
+#   npx wrangler deploy
 # Email alerts go to ALERT_EMAIL through the platform's SendGrid account (decided 2026-11-09):
 #   npx wrangler secret put SENDGRID_KEY --config workers/uptime/wrangler.toml   (the platform SENDGRID_API_KEY)
 #   ALERT_FROM is on mail.trubase.org, which is verified in that SendGrid account.
@@ -18,13 +19,11 @@ crons = ["*/5 * * * *"]
 
 [[kv_namespaces]]
 binding = "STATUS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "446ba1c360074ae1b5a82c206691464f"
 
 [vars]
 TITLE = "Oizer status"
 SUPABASE_URL = "https://wwaknikpdquwnphhwzsm.supabase.co"
-# The anon key is public (it ships in the web app); it only lets the health checks through the API gateway.
-SUPABASE_ANON_KEY = "REPLACE_WITH_ANON_KEY"
 APP_URLS = "https://oizer.trubase.org/,https://oizer-drm.pages.dev/"
 ALERT_EMAIL = "smueller@trubase.org"
 ALERT_FROM = "status@mail.trubase.org"
