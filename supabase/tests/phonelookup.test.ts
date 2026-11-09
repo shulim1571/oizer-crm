@@ -47,7 +47,36 @@ describe('phone and text lookup', () => {
     expect(await text(db, STRANGER, 'bal')).toMatch(/Text a campaign number and its PIN/);
     expect(await text(db, M1_PHONE, 'thanks!')).toBeNull();
     expect(await text(db, M1_PHONE, 'STOP')).toBeNull();
-    expect(await text(db, STRANGER, '9999 1234')).toBe('No campaign with that number.');
+    expect(await text(db, STRANGER, '9999 1234')).toMatch(/^No campaign with that number\. Text a campaign number and its PIN/);
+  });
+
+  it('forgives #, commas, a leading BAL and a PIN typed straight after the code', async () => {
+    await admin(db, `select public.save_phone_lookup(true, false)`);
+    const answer = /^1002 Second campaign: Raised \$375\.00/;
+    // Shulim's first tries, from a phone that isn't registered.
+    expect(await text(db, STRANGER, '1002#')).toBe('Text 1002 and its PIN, like: 1002 1234');
+    expect(await text(db, STRANGER, '10022468')).toBe("That PIN doesn't match campaign 1002. Check it and text: 1002 and the PIN"); // read as 1002 + 2468, not 1002's PIN here
+    expect(await text(db, STRANGER, '10024321')).toMatch(answer);
+    expect(await text(db, STRANGER, '1002# 4321#')).toMatch(answer);
+    expect(await text(db, STRANGER, 'Balance, 1002#, 4321')).toMatch(answer);
+    expect(await text(db, STRANGER, 'Balance, 1002, 4321')).toMatch(answer);
+    expect(await text(db, STRANGER, '1002, 4321')).toMatch(answer);
+    expect(await text(db, STRANGER, 'bal 1002 4321')).toMatch(answer);
+    expect(await text(db, STRANGER, '*1002*4321*')).toMatch(answer);
+    // A code with a missing or garbled PIN gets the hint, never silence.
+    expect(await text(db, STRANGER, 'Balance 1002')).toBe('Text 1002 and its PIN, like: 1002 1234');
+    expect(await text(db, STRANGER, '1002 43x1')).toBe('Text 1002 and its PIN, like: 1002 1234');
+    expect(await text(db, STRANGER, '1002 12')).toBe('Text 1002 and its PIN, like: 1002 1234');
+    expect(await text(db, STRANGER, '1002 1111')).toBe("That PIN doesn't match campaign 1002. Check it and text: 1002 and the PIN");
+    // The keyword alone from an unregistered phone explains how; chit-chat still gets nothing.
+    expect(await text(db, STRANGER, 'Balance')).toMatch(/Text a campaign number and its PIN/);
+    expect(await text(db, STRANGER, 'thanks!')).toBeNull();
+    expect(await text(db, STRANGER, 'stop')).toBeNull();
+    // A registered phone with nothing active is told how to look one up.
+    await db.query(`update public.campaigns set status = 'archived' where id in ('1001', '1003')`);
+    await admin(db, `select public.add_fundraiser_phone('m1', '7185550101')`);
+    expect(await text(db, '+17185550101', 'BAL')).toBe('No active campaigns for this phone. To look one up, text its number and PIN, like: 1001 1234');
+    expect(await text(db, '+17185550101', '1002#')).toBe('Text 1002 and its PIN, like: 1002 1234');
   });
 
   it('limits registered phones and keeps each phone with one fundraiser', async () => {
