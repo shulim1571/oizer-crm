@@ -138,8 +138,9 @@ const REPORT_COLUMNS: (ReportColumn & { get: (r: Row) => string })[] = [
   { key: 'amount', label: 'Amount', align: 'right', get: r => money(r.amount) },
   { key: 'method', label: 'Payment method', get: r => r.payment_method ?? '' },
   { key: 'source', label: 'Source', get: r => r.source_name ?? r.source ?? '' },
-  { key: 'fee', label: 'Fee', align: 'right', get: r => money(r.fee ?? 0) },
-  { key: 'net', label: 'Net', align: 'right', get: r => money(Number(r.amount) - Number(r.fee ?? 0)) },
+  // A failed charge took no money: no fee, no net.
+  { key: 'fee', label: 'Fee', align: 'right', get: r => (r.status === 'failed' ? '' : money(r.fee ?? 0)) },
+  { key: 'net', label: 'Net', align: 'right', get: r => (r.status === 'failed' ? '' : money(Number(r.amount) - Number(r.fee ?? 0))) },
   { key: 'status', label: 'Status', get: r => r.status },
   { key: 'split', label: 'Split', get: r => (r.split_group_id ? 'Part of a split' : '') },
   { key: 'notes', label: 'Notes', get: r => r.notes ?? '' },
@@ -182,8 +183,10 @@ export function CampaignReportDialog({ campaign, onClose }: { campaign: Row; onC
   const rows = (q.data as Row[]) ?? [];
   const chosen = REPORT_COLUMNS.filter(c => cols.includes(c.key) || (c.key === 'campaign' && subs && cols.includes('campaign')));
   const data = rows.map(r => Object.fromEntries(chosen.map(c => [c.key, c.get(r)])));
-  const raised = rows.reduce((t, r) => t + Number(r.amount), 0);
-  const fees = rows.reduce((t, r) => t + Number(r.fee ?? 0), 0);
+  // Totals count money that came in: failed, voided and refunded rows can be listed but add nothing.
+  const counted = rows.filter(r => r.status === 'completed' || r.status === 'collect');
+  const raised = counted.reduce((t, r) => t + Number(r.amount), 0);
+  const fees = counted.reduce((t, r) => t + Number(r.fee ?? 0), 0);
   const summary: [string, string][] = [
     ['Total raised', money(raised)], ['Fees', money(fees)], ['Net', money(raised - fees)],
     ['Balance now', money(campaign.balance)], ['Open pledges', money(campaign.pledged_open)], ['Pledges due in 90 days', money(campaign.pledge_scheduled_90)],

@@ -75,6 +75,30 @@ describe('card payments through Sola', () => {
     expect(await one(db, `select balance from public.campaign_summary where id = '1001'`)).toEqual(before);
   });
 
+  it('give a failed charge no fee, however it is saved, and leave real charges alone', async () => {
+    await keys(db);
+    const id = await sale(db, { amount: 9.91 });
+    await svc(db, `select * from public.claim_gateway_request($1, $2)`, [OIZER, id]);
+    const r = (await finish(db, id, { xResult: 'D', xError: 'Insufficient funds', xMaskedCardNumber: '4xxxxxxxxxxx1111', xCardType: 'Visa' })).r;
+    // Credit Card carries a percentage fee, so before the fix this decline had one.
+    expect(await one(db, `select fee::text, manual_fee, net_donation::text from public.donations where id = $1`, [r.donation_id]))
+      .toEqual({ fee: '0.00', manual_fee: null, net_donation: '0.00' });
+    // Saved by hand as failed, with a fee typed in: still none.
+    await sql(db, `insert into public.donations (id, campaign_id, type, status, amount, fee, manual_fee, payment_method) values ('fx', '1001', 'Payment', 'failed', 100, 3.5, 2, 'Credit Card')`);
+    expect(await one(db, `select fee::text, manual_fee, net_donation::text from public.donations where id = 'fx'`)).toEqual({ fee: '0.00', manual_fee: null, net_donation: '0.00' });
+    // Edited to add one later: refused quietly.
+    await sql(db, `update public.donations set fee = 4 where id = 'fx'`);
+    expect((await one(db, `select fee::text from public.donations where id = 'fx'`)).fee).toBe('0.00');
+    // A completed gift keeps its fee, and one that turns out to have gone through gets its net back.
+    await sql(db, `update public.donations set status = 'completed', fee = 2.90 where id = 'fx'`);
+    expect(await one(db, `select fee::text, net_donation::text from public.donations where id = 'fx'`)).toEqual({ fee: '2.90', net_donation: '97.10' });
+    // A completed gift that fails afterwards loses its fee, and its fees leave the campaign totals.
+    const fees = async () => Number((await one(db, `select fees from public.campaign_summary where id = '1001'`)).fees);
+    const withFee = await fees();
+    await sql(db, `update public.donations set status = 'failed' where id = 'fx'`);
+    expect(await fees()).toBeCloseTo(withFee - 2.9, 2);
+  });
+
   it('save the card on the donor when asked, and charge it again later', async () => {
     await keys(db);
     const id = await sale(db, { save: true });

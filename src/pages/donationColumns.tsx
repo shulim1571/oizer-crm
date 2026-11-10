@@ -52,8 +52,9 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
   ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', width: 180, value: (r: Row) => campLabel(r.campaigns), filter: { column: 'campaign_internal', type: 'text' as const } }]),
   { key: 'payment_method', label: 'Method', filter: { column: 'payment_method', type: 'text' } },
   { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170, filter: { column: 'created_at', type: 'date' } },
-  { key: 'fee', label: 'Fee', render: r => money(r.fee ?? r.manual_fee), value: r => r.fee ?? r.manual_fee, align: 'right', filter: { column: 'fee', type: 'number' } },
-  { key: 'net_donation', label: 'Net', render: r => money(r.net_donation), align: 'right', filter: { column: 'net_donation', type: 'number' } },
+  // A failed charge took no money, so it shows no fee and no net (the database stores both as zero).
+  { key: 'fee', label: 'Fee', render: r => (r.status === 'failed' ? '' : money(r.fee ?? r.manual_fee)), value: r => (r.status === 'failed' ? null : r.fee ?? r.manual_fee), align: 'right', filter: { column: 'fee', type: 'number' } },
+  { key: 'net_donation', label: 'Net', render: r => (r.status === 'failed' ? '' : money(r.net_donation)), value: r => (r.status === 'failed' ? null : r.net_donation), align: 'right', filter: { column: 'net_donation', type: 'number' } },
   { key: 'collector', label: 'Collector', optional: true, value: r => r.collectors?.full_name ?? r.collector_label, filter: { column: 'collector_name', type: 'text' } },
   {
     key: 'source', label: 'Source', optional: true, value: r => r.sources?.name ?? r.source, filter: { column: 'source_name', type: 'text' },
