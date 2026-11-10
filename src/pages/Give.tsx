@@ -53,15 +53,15 @@ const T: Record<Lang, Record<string, string>> = {
     details: 'אייערע פרטים', read_more: 'לייענט מער', safe: 'אייערע קארטל פרטים גייען גלייך צום באצאלונג פראצעסאר. מיר זעען און האלטן זיי נישט.', of_goal: 'פון {goal} ציל',
   },
 };
-// Bank account and DAF wording. English comes from PayMethods.
+// ACH and DAF wording. English comes from PayMethods.
 const PAY_T: Record<Lang, Record<string, string>> = {
   en: {
-    debited: 'Your bank account will be debited within 1–3 business days.',
+    debited: 'Your ACH payment will be debited within 1–3 business days.',
     no_repeat: 'Your gift went through, but it couldn\'t be set up to repeat. The office will be in touch.',
-    test_other: 'Test mode: bank account 999999999 with routing 021000021; OJC card 6900664467242419; Pledger card 6599973975864259; Donors Fund card 6599992999456587 (under $5).',
+    test_other: 'Test mode: ACH account 999999999 with routing 021000021; OJC card 6900664467242419; Pledger card 6599973975864259; Donors Fund card 6599992999456587 (under $5).',
   },
   he: {
-    pay_with: 'אמצעי תשלום', credit_card: 'כרטיס אשראי', bank: 'חשבון בנק', account_type: 'סוג חשבון', checking: 'עו״ש', savings: 'חיסכון',
+    pay_with: 'אמצעי תשלום', credit_card: 'כרטיס אשראי', bank: 'ACH', account_type: 'סוג חשבון', checking: 'עו״ש', savings: 'חיסכון',
     choose_one: 'בחרו', account_name: 'שם בעל החשבון', routing: 'מספר ניתוב (Routing)', routing2: 'הקלידו שוב את מספר הניתוב',
     account: 'מספר חשבון', account2: 'הקלידו שוב את מספר החשבון', ach_auth: 'הרשאה לחיוב חשבון (ACH)', download: 'הורדה',
     ach_agree: 'קראתי ואני מסכים להרשאה שלמעלה.', ach_agree_needed: 'נא לאשר את ההרשאה לחיוב החשבון.', routing_bad: 'בדקו את מספר הניתוב.',
@@ -69,10 +69,10 @@ const PAY_T: Record<Lang, Record<string, string>> = {
     type_needed: 'בחרו עו״ש או חיסכון.', name_needed: 'הזינו את שם בעל החשבון.', daf_card: 'מספר כרטיס {fund}', account_email: 'דוא״ל החשבון',
     daf_email: 'כתובת הדוא״ל שלכם ב-Donors Fund', pin: 'קוד PIN בן 4 ספרות', daf_bad: 'בדקו את מספר כרטיס {fund}.', exp_bad: 'הזינו תוקף בפורמט MM/YY.',
     cvv_bad: 'הזינו CVV.', email_pin_bad: 'הזינו את הדוא״ל ואת קוד ה-PIN של Donors Fund.',
-    debited: 'החיוב מחשבון הבנק יתבצע תוך 1–3 ימי עסקים.', no_repeat: 'התרומה התקבלה, אך לא ניתן היה להגדיר אותה כתרומה קבועה. המשרד ייצור קשר.',
+    debited: 'חיוב ה-ACH יתבצע תוך 1–3 ימי עסקים.', no_repeat: 'התרומה התקבלה, אך לא ניתן היה להגדיר אותה כתרומה קבועה. המשרד ייצור קשר.',
   },
   yi: {
-    pay_with: 'באצאל מיטל', credit_card: 'קרעדיט קארד', bank: 'באנק אקאונט', account_type: 'סארט אקאונט', checking: 'טשעקינג', savings: 'סעיווינגס',
+    pay_with: 'באצאל מיטל', credit_card: 'קרעדיט קארד', bank: 'ACH', account_type: 'סארט אקאונט', checking: 'טשעקינג', savings: 'סעיווינגס',
     choose_one: 'קלייבט', account_name: 'נאמען אויפן אקאונט', routing: 'ראוטינג נומער', routing2: 'שרייבט נאכאמאל דעם ראוטינג נומער',
     account: 'אקאונט נומער', account2: 'שרייבט נאכאמאל דעם אקאונט נומער', ach_auth: 'ACH ערלויבעניש', download: 'אראפלאדן',
     ach_agree: 'איך האב געליינט און בין מסכים צו דער ערלויבעניש אויבן.', ach_agree_needed: 'ביטע זייט מסכים צו דער ACH ערלויבעניש.',
@@ -81,7 +81,7 @@ const PAY_T: Record<Lang, Record<string, string>> = {
     daf_card: '{fund} קארטל נומער', account_email: 'אקאונט אימעיל', daf_email: 'אייער Donors Fund אימעיל', pin: '4 ציפער PIN',
     daf_bad: 'קוקט איבער דעם {fund} קארטל נומער.', exp_bad: 'שרייבט די ביז-דאטום ווי MM/YY.', cvv_bad: 'שרייבט דעם CVV.',
     email_pin_bad: 'שרייבט אייער Donors Fund אימעיל און 4 ציפער PIN.',
-    debited: 'אייער באנק אקאונט וועט באצאלט ווערן אין 1–3 ביזנעס טעג.', no_repeat: 'אייער נדבה איז דורך, אבער מען האט זי נישט געקענט איינשטעלן צו איבערחזר׳ן. דער אפיס וועט זיך פארבינדן.',
+    debited: 'אייער ACH באצאלונג וועט דורכגיין אין 1–3 ביזנעס טעג.', no_repeat: 'אייער נדבה איז דורך, אבער מען האט זי נישט געקענט איינשטעלן צו איבערחזר׳ן. דער אפיס וועט זיך פארבינדן.',
   },
 };
 const COUNTRIES = ['USA', 'Canada', 'Israel', 'England'];

@@ -740,8 +740,9 @@ ul.plain li { padding: 6px 0; }
 .give.give-framed .give-hero.has-banner { padding-top: 70px; }
 
 /* Payment method buttons, bank and DAF fields (payment page and office) */
-.pay-methods { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
-.pay-methods button { border: 1.5px solid #d9dce3; background: #fff; border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; color: #111; }
+/* Every payment option on one row: they share the width, and a two-word name wraps inside its own button. */
+.pay-methods { display: flex; flex-wrap: nowrap; gap: 6px; margin: 8px 0 12px; }
+.pay-methods button { flex: 1 1 auto; min-width: 0; border: 1.5px solid #d9dce3; background: #fff; border-radius: 8px; padding: 8px 4px; font-weight: 600; cursor: pointer; color: #111; line-height: 1.15; font-size: clamp(12px, 3.4vw, 15px); }
 .pay-methods button.on { background: var(--give-accent, var(--accent)); border-color: var(--give-accent, var(--accent)); color: #fff; }
 .pay-methods.small button { padding: 6px 12px; font-size: 14px; }
 .daf-row { display: flex; gap: 10px; margin: 8px 0; }

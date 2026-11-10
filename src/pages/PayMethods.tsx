@@ -11,7 +11,7 @@ const DAF_NEEDS: Record<string, { exp: boolean; cvv: boolean }> = {
 };
 
 export const PAY_EN = {
-  pay_with: 'Payment method', credit_card: 'Credit Card', bank: 'Bank account',
+  pay_with: 'Payment method', credit_card: 'Credit Card', bank: 'ACH',
   account_type: 'Account type', checking: 'Checking', savings: 'Savings', choose_one: 'Select one', account_name: 'Name on account',
   routing: 'Routing number', routing2: 'Re-enter routing number', account: 'Account number', account2: 'Re-enter account number',
   ach_auth: 'ACH authorization', download: 'Download', ach_agree: 'I have read and agree to the authorization above.',
@@ -57,7 +57,7 @@ export const dafBody = (program: string, v: DafValue) => (program === 'Donors Fu
   ? { method: 'daf', program, daf_email: v.email.trim(), daf_pin: v.pin }
   : { method: 'daf', program, daf_card: digits(v.card), daf_exp: DAF_NEEDS[program]?.exp ? digits(v.exp) : undefined, daf_cvv: DAF_NEEDS[program]?.cvv ? v.cvv : undefined });
 
-/** The method buttons: Credit Card, Bank account, then each fund the organization takes. */
+/** The method buttons: Credit Card, ACH, then each fund the organization takes. */
 export function MethodTabs({ value, program, ach, daf, onChange, L }: {
   value: Method; program: string | null; ach: boolean; daf: string[]; onChange: (m: Method, program: string | null) => void; L: PayLabels;
 }) {
