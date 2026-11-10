@@ -19,6 +19,8 @@ export interface Field {
   /** Free-text select: allow values not in the list. */
   freeText?: boolean;
   help?: string;
+  /** Kept in a folded "Advanced / accounting" section (it opens when any of them has a value). */
+  advanced?: boolean;
   /** How to make a new one from right here, without leaving this form. */
   create?: () => { noun: string; table: string; fields: Field[]; defaults?: Row; pk?: string };
 }
@@ -149,14 +151,14 @@ export default function RecordForm(p: Props) {
       </div>
       {p.description && <p className="muted small form-desc">{p.description}</p>}
       <div className="fields">
-        {p.fields.map(f => (
-          <label key={f.name} className={`field ${f.type === 'textarea' ? 'wide' : ''} ${f.type === 'checkbox' ? 'check' : ''}`}>
-            <span>{f.label}{f.required && ' *'}</span>
-            {renderInput(f)}
-            {f.help && <small className="muted">{f.help}</small>}
-          </label>
-        ))}
+        {p.fields.filter(f => !f.advanced).map(fieldBox)}
       </div>
+      {p.fields.some(f => f.advanced) && (
+        <details className="help advanced-fields" open={p.fields.some(f => f.advanced && !isNew && values[f.name] != null && values[f.name] !== '' && values[f.name] !== false)}>
+          <summary>Advanced / accounting</summary>
+          <div className="fields">{p.fields.filter(f => f.advanced).map(fieldBox)}</div>
+        </details>
+      )}
       {(error || p.bulkError) && <div className="error">{error ?? p.bulkError}</div>}
       {p.onBulk && <p className="muted small">Only fields you fill in are changed. Everything else stays as it is on each transaction.</p>}
       {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <DonationActions record={p.record!} onDone={p.onSaved} />}
@@ -170,6 +172,16 @@ export default function RecordForm(p: Props) {
       </div>
     </form>
   );
+
+  function fieldBox(f: Field) {
+    return (
+      <label key={f.name} className={`field ${f.type === 'textarea' ? 'wide' : ''} ${f.type === 'checkbox' ? 'check' : ''}`}>
+        <span>{f.label}{f.required && ' *'}</span>
+        {renderInput(f)}
+        {f.help && <small className="muted">{f.help}</small>}
+      </label>
+    );
+  }
 
   function renderInput(f: Field) {
     const v = values[f.name];

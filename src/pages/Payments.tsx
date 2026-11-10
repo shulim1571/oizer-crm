@@ -417,7 +417,7 @@ export function PaymentsSettingsPage() {
       </div>
       {isSuperAdmin ? (
         <div className="panel-box">
-          <h2><KeyRound size={16} /> Sola keys</h2>
+          <h2><KeyRound size={16} /> Sola keys and webhook</h2>
           <p className="muted small">In the Sola portal: Settings → Keys → Create a Key. Make one <b>iFields</b> key and one <b>API</b> key. Sandbox and live accounts have separate keys.</p>
           <div className="fields">
             <label className="field wide"><span>iFields key (public)</span><input value={ifields} onChange={e => setIfields(e.target.value)} autoComplete="off" /></label>
@@ -426,7 +426,7 @@ export function PaymentsSettingsPage() {
               <small className="muted">Stored encrypted. Only the payment service can read it; it's never shown again.</small></label>
             <label className="inline-check"><input type="checkbox" checked={sandbox} onChange={e => setSandbox(e.target.checked)} /> These are sandbox (test) keys</label>
           </div>
-          <h2>Webhook</h2>
+          <h3 className="sub-head">Webhook</h3>
           <p className="muted small">In the Sola portal: Settings → Gateway Settings → Webhook. Paste this Postback URL, and the PIN below. Sola then confirms every transaction here.</p>
           <div className="share-link"><code>{webhook}</code></div>
           <div className="fields">
@@ -436,7 +436,7 @@ export function PaymentsSettingsPage() {
           </div>
           {saved && <div className="notice">Saved.</div>}
           {error && <div className="error">{error}</div>}
-          <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" disabled={!ifields.trim()} onClick={save}>Save</button></div>
+          <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" disabled={!ifields.trim()} onClick={save}>Save Sola keys</button></div>
         </div>
       ) : <p className="muted">Only the Super Admin can change the payment keys.</p>}
       {isSuperAdmin && cfg && <PaymentOptions cfg={cfg} onSaved={() => void config.reload()} />}
@@ -476,7 +476,7 @@ function PaymentOptions({ cfg, onSaved }: { cfg: PaymentConfig; onSaved: () => v
       ))}</div>
       {saved && <div className="notice">Saved.</div>}
       {error && <div className="error">{error}</div>}
-      <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={save}>Save</button></div>
+      <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={save}>Save bank &amp; DAF options</button></div>
     </div>
   );
 }

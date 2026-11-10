@@ -289,8 +289,9 @@ export function NewDonation() {
     <section className="view narrow">
       <div className="view-head">
         <div className="view-title"><h1>New Donation</h1><span className="count">Record a gift against a campaign</span></div>
-        <div className="view-actions"><button type="button" className="btn primary" onClick={() => setCharging(true)}><CreditCard size={15} /> Charge a card</button></div>
+        <div className="view-actions"><button type="button" className="btn" onClick={() => setCharging(true)}><CreditCard size={15} /> Charge a card</button></div>
       </div>
+      <p className="muted small">Record a gift you already have (cash, check, Zelle…) below. To take a card payment now, use <b>Charge a card</b>.</p>
       {charging && <CardChargeDialog onClose={() => setCharging(false)} onDone={t => setLast({ amount: t.amount, campaign_id: t.campaign_id })} />}
       {last && (
         <div className="notice">
@@ -303,6 +304,7 @@ export function NewDonation() {
         inline
         table="donations"
         title="Donation details"
+        saveLabel="Record donation"
         fields={donationFields}
         defaults={{ type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() }}
         onClose={() => nav(-1)}

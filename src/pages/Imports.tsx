@@ -165,11 +165,18 @@ export function DataImportPage() {
         <div className="card">
           <h3>Data import</h3>
           <p className="muted small">At launch, import in this order: campaigns, then donors, then donation history, then pledges. A row that points at something not yet imported is flagged, never skipped quietly. Every import can be reversed within 24 hours.</p>
-          <div className="tabs">
-            {(['campaigns', 'donors', 'donations', 'pledges', 'fundraisers'] as Kind[]).map((k, i) => (
-              <button key={k} className={kind === k ? 'active' : ''} onClick={() => setKind(k)}>{k === 'fundraisers' ? '' : `${i + 1}. `}{TEMPLATES[k].label}</button>
-            ))}
-          </div>
+          <ol className="stepper" aria-label="Import steps">
+            {(['campaigns', 'donors', 'donations', 'pledges', 'fundraisers'] as Kind[]).map((k, i) => {
+              const done = ((log.data as Row[] | undefined) ?? []).some(r => r.kind === k && !r.reversed_at);
+              return (
+                <li key={k} className={kind === k ? 'on' : done ? 'done' : ''}>
+                  <button type="button" onClick={() => setKind(k)} aria-current={kind === k ? 'step' : undefined}>
+                    <span>{k === 'fundraisers' ? '+' : done ? '✓' : i + 1}</span>{TEMPLATES[k].label}{k === 'fundraisers' && <small className="step-cue">optional</small>}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
           <Importer key={kind} kind={kind} onDone={() => setVersion(v => v + 1)} />
         </div>
       ) : <p className="muted">Only the Super Admin can run imports. Contact lists can be imported from a campaign's page.</p>}

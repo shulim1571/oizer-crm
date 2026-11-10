@@ -833,3 +833,15 @@ tr.selected td { background: var(--accent-soft); }
 .calendar-line.booking { display: block; font-size: 11px; padding: 1px 5px; border-radius: 5px; background: var(--accent-soft); color: var(--accent-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .calendar-line.booking.pending, .calendar-line.booking.waitlisted { background: #fff4e0; color: #8a5300; }
 .calendar-line.booking.declined { background: #fde8e8; color: #9b1c1c; text-decoration: line-through; }
+/* Steps across the top of a multi-step page. */
+.stepper { display: flex; gap: 8px; list-style: none; margin: 0 0 14px; padding: 0; flex-wrap: wrap; }
+.stepper li button { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px 6px 6px; font: inherit; font-weight: 500; color: var(--text-2); cursor: pointer; }
+.stepper li button span { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-size: 12px; font-weight: 700; }
+.stepper li.on button { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+.stepper li.on button span { background: var(--accent); color: #fff; }
+.stepper li.done button span { background: color-mix(in srgb, var(--accent) 25%, #fff); color: var(--accent-text); }
+.sub-head { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; padding-top: 12px; border-top: 1px solid var(--line); }
+.page-tabs-wrap { padding: 20px 28px 0; } .page-tabs-wrap + .view { padding-top: 14px; }
+.step-cue { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 2px; }
+.empty-state { text-align: center; padding: 28px 18px; } .empty-state h2 { font-size: 16px; margin: 0 0 6px; }
+.report-detail > .view { padding: 8px 0 0; }

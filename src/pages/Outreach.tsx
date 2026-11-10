@@ -165,6 +165,7 @@ export function OutreachPage() {
   const [body, setBody] = useState('');
   const [smsBody, setSmsBody] = useState('');
   const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [step, setStep] = useState(1);
   const [donors, setDonors] = useState<Option[]>([]);
   const [managers, setManagers] = useState<Option[]>([]);
   const [campaigns, setCampaigns] = useState<Option[]>([]);
@@ -252,7 +253,15 @@ export function OutreachPage() {
         <div className="view-title"><h1>New Message</h1><span className="count">Custom Outreach by email and text</span></div>
       </div>
 
-      <div className="panel-box">
+      <ol className="stepper" aria-label="Steps">
+        {(['Compose', `Audience${recipients.length ? ` (${recipients.length})` : ''}`, 'Review & send'] as const).map((l, i) => (
+          <li key={i} className={step === i + 1 ? 'on' : step > i + 1 ? 'done' : ''}>
+            <button type="button" onClick={() => setStep(i + 1)} aria-current={step === i + 1 ? 'step' : undefined}><span>{i + 1}</span>{l}</button>
+          </li>
+        ))}
+      </ol>
+
+      {step === 1 && <div className="panel-box">
         <div className="fields">
           <label className="field"><span>Send by</span>
             <select value={channel} onChange={e => setChannel(e.target.value as typeof channel)}>
@@ -278,10 +287,11 @@ export function OutreachPage() {
               <SmsCount text={`${smsBody}\nReply STOP to opt out.`} /></label>
           </div>
         )}
-        <div className="form-actions"><button type="button" className="btn" onClick={saveTemplate} disabled={!body && !smsBody}>Save as template</button></div>
-      </div>
+        <div className="form-actions"><button type="button" className="btn" onClick={saveTemplate} disabled={!body && !smsBody}>Save as template</button>
+          <div className="spacer" /><button type="button" className="btn primary" disabled={channel === 'sms' ? !smsBody.trim() : !body.trim() || (channel === 'both' && !smsBody.trim())} onClick={() => setStep(2)}>Next: audience</button></div>
+      </div>}
 
-      <div className="panel-box">
+      {step === 2 && <div className="panel-box">
         <h2>Recipients ({recipients.length})</h2>
         <div className="fields">
           <label className="field"><span>Add a donor</span><SearchSelect value={null} options={donors} onChange={v => addPerson('donor', v)} placeholder="Search donors" /></label>
@@ -306,9 +316,20 @@ export function OutreachPage() {
           </table></div>
         )}
         {recipients.length > 0 && <p className="muted small">{reachable} can be reached by {channel === 'both' ? 'email or text' : channel === 'sms' ? 'text' : 'email'}. Greyed rows have no {channel === 'sms' ? 'phone' : 'address'} and are skipped. Anyone listed twice gets it once.</p>}
-      </div>
+        {recipients.length === 0 && <p className="muted small">Nobody yet. Add donors, fundraisers or a whole group above.</p>}
+        <div className="form-actions"><button type="button" className="btn" onClick={() => setStep(1)}>Back</button><div className="spacer" />
+          <button type="button" className="btn primary" disabled={!reachable} onClick={() => setStep(3)}>Next: review</button></div>
+      </div>}
 
-      {preview && (channel !== 'sms' ? body : smsBody) && (
+      {step === 3 && !reachable && (
+        <div className="panel-box">
+          <h2>No one to send to yet</h2>
+          <p className="muted small">{recipients.length ? `None of the ${recipients.length} people added can be reached by ${channel === 'sms' ? 'text' : channel === 'email' ? 'email' : 'email or text'}.` : 'Add who should get this message first.'}</p>
+          <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={() => setStep(2)}>Choose recipients</button></div>
+        </div>
+      )}
+
+      {step === 3 && reachable > 0 && preview && (channel !== 'sms' ? body : smsBody) && (
         <div className="panel-box">
           <h2>Preview for <select value={preview.key} onChange={e => setPreviewKey(e.target.value)}>{recipients.map(r => <option key={r.key} value={r.key}>{r.name}</option>)}</select></h2>
           {channel !== 'sms' && <><p><b>{personalize(subject, preview)}</b></p><div className="message-text" dangerouslySetInnerHTML={{ __html: previewEmail ?? '' }} /></>}
@@ -316,14 +337,15 @@ export function OutreachPage() {
         </div>
       )}
 
-      <div className="panel-box">
+      {step === 3 && reachable > 0 && <div className="panel-box">
+        <p className="muted small">By {channel === 'both' ? 'email and text' : channel === 'sms' ? 'text' : 'email'}{channel !== 'sms' && subject ? <> · “{subject}”</> : null} · {reachable} of {recipients.length} reachable</p>
         <label className="inline-check"><input type="checkbox" checked={later} onChange={e => setLater(e.target.checked)} /> Send later</label>
         {later && <label className="field"><span>When</span><input type="datetime-local" value={when} onChange={e => setWhen(e.target.value)} /></label>}
         {result && <div className="notice">{later ? 'Scheduled' : 'Sent'} to {result.queued}.{(result.skipped as Row[]).length > 0 && ` Skipped ${(result.skipped as Row[]).length}: ${(result.skipped as Row[]).map(s => `${s.to} (${s.reason})`).join('; ')}`} Track it in Outreach History.</div>}
         {error && <div className="error">{error}</div>}
-        <div className="form-actions"><div className="spacer" />
+        <div className="form-actions"><button type="button" className="btn" onClick={() => setStep(2)}>Back</button><div className="spacer" />
           <button type="button" className="btn primary" disabled={busy || !reachable || (later && !when)} onClick={send}><Send size={15} /> {later ? 'Schedule' : 'Send'} to {reachable}</button></div>
-      </div>
+      </div>}
     </section>
   );
 }

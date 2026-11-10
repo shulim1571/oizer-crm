@@ -64,11 +64,21 @@ export default function ReconciliationPage() {
             <Kpi label="Latest bank line" value={a.last_line_date ? usDate(a.last_line_date) : 'None yet'} icon={<FileUp size={18} />} tone="violet" small />
             <Kpi label="Outstanding checks" value={String(a.outstanding_checks)} icon={<Scale size={18} />} tone="amber" sub={money(a.outstanding_checks_total)} />
           </div>
-          <div className="tabs">
-            {([['match', 'Match'], ['lines', 'Bank lines'], ['transfers', 'Between accounts'], ['periods', 'Periods']] as const).map(([t, label]) => (
-              <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{label}</button>
+          {/* The usual order of work: bring in the statement, match it, record moves between banks, sign off. */}
+          <ol className="stepper" aria-label="Reconciliation steps">
+            {([
+              ['lines', 'Bank lines', a.last_line_date ? `through ${usDate(a.last_line_date)}` : 'import a statement'],
+              ['match', 'Match', Number(a.unmatched_lines) ? `${a.unmatched_lines} to match` : 'all matched'],
+              ['transfers', 'Between accounts', null],
+              ['periods', 'Sign off', a.locked_through ? `through ${usDate(a.locked_through)}` : 'not yet'],
+            ] as const).map(([t, label, cue], i) => (
+              <li key={t} className={tab === t ? 'on' : ''}>
+                <button type="button" onClick={() => setTab(t)} aria-current={tab === t ? 'step' : undefined}>
+                  <span>{i + 1}</span>{label}{cue && <small className="step-cue">{cue}</small>}
+                </button>
+              </li>
             ))}
-          </div>
+          </ol>
           {tab === 'match' && <MatchTab account={account} version={version} onChanged={changed} />}
           {tab === 'lines' && <LinesTab account={account} version={version} onChanged={changed} />}
           {tab === 'transfers' && <TransfersTab accounts={accounts} version={version} onChanged={changed} />}

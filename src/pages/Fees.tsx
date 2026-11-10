@@ -1,3 +1,4 @@
+import PageTabs, { usePageTab } from '../components/PageTabs';
 import CrudPage, { campLabel } from '../components/CrudPage';
 import type { Field } from '../components/RecordForm';
 import { useAuth } from '../lib/auth';
@@ -37,12 +38,16 @@ const feeText = (r: Row) => {
   }
 };
 
+const FEE_TABS = [['methods', 'Methods & fees'], ['overrides', 'Campaign overrides']] as const;
+
 export default function FeesPage() {
   const { permissions } = useAuth();
   const canEdit = permissions.includes('configure_fees');
+  const [tab, setTab] = usePageTab(FEE_TABS.map(([k]) => k));
   return (
     <>
-      <CrudPage
+      <div className="page-tabs-wrap"><PageTabs tabs={FEE_TABS} value={tab} onChange={setTab} /></div>
+      {tab === 'methods' && <CrudPage
         title="Payment Methods & Fees" noun="Payment method"
         table="payment_methods"
         order={{ column: 'name' }}
@@ -57,8 +62,8 @@ export default function FeesPage() {
           { key: 'active', label: 'Active', value: r => (r.active ? 'Yes' : 'No') },
         ]}
         fields={methodFields}
-      />
-      <CrudPage
+      />}
+      {tab === 'overrides' && <CrudPage
         title="Campaign Fee Overrides" noun="Override"
         table="campaign_fee_overrides"
         select="*, campaigns(id, internal_name, campaign_name, external_name), payment_methods(name)"
@@ -71,7 +76,7 @@ export default function FeesPage() {
           { key: 'fee', label: 'Fee', value: feeText },
         ]}
         fields={overrideFields}
-      />
+      />}
     </>
   );
 }

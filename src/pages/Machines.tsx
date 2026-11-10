@@ -457,6 +457,12 @@ export function MachineReportPage() {
         <div className="kpi"><div><div className="kpi-label">Over-capacity days</div><div className="kpi-value">{report.over.length}</div></div></div>
         <div className="kpi"><div><div className="kpi-label">Machines in service</div><div className="kpi-value">{report.machines}</div></div></div>
       </div>
+      {!q.loading && !q.error && report.total === 0 ? (
+        <div className="panel-box empty-state">
+          <h2>No booking requests between these dates</h2>
+          <p className="muted small">Pick a wider range above, or add a booking from the <Link to="/calendar">calendar</Link>. Charts and tables appear once there are requests.</p>
+        </div>
+      ) : <>
       <div className="cards">
         <Bars title="By day of week" rows={report.weekday} />
         <Bars title="By month" rows={report.month} />
@@ -482,7 +488,9 @@ export function MachineReportPage() {
         loading={q.loading}
         exportName="machine-over-capacity-days"
         columns={[{ key: 'date', label: 'Day' }, { key: 'requests', label: 'Requests', align: 'right' }]}
+        plain
       />
+      </>}
     </section>
   );
 }

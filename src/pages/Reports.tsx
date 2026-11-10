@@ -108,6 +108,8 @@ export function SourceReportPage() {
           { key: 'net', label: 'Net', render: r => money(r.net), value: r => r.net.toFixed(2), align: 'right' },
         ]}
       />
+      <details className="help report-detail">
+        <summary>Show every payment ({lines.length.toLocaleString()})</summary>
       <DataTable
         title="Payments"
         rows={lines}
@@ -121,6 +123,7 @@ export function SourceReportPage() {
           { key: 'source_tag', label: 'Source', width: 200 },
         ]}
       />
+      </details>
     </section>
   );
 }
