@@ -1,4 +1,5 @@
 import type { Field } from '../components/RecordForm';
+import { localToday } from './format';
 import {
   CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, payeeOptions, payoutMethodOptions, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
   collectorOptions, donorOptions, managerOptions, sourceOptions,
@@ -141,6 +142,9 @@ export const payeeFields: Field[] = [
   { name: 'preferred_method', label: 'Preferred payout method', type: 'select', options: payoutMethodOptions },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
+
+/** A new payout is for now: today's date to process on, and the current time (Moshe Henig, 2026-11-10). Both stay editable. */
+export const newPayoutDefaults = () => ({ scheduled_for: localToday(), created_at: new Date().toISOString() });
 
 export const expenseFields: Field[] = [
   { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },

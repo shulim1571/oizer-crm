@@ -10,7 +10,7 @@ import { supabase, type Row } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, yn } from '../lib/format';
 import {
-  accountFields, expenseFields, personFields, sourceFields,
+  accountFields, expenseFields, newPayoutDefaults, personFields, sourceFields,
 } from '../lib/schemas';
 
 const CAMP = 'id, internal_name, campaign_name, external_name';
@@ -45,7 +45,7 @@ export function ExpensesPage() {
         { key: 'created_at', label: 'Timestamp', render: r => dateTime(r.created_at), width: 170 },
       ]}
       fields={expenseFields}
-      defaults={{ account_id: defaultAccountId }}
+      defaults={{ account_id: defaultAccountId, ...newPayoutDefaults() }}
       // Admins enter payouts directly ("New payout"); fundraisers ask the office for one.
       extraActions={!isAdmin && canWork && (
         <button className="btn primary" onClick={() => setRequesting(true)}><Plus size={16} /> New payout request</button>

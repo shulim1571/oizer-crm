@@ -15,7 +15,7 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, pct, yn } from '../lib/format';
-import { campaignFields, donationFields, expenseFields, fundraiserDonationFields, taskFields, transferEditFields } from '../lib/schemas';
+import { campaignFields, donationFields, expenseFields, fundraiserDonationFields, newPayoutDefaults, taskFields, transferEditFields } from '../lib/schemas';
 import { clearLookups } from '../lib/lookups';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
 import { STATUS_LABEL } from './Campaigns';
@@ -144,7 +144,7 @@ export default function CampaignDetail() {
         { key: 'cleared', label: 'Cleared', render: (r: Row) => yn(r.cleared) },
         { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
       ],
-      add: isAdmin && { table: 'expenses', title: 'New Payout', fields: expenseFields, defaults: { campaign_id: id, account_id: defaultAccountId, created_at: new Date().toISOString() } },
+      add: isAdmin && { table: 'expenses', title: 'New Payout', fields: expenseFields, defaults: { campaign_id: id, account_id: defaultAccountId, ...newPayoutDefaults() } },
       edit: isAdmin && { table: 'expenses', title: 'Edit Payout', fields: expenseFields },
     },
     transfers: {
