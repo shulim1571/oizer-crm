@@ -12,6 +12,8 @@ const OUTCOME: Record<string, { tone: 'green' | 'amber' | 'red' | 'blue' | ''; t
   answered: { tone: 'green', text: 'Answered' }, list: { tone: 'green', text: 'Listed campaigns' },
   needs_pin: { tone: 'blue', text: 'Asked for PIN' }, wrong_pin: { tone: 'amber', text: 'Wrong PIN' },
   locked: { tone: 'red', text: 'Locked out' }, not_found: { tone: 'amber', text: 'No such campaign' }, help: { tone: '', text: 'Sent help' },
+  recent: { tone: 'green', text: 'Recent transactions' }, recent_limited: { tone: 'red', text: 'Too many RECENT' },
+  recent_unknown: { tone: 'amber', text: 'RECENT from unknown phone' },
 };
 
 export default function PhoneLookupPage() {
@@ -22,16 +24,16 @@ export default function PhoneLookupPage() {
     if (error) throw new Error(error.message);
     return data as Row[];
   });
-  const [v, setV] = useState({ sms: false, voice: false });
+  const [v, setV] = useState({ sms: false, voice: false, noDonary: false });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const s = status.data as Row | null | undefined;
-  useEffect(() => { if (s) setV({ sms: s.sms_replies, voice: s.voice }); }, [s]);
+  useEffect(() => { if (s) setV({ sms: s.sms_replies, voice: s.voice, noDonary: !!s.exclude_donary }); }, [s]);
   const voiceUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/voice`;
   const smsUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/message-events?provider=twilio`;
 
   async function save() {
     setMsg(null);
-    const { error } = await supabase.rpc('save_phone_lookup', { p_sms_replies: v.sms, p_voice: v.voice });
+    const { error } = await supabase.rpc('save_phone_lookup', { p_sms_replies: v.sms, p_voice: v.voice, p_exclude_donary: v.noDonary });
     setMsg(error ? { ok: false, text: error.message } : { ok: true, text: 'Saved.' });
     status.reload();
   }
@@ -52,6 +54,7 @@ export default function PhoneLookupPage() {
         </p>
         <ul className="muted small">
           <li>Text <code>BAL</code> for your campaigns, <code>1001</code> for one of them, or <code>1001 1234</code> with a PIN. <code>MENU</code> explains.</li>
+          <li>Admins and fundraisers can text <code>RECENT</code> for their last 5 transactions, or <code>RECENT 1001</code> for one campaign: date, amount, campaign and donor initials. Admins are matched by the phone on their notification settings, fundraisers by a registered phone. Up to 10 an hour per phone; an unknown phone gets one reply a day saying it isn’t registered.</li>
           <li>Call and enter the campaign number, then the PIN; fundraisers can press star for all their campaigns.</li>
         </ul>
         {isSuperAdmin ? (
@@ -60,6 +63,8 @@ export default function PhoneLookupPage() {
             <p className="muted small">Each answer is a text Twilio bills (about $0.008 per part plus carrier fees; Hebrew and Yiddish names make shorter parts). Only messages that ask for a lookup get an answer.</p>
             <label className="check"><input type="checkbox" checked={v.voice} onChange={e => setV({ ...v, voice: e.target.checked })} /> Answer the phone line</label>
             <p className="muted small">Twilio bills incoming calls by the minute (about $0.0085 a minute for a local number). While this is off, calls are turned away without charge.</p>
+            <label className="check"><input type="checkbox" checked={v.noDonary} onChange={e => setV({ ...v, noDonary: e.target.checked })} /> Leave out Donary donations</label>
+            <p className="muted small">Off by default. When on, text and phone replies (balances, campaign lookups and RECENT) don’t count or list donations that came from Donary. The portal itself still shows everything.</p>
             <div className="form-actions"><div className="spacer" /><button className="btn primary" onClick={save}>Save</button></div>
           </>
         ) : <p className="muted small">Only the Super Admin can turn these on or off.</p>}

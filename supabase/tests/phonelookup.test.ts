@@ -122,4 +122,80 @@ describe('phone and text lookup', () => {
       .toEqual([{ sms_replies: false, voice: false, sms_number: NUMBER }]);
     expect((await svc(db, `select * from public.phone_org($1)`, ['(845) 613-4272']))).toMatchObject({ org_id: OIZER, voice: false });
   });
+
+  describe('RECENT and leaving out Donary', () => {
+    const ADMIN_PHONE = '+18455550111';
+    const add = (id: string, campaign: string, amount: number, extra: { donary?: string; status?: string; at?: string; name?: string; anonymous?: boolean } = {}) =>
+      svc(db, `insert into public.donations (id, org_id, campaign_id, type, status, amount, name, anonymous, donary_id, created_at)
+               values ($1, $2, $3, 'Payment', $4, $5, $6, $7, $8, $9)`,
+        [id, OIZER, campaign, extra.status ?? 'completed', amount, extra.name ?? 'Chaim Weiss', extra.anonymous ?? false, extra.donary ?? null, extra.at ?? '2030-01-01T15:00:00Z']);
+    const money = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    beforeEach(async () => {
+      await admin(db, `select public.save_phone_lookup(true, false)`);
+      await admin(db, `select public.add_fundraiser_phone('m1', '(718) 555-0101')`);
+      await svc(db, `insert into public.notification_preferences (org_id, user_id, phone) values ($1, $2, '(845) 555-0111')`, [OIZER, ADMIN]);
+      await add('r1', '1001', 180, { at: '2030-01-01T16:00:00Z', name: 'Moshe Klein' });
+      await add('r2', '1002', 36, { at: '2030-01-01T17:00:00Z', anonymous: true });
+      await add('r3', '1001', 54, { at: '2030-01-01T18:00:00Z', donary: 'DN-1', name: 'Yossi Gold' });
+      await add('r4', '1001', 99, { at: '2030-01-01T19:00:00Z', status: 'failed' });
+    });
+
+    it('lists an admin’s latest transactions across campaigns, minimal and newest first', async () => {
+      const r = await text(db, ADMIN_PHONE, 'recent');
+      const lines = r!.split('\n');
+      expect(lines[0]).toBe('Recent:');
+      expect(lines.slice(1, 4)).toEqual(['1/1 $54.00 #1001 Y.G.', '1/1 $36.00 #1002 Anon', '1/1 $180.00 #1001 M.K.']);
+      expect(lines.length).toBeLessThanOrEqual(6);
+      expect(r).not.toContain('$99.00');           // a failed charge isn't listed
+      expect(r).not.toMatch(/Klein|Weiss|Gold/);   // initials only
+      const one = (await text(db, ADMIN_PHONE, 'Recent 1002'))!.split('\n');
+      expect(one.slice(0, 2)).toEqual(['Recent for #1002:', '1/1 $36.00 #1002 Anon']);
+      expect(one.slice(1).every(l => l.includes('#1002'))).toBe(true);
+    });
+
+    it('shows a fundraiser only their own campaigns', async () => {
+      const r = await text(db, M1_PHONE, 'RECENT');
+      expect(r).toContain('#1001');
+      expect(r).not.toContain('#1002');            // m1 isn't on 1002
+      expect(await text(db, M1_PHONE, 'recent 1002')).toBe('No campaign 1002 for this phone.');
+    });
+
+    it('answers an unknown phone politely once a day, then not at all', async () => {
+      expect(await text(db, STRANGER, 'recent')).toMatch(/isn't registered for RECENT/);
+      expect(await text(db, STRANGER, 'recent')).toBeNull();
+      expect(await text(db, STRANGER, 'recent 1001')).toBeNull();
+    });
+
+    it('allows 10 an hour per phone, then one notice and silence', async () => {
+      for (let i = 0; i < 10; i++) expect(await text(db, M1_PHONE, 'recent')).toMatch(/^Recent:/);
+      expect(await text(db, M1_PHONE, 'recent')).toMatch(/Too many RECENT texts/);
+      expect(await text(db, M1_PHONE, 'recent')).toBeNull();
+      // Balance lookups aren't affected.
+      expect(await text(db, M1_PHONE, '1001')).toMatch(/^1001 /);
+    });
+
+    it('stays silent while text replies are off', async () => {
+      await admin(db, `select public.save_phone_lookup(false, false)`);
+      expect(await text(db, ADMIN_PHONE, 'recent')).toBeNull();
+    });
+
+    it('leaves Donary donations out of every automatic reply when the setting is on (off by default)', async () => {
+      expect(await admin(db, `select exclude_donary from public.phone_lookup_status()`)).toEqual([{ exclude_donary: false }]);
+      const before = await lookup(db, M1_PHONE, '1001', null);
+      expect(await text(db, ADMIN_PHONE, 'recent 1001')).toContain('Y.G.');
+
+      await admin(db, `select public.save_phone_lookup(true, false, true)`);
+      expect(await admin(db, `select exclude_donary from public.phone_lookup_status()`)).toEqual([{ exclude_donary: true }]);
+      const after = await lookup(db, M1_PHONE, '1001', null);
+      expect(Number(after.campaign.raised)).toBeCloseTo(Number(before.campaign.raised) - 54, 2);
+      expect(Number(after.campaign.balance)).toBeCloseTo(Number(before.campaign.balance) - 54, 2);
+      expect(await text(db, M1_PHONE, '1001')).toContain(`Raised $${money(Number(before.campaign.raised) - 54)}`);
+      expect(await text(db, ADMIN_PHONE, 'recent 1001')).not.toContain('Y.G.');
+      expect(await text(db, M1_PHONE, 'bal')).toMatch(/^1001 /);
+      // Saving the switches without the new setting keeps it as it was; only the Super Admin can change it.
+      await admin(db, `select public.save_phone_lookup(true, true)`);
+      expect(await admin(db, `select exclude_donary from public.phone_lookup_status()`)).toEqual([{ exclude_donary: true }]);
+      await expect(rows(db, MANAGER_1, `select public.save_phone_lookup(true, true, false)`)).rejects.toThrow();
+    });
+  });
 });
