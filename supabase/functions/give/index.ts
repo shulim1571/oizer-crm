@@ -1,11 +1,15 @@
 // Gifts from a campaign's public payment page: by card, bank account (ACH) or DAF card. No sign-in: deployed
-// with JWT verification off. Each request passes Cloudflare Turnstile with the organization's own secret key, or
-// the platform's (TURNSTILE_SECRET_KEY) when it has none, except while it is on sandbox keys and neither is set.
-// The database checks the page's rules, the method and the connection's recent attempts, then the organization's own Sola key charges the gift.
+// with JWT verification off. Each request must pass Cloudflare Turnstile with the organization's own secret key,
+// or the platform's (TURNSTILE_SECRET_KEY) when it has none; with neither, the page can't take payments, sandbox
+// keys or not. Requests reach this function through the rate-limiting gate (workers/give-gate); once
+// GIVE_GATE_SECRET is set, anything else is refused. The database then checks the page's rules, the method and
+// the connection's recent attempts, and the organization's own Sola key charges the gift.
+import { botCheckDecision, gateCheck } from '../_shared/giveGuard.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const platformTurnstileSecret = Deno.env.get('TURNSTILE_SECRET_KEY') ?? null;
+const gateSecret = Deno.env.get('GIVE_GATE_SECRET') ?? null;
 const GATEWAY = 'https://x1.cardknox.com/gatewayjson';
 
 const CORS = {
@@ -26,15 +30,16 @@ async function rpc(name: string, args: unknown) {
   return body;
 }
 
-async function humanCheck(org: string, token: string | undefined, ip: string | null, sandbox: boolean) {
+async function humanCheck(org: string, token: string | undefined, ip: string | null): Promise<'ok' | 'not_set_up' | 'failed'> {
   const own = await rpc('org_turnstile_secret', { p_org: org }).catch(() => null) as string | null;
   const turnstileSecret = own ?? platformTurnstileSecret;
-  if (!turnstileSecret) return sandbox;
-  if (!token) return false;
-  const form = new URLSearchParams({ secret: turnstileSecret, response: token, ...(ip ? { remoteip: ip } : {}) });
-  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form });
-  const body = await res.json().catch(() => ({}));
-  return body.success === true;
+  const decision = botCheckDecision(turnstileSecret, token);
+  if (decision === 'not_set_up') return 'not_set_up';
+  if (decision === 'no_token') return 'failed';
+  const form = new URLSearchParams({ secret: turnstileSecret!, response: token!, ...(ip ? { remoteip: ip } : {}) });
+  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form }).catch(() => null);
+  const body = res ? await res.json().catch(() => ({})) : {};
+  return body.success === true ? 'ok' : 'failed';
 }
 
 const COUNTRY: Record<string, string> = { USA: 'US', Canada: 'CA', Israel: 'IL', England: 'GB' };
@@ -106,9 +111,11 @@ const kept = (result: Record<string, string>) => Object.fromEntries(KEEP.filter(
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return reply({ error: 'Method not allowed' });
+  const gate = gateCheck(gateSecret, req.headers);
+  if (!gate.ok) return Response.json({ error: 'Please use the campaign\'s payment page.' }, { status: 403, headers: CORS });
+  const ip = gate.ip;
   let b: Record<string, any> & Pay;
   try { b = await req.json(); } catch { return reply({ error: 'Something went wrong. Please try again.' }); }
-  const ip = (req.headers.get('cf-connecting-ip') ?? req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || null;
   b.method ??= 'card';
   if (!b.org || !b.campaign) return reply({ error: 'Something went wrong. Please try again.' });
   const problem = payProblem(b);
@@ -121,7 +128,9 @@ Deno.serve(async req => {
     return reply({ error: 'This page isn\'t available right now. Please try again shortly.' });
   }
   if (!page) return reply({ error: 'This page isn\'t taking donations.' });
-  if (!await humanCheck(b.org, b.turnstile, ip, page.payments?.sandbox)) return reply({ error: 'Please confirm you\'re not a robot and try again.', retry_check: true });
+  const human = await humanCheck(b.org, b.turnstile, ip);
+  if (human === 'not_set_up') return reply({ error: 'This page isn\'t taking online donations yet. Please contact the organization.', not_set_up: true });
+  if (human !== 'ok') return reply({ error: 'Please confirm you\'re not a robot and try again.', retry_check: true });
 
   // 1. The page's rules, the method and the connection's limits.
   let start: { id: string; token: string; total: number; kind: 'sale' | 'save' };

@@ -11,7 +11,7 @@ import { campaignOptions, type Option } from '../lib/lookups';
 import { requestOrgId, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
-import { TurnstileKeys } from './IntegrationKeys';
+import { BotCheckWarning, NO_KEYS, TurnstileKeys, useKeyStatus, type KeyStatus } from './IntegrationKeys';
 import { RecurringDialog, SaveCardDialog, SetupRecurringDialog } from './Recurring';
 import {
   BankFields, DAF_PROGRAMS, DafFields, MethodTabs, PAY_EN, bankBody, bankProblem, dafBody, dafProblem, emptyBank, emptyDaf, savedLabel,
@@ -465,6 +465,7 @@ export function SavedCards({ donor }: { donor: Row }) {
 const randomPin = () => Array.from(crypto.getRandomValues(new Uint8Array(24)), b => 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'[b % 56]).join('');
 
 export function PaymentsSettingsPage() {
+  const keyStatus = useKeyStatus();
   const { isSuperAdmin, org } = useAuth();
   const config = usePaymentConfig();
   const cfg = config.data as PaymentConfig | null;
@@ -493,6 +494,7 @@ export function PaymentsSettingsPage() {
       <div className="view-head">
         <div className="view-title"><h1>Payments</h1><span className="count">Card processing through Sola Payments</span></div>
       </div>
+      {keyStatus.data !== undefined && <BotCheckWarning status={(keyStatus.data as KeyStatus | undefined) ?? NO_KEYS} />}
       <div className="panel-box">
         <h2>Status</h2>
         <dl className="record-facts">

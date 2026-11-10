@@ -88,6 +88,8 @@ const COUNTRIES = ['USA', 'Canada', 'Israel', 'England'];
 const usd = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 // The organization's own Turnstile site key when it has one, otherwise the platform's.
 const PLATFORM_TURNSTILE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+// Payments go through the rate-limiting gate in front of the give function (workers/give-gate).
+const GIVE_URL = (import.meta.env.VITE_GIVE_GATE_URL as string | undefined) || 'https://oizer-give-gate.smueller-cd9.workers.dev/';
 
 type TurnstileApi = { render: (el: HTMLElement, o: Record<string, unknown>) => string; reset: (id?: string) => void };
 let turnstileLoad: Promise<void> | null = null;
@@ -177,7 +179,8 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
         <div className="give-card give-form-card">
           {thanks ? (
             <Thanks t={t} data={data} result={thanks} onAgain={() => { setThanks(null); setRound(r => r + 1); void load(); }} />
-          ) : !data.payments.ready ? (
+          ) : !data.payments.ready || !(data.payments.turnstile_site_key || PLATFORM_TURNSTILE_KEY) ? (
+            // Without a bot check the page can't take payments (the give function refuses them too).
             <p className="error" dir="auto">{t.unavailable}</p>
           ) : (
             <GiveForm key={round} t={t} data={data} orgId={orgId} onDone={setThanks} />
@@ -276,14 +279,18 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
       const pay = method === 'ach' ? { ...bankBody(bank), ach_agreed: bank.agreed }
         : method === 'daf' ? dafBody(program!, daf)
         : await tokens.current!().then(card => ({ method: 'card', card_sut: card.card, cvv_sut: card.cvv, exp: expDigits }));
-      const { data: r, error: e } = await supabase.functions.invoke('give', {
-        body: {
+      // Through the rate-limiting gate (workers/give-gate), never straight to the give function.
+      const res = await fetch(GIVE_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           org: orgId, campaign: data.campaign.id, amount: chosen, cover_fee: cover && !!p.cover_fee, donor: d, custom, ...pay, turnstile: human,
           // A fund's recurring grant starts today.
           recurring: rec.on ? { frequency: rec.frequency, start: method === 'daf' ? todayIso : rec.start, count, text_me: rec.textMe } : null,
-        },
-      });
-      if (e) throw new Error('Something went wrong. Please try again.');
+        }),
+      }).catch(() => null);
+      if (!res) throw new Error('Something went wrong. Please check your connection and try again.');
+      const r = await res.json().catch(() => null) as Row | null;
+      if (!r) throw new Error('Something went wrong. Please try again.');
       if (r.approved) return onDone(r);
       setError(r.error ?? 'The card was declined.');
     } catch (err) {

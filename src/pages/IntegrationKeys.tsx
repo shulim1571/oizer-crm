@@ -97,10 +97,25 @@ export const ownWebhook = (provider: 'sendgrid' | 'twilio', orgId: string | unde
   `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/message-events?provider=${provider}&org=${requestOrgId() ?? orgId ?? ''}`;
 
 /** The payment page's bot check. */
+/** True when the payment page has a bot check: this organization's Turnstile keys, or the platform's. */
+export const botCheckReady = (k: KeyStatus) => ownKeys(k, 'turnstile') || !!import.meta.env.VITE_TURNSTILE_SITE_KEY;
+
+/** Shown wherever payments are set up when the payment page has no bot check, and so can't take payments. */
+export function BotCheckWarning({ status }: { status: KeyStatus }) {
+  if (botCheckReady(status)) return null;
+  return (
+    <div className="error" role="alert">
+      <b>Payment pages can't take donations yet:</b> there's no Cloudflare Turnstile bot check. Add this organization's Turnstile
+      site key and secret key under Settings → Payments (the Turnstile keys section). Until then online gifts are refused, even with sandbox keys.
+    </div>
+  );
+}
+
 export function TurnstileKeys() {
   const q = useKeyStatus();
   const k = (q.data as KeyStatus | undefined) ?? NO_KEYS;
   return (
+    <>
     <KeysPanel service="turnstile" status={k} onSaved={() => void q.reload()}
       platformNote="Payment pages use the platform's Cloudflare Turnstile check, which may show the platform's domain to donors."
       intro={<>In Cloudflare: Turnstile → Add widget, with the domains your payment pages use (for example <code>oizer.trubase.org</code>). Paste both keys here.</>}
@@ -108,5 +123,6 @@ export function TurnstileKeys() {
         { name: 'site', label: 'Site key (public)', secret: false, set: !!k.turnstile_site_key, shown: k.turnstile_site_key, placeholder: '0x4AAA…' },
         { name: 'secret', label: 'Secret key', secret: true, set: k.turnstile_secret_set, placeholder: '0x4AAA…', help: 'Stored encrypted; only the payment service can read it.' },
       ]} />
+    </>
   );
 }
