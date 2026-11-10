@@ -236,7 +236,6 @@ export const sourceFields: Field[] = [
 
 export const accountFields: Field[] = [
   { name: 'name', label: 'Account', required: true },
-  { name: 'filter_checks', label: 'Filter Checks', type: 'checkbox' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 

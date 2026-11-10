@@ -104,7 +104,7 @@ export function AccountDetail() {
   return (
     <div className="detail">
       <DetailHead title={d.name} initial={d.name[0]} onEdit={() => setEditing(true)}
-                  sub={<>{d.filter_checks && <Pill tone="blue">Filter checks</Pill>}{d.notes && <span>{d.notes}</span>}</>} />
+                  sub={<>{d.notes && <span>{d.notes}</span>}</>} />
       <div className="kpis">
         <Kpi label="Donations in" value={money(d.donations_total)} icon={<TrendingUp size={18} />} tone="green"
              sub={`${Number(d.donation_count).toLocaleString()} donations`} />

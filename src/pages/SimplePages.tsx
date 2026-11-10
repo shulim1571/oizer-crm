@@ -116,7 +116,6 @@ export function AccountsPage() {
         { key: 'donations_total', label: 'Donations in', render: r => money(r.donations_total), align: 'right' },
         { key: 'expenses_total', label: 'Expenses out', render: r => money(r.expenses_total), align: 'right' },
         { key: 'uncleared_total', label: 'Uncleared checks', render: r => money(r.uncleared_total), align: 'right' },
-        { key: 'filter_checks', label: 'Filter Checks', render: r => yn(r.filter_checks) },
         { key: 'notes', label: 'Notes' },
       ]}
       fields={accountFields}
