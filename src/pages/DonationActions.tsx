@@ -4,7 +4,7 @@ import SearchSelect from '../components/SearchSelect';
 import { localToday, money } from '../lib/format';
 import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
 import { supabase, type Row } from '../lib/supabase';
-import { GatewayActions } from './Payments';
+import { CardChargeDialog, GatewayActions } from './Payments';
 
 const RETURN_REASONS = ['NSF', 'Account Closed', 'Stop Payment', 'Other'];
 const today = () => localToday();
@@ -58,6 +58,7 @@ export default function DonationActions({ record, onDone }: { record: Row; onDon
           <button type="button" className="btn danger" onClick={reject}>Reject</button>
         </>
       )}
+      {record.status === 'failed' && <RetryFailed record={record} onDone={() => run(Promise.resolve({ error: null }))} />}
       {record.possible_duplicate && (
         <button type="button" className="btn" onClick={() => run(supabase.rpc('mark_duplicate_reviewed', { p_id: record.id }))}>Not a duplicate</button>
       )}
@@ -69,6 +70,49 @@ export default function DonationActions({ record, onDone }: { record: Row; onDon
       {splitting && <SplitDialog record={record} onClose={() => setSplitting(false)} onSplit={run} />}
       {record.gateway_id && <GatewayActions record={record} onDone={() => run(Promise.resolve({ error: null }))} onCharged={setViaSola} />}
     </div>
+  );
+}
+
+/**
+ * Retry a failed donation (admins). A recurring payment retries its schedule; anything else opens Charge a card
+ * with the campaign, donor, amount and saved card filled in. A retry that goes through is linked to the failed one.
+ */
+function RetryFailed({ record, onDone }: { record: Row; onDone: () => void }) {
+  const [info, setInfo] = useState<Row | null>(null);
+  const [charging, setCharging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.rpc('failed_donation_retry', { p_donation: record.id }).then(({ data }) => setInfo(((data ?? []) as Row[])[0] ?? null));
+  }, [record.id]);
+  if (!info) return null;
+  if (info.retried_as) return <span className="muted small">Retried as #{info.retried_as}</span>;
+  if (!info.campaign_open) return <span className="muted small">Can't retry: the campaign is closed</span>;
+  async function retrySchedule() {
+    setError(null);
+    const { error: e } = await supabase.rpc('set_recurring_status', { p_id: info!.recurring_id, p_action: 'retry' });
+    if (e) return setError(e.message);
+    alert('The recurring charge will be tried again in the next few minutes.');
+    onDone();
+  }
+  return (
+    <>
+      {info.recurring_id
+        ? <button type="button" className="btn primary" onClick={retrySchedule}>Retry the recurring charge</button>
+        : <button type="button" className="btn primary" onClick={() => setCharging(true)}>Retry charge</button>}
+      {error && <div className="error">{error}</div>}
+      {charging && createPortal(
+        <CardChargeDialog campaignId={info.campaign_id} donorId={info.donor_id} cardId={info.card_id} amount={Number(info.amount)}
+          title={`Retry a failed ${money(info.amount)} charge`}
+          onClose={() => setCharging(false)}
+          onDone={async t => {
+            if (t.donation_id) {
+              const { error: e } = await supabase.rpc('link_donation_retry', { p_failed: record.id, p_new: t.donation_id });
+              if (e) setError(`The retry went through, but couldn't be linked to the failed donation: ${e.message}`);
+            }
+            onDone();
+          }} />,
+        document.body)}
+    </>
   );
 }
 

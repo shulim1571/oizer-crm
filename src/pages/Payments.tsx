@@ -115,8 +115,8 @@ export function CardFields({ ifieldsKey, onTokens, labels = { card: 'Card number
 // ---------------------------------------------------------------------------
 const FREQ_LABEL: Record<string, string> = { weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', annually: 'Yearly' };
 const usDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone }: {
-  campaignId?: string | null; donorId?: string | null; cardId?: string | null; onClose: () => void; onDone?: (t: Row) => void;
+export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmount, title, onClose, onDone }: {
+  campaignId?: string | null; donorId?: string | null; cardId?: string | null; amount?: number; title?: string; onClose: () => void; onDone?: (t: Row) => void;
 }) {
   const config = usePaymentConfig();
   const [campaigns, setCampaigns] = useState<Option[]>([]);
@@ -124,7 +124,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
   const [donor, setDonor] = useState<string | null>(donorId ?? null);
   const [cards, setCards] = useState<Row[]>([]);
   const [card, setCard] = useState<string>(cardId ?? '');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(startAmount ? String(startAmount) : '');
   const [exp, setExp] = useState('');
   const [name, setName] = useState('');
   const [zip, setZip] = useState('');
@@ -234,7 +234,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
 
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2><CreditCard size={18} /> Take a payment {cfg?.sandbox && <Pill tone="amber">Sandbox</Pill>}</h2>
+      <div className="form-head"><h2><CreditCard size={18} /> {title ?? 'Take a payment'} {cfg?.sandbox && <Pill tone="amber">Sandbox</Pill>}</h2>
         <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
       {config.loading ? null : !cfg?.ifields_key || !cfg.api_key_set ? (
         <p>Card payments aren't set up yet. The Super Admin adds this organization's Sola keys under <Link to="/payments-settings">Settings → Payments</Link>.</p>

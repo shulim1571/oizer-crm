@@ -114,6 +114,38 @@ describe('card payments through Sola', () => {
     expect(await rows(db, MANAGER_1, `select * from public.donor_saved_cards('d1')`)).toEqual([]);
   });
 
+  it('retry a failed donation once, on the same saved card, and link the two', async () => {
+    await keys(db);
+    // A saved card, then a charge on it that's declined.
+    const first = await sale(db, { save: true });
+    await svc(db, `select * from public.claim_gateway_request($1, $2)`, [OIZER, first]);
+    await finish(db, first, APPROVED);
+    const [card] = await rows(db, ADMIN, `select id from public.donor_saved_cards('d1')`);
+    const declined = await sale(db, { card: card.id, amount: 54 });
+    await svc(db, `select * from public.claim_gateway_request($1, $2)`, [OIZER, declined]);
+    const failed = (await finish(db, declined, { xResult: 'D', xError: 'Insufficient funds' })).r.donation_id as string;
+    expect(await one(db, `select status, amount::text, campaign_id, donor_id, card_id, method, retried_as, campaign_open from public.failed_donation_retry($1)`, [failed]))
+      .toEqual({ status: 'failed', amount: '54.00', campaign_id: '1001', donor_id: 'd1', card_id: card.id, method: 'card', retried_as: null, campaign_open: true });
+    expect(await rows(db, MANAGER_1, `select * from public.failed_donation_retry($1)`, [failed])).toEqual([]);
+
+    // The retry is a new charge; once it goes through it's linked, and the failed one can't be retried again.
+    const retry = await sale(db, { card: card.id, amount: 54 });
+    await svc(db, `select * from public.claim_gateway_request($1, $2)`, [OIZER, retry]);
+    const ok = (await finish(db, retry, { ...APPROVED, xRefNum: '1000099' })).r.donation_id as string;
+    await sql(db, `select public.link_donation_retry($1, $2)`, [failed, ok]);
+    expect((await one(db, `select retried_as from public.failed_donation_retry($1)`, [failed])).retried_as).toBe(ok);
+    expect(await one(db, `select replaces_donation_id from public.donations where id = $1`, [ok])).toEqual({ replaces_donation_id: failed });
+    expect((await one(db, `select notes from public.donations where id = $1`, [failed])).notes).toMatch(new RegExp(`Retried as ${ok}$`));
+    // The failed one keeps no fee and stays out of the totals; only the retry counts.
+    expect((await one(db, `select fee::text, status from public.donations where id = $1`, [failed]))).toEqual({ fee: '0.00', status: 'failed' });
+
+    // Only failed donations, only with a retry that went through, only once, only admins.
+    await expect(sql(db, `select public.link_donation_retry($1, $2)`, [ok, failed])).rejects.toThrow(/Only a failed donation/);
+    const another = (await one(db, `insert into public.donations (campaign_id, type, status, amount) values ('1001', 'Payment', 'completed', 54) returning id`)).id;
+    await expect(sql(db, `select public.link_donation_retry($1, $2)`, [failed, another])).rejects.toThrow(/already retried/);
+    await expect(sql(db, `select public.link_donation_retry($1, $2)`, [failed, ok], MANAGER_1)).rejects.toThrow();
+  });
+
   it('void or refund only through Sola, and only once', async () => {
     await keys(db);
     const id = await sale(db);
