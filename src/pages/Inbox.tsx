@@ -1,3 +1,4 @@
+import { fromBase64 } from '../lib/base64';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Download, Megaphone, Mic, Pin, Play, Plus, Radio, Send, Square, Trash2, Users, X } from 'lucide-react';
@@ -217,7 +218,7 @@ function VoicePlayer({ messageId, seconds, downloadable }: { messageId: string; 
     const { data } = await supabase.rpc('voice_note', { p_message: messageId });
     const v = ((data ?? []) as Row[])[0];
     if (!v) return;
-    const bytes = Uint8Array.from(atob(v.data), c => c.charCodeAt(0));
+    const bytes = fromBase64(v.data, 'attachment');
     setMime(v.mime);
     setUrl(URL.createObjectURL(new Blob([bytes], { type: v.mime })));
   }

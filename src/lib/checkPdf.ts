@@ -165,7 +165,7 @@ export async function buildCheckPdf(c: CheckData): Promise<Uint8Array> {
   return doc.save();
 }
 
-export const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
+export { fromBase64 } from './base64';
 export const toBase64 = async (file: File) => {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let s = '';

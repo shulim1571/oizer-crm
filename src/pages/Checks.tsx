@@ -44,8 +44,8 @@ async function checkData(s: Row, account: string, c: { checkNumber: number; date
     printName: s.print_name ?? '', printAddress: s.print_address, bankName: s.bank_name ?? '',
     routing: s.routing_number ?? '000000000', account: s.account_number ?? '0000',
     offsetX: Number(s.offset_x), offsetY: Number(s.offset_y),
-    signature: sig ? { bytes: fromBase64(sig.data), mime: sig.mime } : null,
-    micrFont: font ? { bytes: fromBase64(font.data), transit: font.transit_char, onUs: font.onus_char } : null,
+    signature: sig ? { bytes: fromBase64(sig.data, 'signature file'), mime: sig.mime } : null,
+    micrFont: font ? { bytes: fromBase64(font.data, 'MICR font file'), transit: font.transit_char, onUs: font.onus_char } : null,
     sample,
   };
 }
