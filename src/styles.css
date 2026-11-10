@@ -845,3 +845,4 @@ tr.selected td { background: var(--accent-soft); }
 .step-cue { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 2px; }
 .empty-state { text-align: center; padding: 28px 18px; } .empty-state h2 { font-size: 16px; margin: 0 0 6px; }
 .report-detail > .view { padding: 8px 0 0; }
+.recurring-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 10px 0; background: var(--surface-2); }

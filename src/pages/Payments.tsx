@@ -4,7 +4,8 @@ import { CreditCard, KeyRound, Trash2, X } from 'lucide-react';
 import SearchSelect from '../components/SearchSelect';
 import { Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { dateTime, money } from '../lib/format';
+import { dateTime, localToday, money } from '../lib/format';
+import { nextDate } from '../lib/recurring';
 import { campaignOptions, donorOptions, type Option } from '../lib/lookups';
 import { requestOrgId, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -111,6 +112,8 @@ export function CardFields({ ifieldsKey, onTokens, labels = { card: 'Card number
 // ---------------------------------------------------------------------------
 // Charging a card
 // ---------------------------------------------------------------------------
+const FREQ_LABEL: Record<string, string> = { weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', annually: 'Yearly' };
+const usDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone }: {
   campaignId?: string | null; donorId?: string | null; cardId?: string | null; onClose: () => void; onDone?: (t: Row) => void;
 }) {
@@ -135,6 +138,9 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Row | null>(null);
+  // Recurring: today's charge is the first payment, or nothing now and the first charge on a later date.
+  const [rec, setRec] = useState({ on: false, frequency: 'monthly', when: 'today' as 'today' | 'later', later: '', fixed: false, count: '12' });
+  const [schedule, setSchedule] = useState<string | null>(null);
   const tokens = useRef<() => Promise<{ card: string; cvv: string }>>();
   const setTokens = useRef((get: () => Promise<{ card: string; cvv: string }>) => { tokens.current = get; }).current;
 
@@ -150,26 +156,75 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
 
   const cfg = config.data as PaymentConfig | null;
   const expDigits = exp.replace(/\D/g, '');
+  const canRepeat = !!donor && (!!card || method !== 'daf');
+  const repeating = rec.on && canRepeat;
+  const later = repeating && rec.when === 'later';
+  const count = rec.fixed ? Number(rec.count) : null;
+
+  /** The recurring schedule on the donor's saved card, through the usual recurring donations. */
+  async function scheduleOn(cardId: string, start: string, payments: number | null) {
+    const { error: e } = await supabase.rpc('create_recurring', {
+      p_donor: donor, p_campaign: campaign, p_card: cardId, p_amount: Number(amount), p_frequency: rec.frequency, p_start: start,
+      p_count: payments, p_notify_email: email || null, p_notify_phone: null,
+    });
+    if (e) throw new Error(`The payment went through, but the recurring schedule wasn't set up: ${e.message}`);
+    const freq = FREQ_LABEL[rec.frequency] ?? rec.frequency;
+    setSchedule(`${freq} ${money(Number(amount))} from ${usDate(start)}${payments ? `, ${payments} more payment${payments === 1 ? '' : 's'}` : ', until cancelled'}. Manage it under Recurring.`);
+  }
+
   async function charge() {
     setError(null);
+    setSchedule(null);
     if (!campaign) return setError('Choose a campaign.');
     if (!(Number(amount) > 0)) return setError('Enter an amount.');
+    if (repeating && rec.fixed && !(count && count >= (later ? 1 : 2))) return setError(later ? 'Enter how many payments.' : 'Enter at least 2 payments (today counts as the first).');
+    if (later && !(rec.later && rec.later > localToday())) return setError('Choose a start date after today.');
+    if (later) return scheduleLater();
     const problem = card ? null : method === 'ach' ? bankProblem(bank, OFFICE_PAY) : method === 'daf' ? dafProblem(program ?? '', daf, OFFICE_PAY)
       : expDigits.length !== 4 ? 'Enter the expiry as MM/YY.' : null;
     if (problem) return setError(problem);
     const what = card ? `the saved ${savedLabel(cards.find(k => k.id === card) ?? {})}` : method === 'ach' ? 'this bank account' : method === 'daf' ? `this ${program} card` : 'this card';
-    if (!confirm(`Charge ${money(Number(amount))} to ${what}?`)) return;
+    if (!confirm(`Charge ${money(Number(amount))} to ${what}${repeating ? ` now, then ${(FREQ_LABEL[rec.frequency] ?? rec.frequency).toLowerCase()}${count ? ` for ${count - 1} more payments` : ' until cancelled'}` : ''}?`)) return;
     setBusy(true);
     try {
       const pay = card ? {} : method === 'ach' ? { ...bankBody(bank), ach_authorized: bank.agreed } : method === 'daf' ? dafBody(program!, daf)
         : await tokens.current!().then(t => ({ method: 'card', card_sut: t.card, cvv_sut: t.cvv, exp: expDigits }));
       const r = await callPayments({
-        action: 'sale', campaign_id: campaign, donor_id: donor, amount: Number(amount), card_id: card || null, save_card: save && !card,
+        action: 'sale', campaign_id: campaign, donor_id: donor, amount: Number(amount), card_id: card || null, save_card: (save || repeating) && !card,
         name, email, notes, zip, ...pay,
       });
       if (r.error) throw new Error(r.error);
       setResult(r.transaction!);
-      if (r.transaction?.status === 'approved') onDone?.(r.transaction);
+      if (r.transaction?.status === 'approved') {
+        onDone?.(r.transaction);
+        const cardId = card || r.transaction.card_id;
+        if (repeating) {
+          if (!cardId) throw new Error('The payment went through, but the card couldn\'t be saved, so no recurring schedule was set up.');
+          await scheduleOn(cardId, nextDate(localToday(), rec.frequency), count ? count - 1 : null);
+        }
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** A start date later on: save a new card without charging (or use the saved one), then schedule. */
+  async function scheduleLater() {
+    setBusy(true);
+    try {
+      let cardId = card;
+      if (!cardId) {
+        const pay = method === 'ach' ? { ...bankBody(bank), ach_authorized: bank.agreed, name: bank.account_name }
+          : await tokens.current!().then(t => ({ method: 'card', name, zip, card_sut: t.card, cvv_sut: t.cvv, exp: expDigits }));
+        const r = await callPayments({ action: 'save', donor_id: donor, ...pay });
+        if (r.error) throw new Error(r.error);
+        if (r.transaction?.status !== 'approved' || !r.transaction.card_id) throw new Error(`Sola didn't accept it: ${r.transaction?.error ?? 'no reason given'}`);
+        cardId = r.transaction.card_id;
+      }
+      await scheduleOn(cardId, rec.later, count);
+      setResult({ status: 'scheduled' });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -185,12 +240,15 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
         <p>Card payments aren't set up yet. The Super Admin adds this organization's Sola keys under <Link to="/payments-settings">Settings → Payments</Link>.</p>
       ) : result ? (
         <>
-          {result.status === 'approved'
+          {result.status === 'scheduled' ? <div className="notice">Recurring donation set up; nothing was charged today.</div>
+            : result.status === 'approved'
             ? <div className="notice">Approved: {money(result.amount)} · {savedLabel({ method: result.method, card_type: result.card_type, masked: result.masked_card, daf_program: result.daf_program })} · Sola ref {result.ref_num}
                 {result.card_id ? ' · saved for next time' : ''}{result.method === 'ach' ? '. The bank debit settles in 1–3 business days; a return from the bank will show up on the Task Sheet.' : ''}</div>
             : <div className="error">{result.status === 'declined' ? 'Declined' : 'Error'}: {result.error ?? 'no reason given'}. It's kept as a failed transaction; nothing was charged.</div>}
+          {schedule && <div className="notice">Recurring: {schedule}</div>}
+          {error && <div className="error">{error}</div>}
           <div className="form-actions"><div className="spacer" />
-            {result.status !== 'approved' && <button type="button" className="btn" onClick={() => setResult(null)}>Try again</button>}
+            {result.status !== 'approved' && result.status !== 'scheduled' && <button type="button" className="btn" onClick={() => setResult(null)}>Try again</button>}
             <button type="button" className="btn primary" onClick={onClose}>Done</button></div>
         </>
       ) : (
@@ -226,9 +284,38 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
               )}
               {method === 'ach' && <BankFields value={bank} onChange={setBank} L={OFFICE_PAY} authorization={cfg.ach_authorization_text} />}
               {method === 'daf' && program && <DafFields program={program} value={daf} onChange={setDaf} L={OFFICE_PAY} />}
-              {donor && <label className="inline-check"><input type="checkbox" checked={save} onChange={e => setSave(e.target.checked)} />
+              {donor && !repeating && <label className="inline-check"><input type="checkbox" checked={save} onChange={e => setSave(e.target.checked)} />
                 Save this {method === 'ach' ? 'bank account' : 'card'} on the donor for next time{method === 'daf' ? ' (if the fund allows it)' : ''}</label>}
             </>
+          )}
+          {canRepeat && (
+            <div className="recurring-box">
+              <label className="inline-check"><input type="checkbox" checked={rec.on} onChange={e => setRec(r => ({ ...r, on: e.target.checked }))} /> <b>Make this a recurring donation</b></label>
+              {rec.on && (
+                <>
+                  <div className="fields">
+                    <label className="field"><span>How often</span>
+                      <select value={rec.frequency} onChange={e => setRec(r => ({ ...r, frequency: e.target.value }))}>
+                        {Object.entries(FREQ_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select></label>
+                    <label className="field"><span>Start</span>
+                      <select value={rec.when} onChange={e => setRec(r => ({ ...r, when: e.target.value as 'today' | 'later' }))}>
+                        <option value="today">Today: charge now as the first payment</option>
+                        <option value="later">On a later date: nothing charged now</option>
+                      </select></label>
+                    {rec.when === 'later' && <label className="field"><span>First charge on</span><input type="date" min={localToday()} value={rec.later} onChange={e => setRec(r => ({ ...r, later: e.target.value }))} /></label>}
+                    <label className="field"><span>Payments</span>
+                      <select value={rec.fixed ? 'n' : 'open'} onChange={e => setRec(r => ({ ...r, fixed: e.target.value === 'n' }))}>
+                        <option value="open">No end date (until cancelled)</option><option value="n">A set number</option>
+                      </select></label>
+                    {rec.fixed && <label className="field"><span>How many{rec.when === 'today' ? ' (including today)' : ''}</span>
+                      <input type="number" min={rec.when === 'today' ? 2 : 1} max={520} value={rec.count} onChange={e => setRec(r => ({ ...r, count: e.target.value }))} /></label>}
+                  </div>
+                  <p className="muted small">The {card ? 'saved card' : method === 'ach' ? 'bank account is' : 'card is'} {card ? 'is used' : 'saved on the donor'} for the later payments, which run through Recurring like any other recurring donation
+                    {email ? `; ${email} is told about each one` : ''}.</p>
+                </>
+              )}
+            </div>
           )}
           <div className="fields">
             <label className="field"><span>Email for Sola's receipt</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
@@ -238,7 +325,8 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
             An approved payment is saved as a completed donation; a decline is kept as a failed one.</p>
           {error && <div className="error">{error}</div>}
           <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
-            <button type="button" className="btn primary" disabled={busy} onClick={charge}>{busy ? 'Charging…' : `Charge ${Number(amount) > 0 ? money(Number(amount)) : ''}`}</button></div>
+            <button type="button" className="btn primary" disabled={busy} onClick={charge}>
+              {busy ? (later ? 'Saving…' : 'Charging…') : later ? 'Save and schedule' : `Charge ${Number(amount) > 0 ? money(Number(amount)) : ''}${repeating ? ' and repeat' : ''}`}</button></div>
         </>
       )}
     </Overlay>
