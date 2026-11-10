@@ -10,6 +10,7 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { MessagePill } from './Messaging';
 import { Overlay } from './Pledges';
+import { EMAIL_HELP, MERGE_FIELDS, SMS_HELP, smsPlain } from '../lib/outreachFormat';
 
 // Sharing a campaign's payment link, and Custom Outreach. Both are marketing sends: emails carry an
 // unsubscribe link and texts say how to opt out, which the database adds.
@@ -230,7 +231,7 @@ export function OutreachPage() {
     setError(null);
     try {
       const { data, error: e } = await supabase.rpc('send_outreach', {
-        p_channel: channel, p_subject: subject, p_body: body, p_sms_body: smsBody,
+        p_channel: channel, p_subject: subject, p_body: body, p_sms_body: smsPlain(smsBody),
         p_recipients: recipients.map(r => ({ kind: r.kind, id: r.id, address: r.address, campaign_id: r.campaign_id })),
         p_send_after: later && when ? new Date(when).toISOString() : null,
         p_attachment_name: file?.name ?? null, p_attachment: file ? await toBase64(file) : null,
@@ -247,7 +248,7 @@ export function OutreachPage() {
 
   const preview = recipients.find(r => r.key === previewKey) ?? recipients[0];
   const previewEmail = useMemo(() => preview && formatHtml(personalize(body, preview)), [preview, body]);
-  const token = (t: string) => <button key={t} type="button" className="chip-btn" onClick={() => setBody(b => b + t)}>{t}</button>;
+  const token = (t: string, add: typeof setBody = setBody) => <button key={t} type="button" className="chip-btn" onClick={() => add(b => b + t)}>{t}</button>;
   return (
     <section className="view">
       <div className="view-head">
@@ -277,7 +278,7 @@ export function OutreachPage() {
           <div className="fields">
             <label className="field wide"><span>Subject</span><input value={subject} onChange={e => setSubject(e.target.value)} /></label>
             <label className="field wide"><span>Email</span><textarea rows={8} value={body} onChange={e => setBody(e.target.value)} />
-              <small className="muted">**bold**, *italic*; web addresses become links. Fill in per person: {['{first_name}', '{last_name}', '{campaign_name}'].map(token)}</small></label>
+              <small className="muted">{EMAIL_HELP} Fill in per person: {MERGE_FIELDS.map(t => token(t))}</small></label>
             <label className="field wide"><span><Paperclip size={13} /> PDF attachment (optional)</span>
               <input type="file" accept="application/pdf,.pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} /></label>
           </div>
@@ -285,7 +286,8 @@ export function OutreachPage() {
         {channel !== 'email' && (
           <div className="fields">
             <label className="field wide"><span>Text message</span><textarea rows={3} value={smsBody} onChange={e => setSmsBody(e.target.value)} />
-              <SmsCount text={`${smsBody}\nReply STOP to opt out.`} /></label>
+              <small className="muted">{SMS_HELP} Fill in per person: {MERGE_FIELDS.map(t => token(t, setSmsBody))}</small>
+              <SmsCount text={`${smsPlain(smsBody)}\nReply STOP to opt out.`} /></label>
           </div>
         )}
         <div className="form-actions"><button type="button" className="btn" onClick={saveTemplate} disabled={!body && !smsBody}>Save as template</button>
@@ -334,7 +336,7 @@ export function OutreachPage() {
         <div className="panel-box">
           <h2>Preview for <select value={preview.key} onChange={e => setPreviewKey(e.target.value)}>{recipients.map(r => <option key={r.key} value={r.key}>{r.name}</option>)}</select></h2>
           {channel !== 'sms' && <><p><b>{personalize(subject, preview)}</b></p><div className="message-text" dangerouslySetInnerHTML={{ __html: previewEmail ?? '' }} /></>}
-          {channel !== 'email' && <pre className="message-text">{personalize(smsBody, preview)}{'\n'}Reply STOP to opt out.</pre>}
+          {channel !== 'email' && <pre className="message-text">{personalize(smsPlain(smsBody), preview)}{'\n'}Reply STOP to opt out.</pre>}
         </div>
       )}
 
@@ -468,9 +470,12 @@ function TemplateDialog({ template: t, onClose, onSaved }: { template: Row; onCl
       <div className="fields">
         <label className="field wide"><span>Name</span><input value={name} onChange={e => setName(e.target.value)} /></label>
         <label className="field wide"><span>Email subject</span><input value={subject} onChange={e => setSubject(e.target.value)} /></label>
-        <label className="field wide"><span>Email</span><textarea rows={8} value={body} onChange={e => setBody(e.target.value)} /></label>
-        <label className="field wide"><span>Text message</span><textarea rows={3} value={sms} onChange={e => setSms(e.target.value)} /><SmsCount text={sms} /></label>
+        <label className="field wide"><span>Email</span><textarea rows={8} value={body} onChange={e => setBody(e.target.value)} />
+          <small className="muted">{EMAIL_HELP}</small></label>
+        <label className="field wide"><span>Text message</span><textarea rows={3} value={sms} onChange={e => setSms(e.target.value)} />
+          <small className="muted">{SMS_HELP}</small><SmsCount text={smsPlain(sms)} /></label>
       </div>
+      <p className="help">Fill in per person, in the subject, email or text: <code>{'{first_name}'}</code>, <code>{'{last_name}'}</code> and <code>{'{campaign_name}'}</code>. Where someone has no name or campaign on file, that field is left blank.</p>
       {error && <div className="error">{error}</div>}
       <div className="form-actions">
         {t.id && <button type="button" className="btn danger" onClick={remove}><Trash2 size={15} /> Delete</button>}
