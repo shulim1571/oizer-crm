@@ -89,13 +89,14 @@ describe('card payments through Sola', () => {
     // Edited to add one later: refused quietly.
     await sql(db, `update public.donations set fee = 4 where id = 'fx'`);
     expect((await one(db, `select fee::text from public.donations where id = 'fx'`)).fee).toBe('0.00');
-    // A completed gift keeps its fee, and one that turns out to have gone through gets its net back.
-    await sql(db, `update public.donations set status = 'completed', fee = 2.90 where id = 'fx'`);
+    // A completed gift keeps its fee, and one that turns out to have gone through gets its net back (a system
+    // correction: admins can't move a failed gift to completed).
+    await svc(db, `update public.donations set status = 'completed', fee = 2.90 where id = 'fx'`);
     expect(await one(db, `select fee::text, net_donation::text from public.donations where id = 'fx'`)).toEqual({ fee: '2.90', net_donation: '97.10' });
     // A completed gift that fails afterwards loses its fee, and its fees leave the campaign totals.
     const fees = async () => Number((await one(db, `select fees from public.campaign_summary where id = '1001'`)).fees);
     const withFee = await fees();
-    await sql(db, `update public.donations set status = 'failed' where id = 'fx'`);
+    await svc(db, `update public.donations set status = 'failed' where id = 'fx'`);
     expect(await fees()).toBeCloseTo(withFee - 2.9, 2);
   });
 
@@ -144,6 +145,53 @@ describe('card payments through Sola', () => {
     const another = (await one(db, `insert into public.donations (campaign_id, type, status, amount) values ('1001', 'Payment', 'completed', 54) returning id`)).id;
     await expect(sql(db, `select public.link_donation_retry($1, $2)`, [failed, another])).rejects.toThrow(/already retried/);
     await expect(sql(db, `select public.link_donation_retry($1, $2)`, [failed, ok], MANAGER_1)).rejects.toThrow();
+  });
+
+  it('edit a donation only along the allowed status steps, and never change what the card processor decided', async () => {
+    await keys(db);
+    const declined = await sale(db, { amount: 54 });
+    await svc(db, `select * from public.claim_gateway_request($1, $2)`, [OIZER, declined]);
+    const failed = (await finish(db, declined, { xResult: 'D', xError: 'Insufficient funds' })).r.donation_id as string;
+    // Moshe's case: a failed card charge can't be edited to completed, directly or by bulk edit.
+    await expect(sql(db, `update public.donations set status = 'completed' where id = $1`, [failed])).rejects.toThrow(/card processor/);
+    await expect(sql(db, `select public.bulk_update_donations(array[$1], '{"status":"completed"}')`, [failed])).rejects.toThrow(/card processor/);
+    // A processed charge keeps its amount, method, fee and time; who it's for and the notes can still change.
+    const charged = await sale(db);
+    await svc(db, `select * from public.claim_gateway_request($1, $2)`, [OIZER, charged]);
+    const ok = (await finish(db, charged, APPROVED)).r.donation_id as string;
+    for (const set of [`amount = 1`, `payment_method = 'Cash'`, `fee = coalesce(fee, 0) + 1`, `created_at = now() - interval '1 day'`, `status = 'voided'`]) {
+      await expect(sql(db, `update public.donations set ${set} where id = $1`, [ok])).rejects.toThrow(/card processor/);
+    }
+    await sql(db, `update public.donations set notes = 'Table 4', name = 'M. Klein', amount = amount where id = $1`, [ok]);
+    expect(await one(db, `select notes, status, amount::text from public.donations where id = $1`, [ok])).toEqual({ notes: 'Table 4', status: 'completed', amount: '180.00' });
+    // Splitting a card payment across campaigns still works (once it's off the donor's pledge).
+    for (const m of await rows(db, ADMIN, `select distinct pledge_id from public.pledge_payments where donation_id = $1`, [ok])) {
+      await sql(db, `select public.unmatch_pledge_payment($1, $2)`, [m.pledge_id, ok]);
+    }
+    await sql(db, `select public.split_donation($1, '[{"campaign_id":"1001","amount":100},{"campaign_id":"1001","amount":80}]')`, [ok]);
+    expect((await one(db, `select amount::text from public.donations where id = $1`, [ok])).amount).toBe('100.00');
+    // Its reversal still goes through Sola, as the system.
+    const v = (await one(db, `select public.begin_card_reversal($1, 'void') id`, [ok])).id;
+    await svc(db, `select * from public.claim_gateway_request($1, $2)`, [OIZER, v]);
+    await finish(db, v, { xResult: 'A', xRefNum: '1000002' });
+    expect((await one(db, `select status from public.donations where id = $1`, [ok])).status).toBe('voided');
+  });
+
+  it('edit a manual donation only along the allowed status steps', async () => {
+    const add = async (status: string) => (await one(db, `insert into public.donations (campaign_id, type, status, amount, payment_method) values ('1001', 'Payment', $1, 36, 'Cash') returning id`, [status])).id as string;
+    const done = await add('completed');
+    // Amount and method stay editable on a manual entry.
+    await sql(db, `update public.donations set amount = 40, payment_method = 'Check' where id = $1`, [done]);
+    await sql(db, `update public.donations set status = 'voided' where id = $1`, [done]);
+    await expect(sql(db, `update public.donations set status = 'completed' where id = $1`, [done])).rejects.toThrow(/A voided donation can't be changed to completed/);
+    const failed = await add('failed');
+    await expect(sql(db, `update public.donations set status = 'completed' where id = $1`, [failed])).rejects.toThrow(/can't be changed/);
+    const pending = await add('pending');
+    await expect(sql(db, `update public.donations set status = 'refunded' where id = $1`, [pending])).rejects.toThrow(/can't be changed/);
+    await sql(db, `select public.review_donation($1, true)`, [pending]);
+    // Manual refunds still work through their own action.
+    await sql(db, `select public.refund_donation($1)`, [pending]);
+    expect((await one(db, `select status from public.donations where id = $1`, [pending])).status).toBe('refunded');
   });
 
   it('void or refund only through Sola, and only once', async () => {

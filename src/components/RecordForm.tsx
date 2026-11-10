@@ -3,7 +3,8 @@ import { NewDonorDialog } from './DonorPicker';
 import { useEffect, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
 import { supabase, type Row } from '../lib/supabase';
-import { clearLookups, type Option } from '../lib/lookups';
+import { clearLookups, DONATION_STATUSES, type Option } from '../lib/lookups';
+import { allowedStatuses, PROCESSOR_FIELDS } from '../lib/donationRules';
 import { fromLocalInput, toLocalInput } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import DateNote from './DateNote';
@@ -23,6 +24,8 @@ export interface Field {
   help?: string;
   /** Kept in a folded "Advanced / accounting" section (it opens when any of them has a value). */
   advanced?: boolean;
+  /** Shown but can't be changed, and left out when saving. */
+  readOnly?: boolean;
   /** How to make a new one from right here, without leaving this form. */
   create?: () => { noun: string; table: string; fields: Field[]; defaults?: Row; pk?: string };
 }
@@ -60,6 +63,22 @@ export default function RecordForm(p: Props) {
   const [opts, setOpts] = useState<Record<string, Option[]>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Editing a donation: statuses follow the allowed steps, and a card-processed one keeps the processor's fields.
+  const [processed, setProcessed] = useState(false);
+  const donationEdit = p.table === 'donations' && !isNew && !p.onBulk;
+  useEffect(() => {
+    if (!donationEdit) return;
+    supabase.rpc('donation_gateway', { p_donation: p.record!.id }).then(({ data }) => setProcessed(((data ?? []) as Row[]).length > 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const fields: Field[] = !donationEdit ? p.fields : p.fields.map(f => {
+    if (processed && PROCESSOR_FIELDS.includes(f.name)) return { ...f, readOnly: true, help: 'From the card processor' };
+    if (f.name === 'status') {
+      const ok = allowedStatuses(p.record!.status);
+      return { ...f, options: DONATION_STATUSES.filter(o => ok.includes(o.value)) };
+    }
+    return f;
+  });
 
   const loadOptions = (fields: Field[]) => {
     for (const f of fields) {
@@ -104,7 +123,8 @@ export default function RecordForm(p: Props) {
     setSaving(true);
     setError(null);
     const payload: Row = isNew ? { ...p.defaults } : {};
-    for (const f of p.fields) {
+    for (const f of fields) {
+      if (f.readOnly) continue;
       let v = values[f.name];
       if (v === '' || v === undefined) v = null;
       if (f.type === 'number' && v != null) v = Number(v);
@@ -154,13 +174,14 @@ export default function RecordForm(p: Props) {
         {!p.inline && <button type="button" className="icon-btn" onClick={p.onClose}><X size={20} /></button>}
       </div>
       {p.description && <p className="muted small form-desc">{p.description}</p>}
+      {donationEdit && processed && <p className="muted small">This payment went through the card processor, so its status, amount, method, fee and time can't be edited here. Use Refund or Void at Sola, or Retry for a failed charge.</p>}
       <div className="fields">
-        {p.fields.filter(f => !f.advanced).map(fieldBox)}
+        {fields.filter(f => !f.advanced).map(fieldBox)}
       </div>
-      {p.fields.some(f => f.advanced) && (
-        <details className="help advanced-fields" open={p.fields.some(f => f.advanced && !isNew && values[f.name] != null && values[f.name] !== '' && values[f.name] !== false)}>
+      {fields.some(f => f.advanced) && (
+        <details className="help advanced-fields" open={fields.some(f => f.advanced && !isNew && values[f.name] != null && values[f.name] !== '' && values[f.name] !== false)}>
           <summary>Advanced / accounting</summary>
-          <div className="fields">{p.fields.filter(f => f.advanced).map(fieldBox)}</div>
+          <div className="fields">{fields.filter(f => f.advanced).map(fieldBox)}</div>
         </details>
       )}
       {p.table === 'expenses' && !p.onBulk && <CampaignBalanceNote campaignId={values.campaign_id} amount={values.amount} />}
@@ -190,6 +211,12 @@ export default function RecordForm(p: Props) {
 
   function renderInput(f: Field) {
     const v = values[f.name];
+    if (f.readOnly) {
+      const shown = f.type === 'datetime' && v ? new Date(v).toLocaleString()
+        : f.options && Array.isArray(f.options) ? (f.options.find(o => o.value === v)?.label ?? v)
+        : (opts[f.name] ?? []).find(o => o.value === v)?.label ?? v;
+      return <input value={shown ?? ''} disabled readOnly />;
+    }
     switch (f.type) {
       case 'textarea':
         return <textarea rows={3} value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required} />;
@@ -216,7 +243,7 @@ export default function RecordForm(p: Props) {
           <select value={v ?? ''} required={f.required}
                   onChange={e => (e.target.value === NEW_OPTION ? setCreating(f) : set(f.name, e.target.value))}>
             <option value="">—</option>
-            {(opts[f.name] ?? []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {((Array.isArray(f.options) ? f.options : opts[f.name]) ?? []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             {f.create && isAdmin && <option value={NEW_OPTION}>+ Create new {f.create().noun}</option>}
           </select>
         );
