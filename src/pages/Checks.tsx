@@ -1,3 +1,4 @@
+import { STALE_MESSAGE, friendlyError, isStaleChunkError } from '../lib/staleChunk';
 import RowMenu from '../components/RowMenu';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -87,7 +88,7 @@ export function PayoutCheckActions({ record, onDone }: { record: Row; onDone: (r
       {live ? (
         <>
           <span>Check #{live.check_number} <CheckPill status={live.status} /></span>
-          <button type="button" className="btn" onClick={() => reprintCheck(live.id).catch(e => alert(e.message))}><Printer size={15} /> Print again</button>
+          <button type="button" className="btn" onClick={() => reprintCheck(live.id).catch(e => alert(friendlyError(e)))}><Printer size={15} /> Print again</button>
           <Link to="/checks" className="btn">Check register</Link>
         </>
       ) : (
@@ -108,6 +109,10 @@ function PrintCheckDialog({ payout, onClose, onDone }: { payout: Row; onClose: (
   const [campaign, setCampaign] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The check printer is loaded now, before anything is recorded: a page opened before a deploy can't load it,
+  // and then nothing should be recorded at all (Moshe Henig's "print check doesn't work").
+  const [printer, setPrinter] = useState<'loading' | 'ready' | 'stale'>('loading');
+  useEffect(() => { pdf().then(() => setPrinter('ready'), e => setPrinter(isStaleChunkError(e) ? 'stale' : 'ready')); }, []);
   useEffect(() => {
     accountOptions().then(setAccounts);
     asset('micr_font').then(f => setHasFont(!!f));
@@ -121,7 +126,11 @@ function PrintCheckDialog({ payout, onClose, onDone }: { payout: Row; onClose: (
   async function preview() {
     if (!settings) return;
     setError(null);
-    await openPdf(await checkData(settings, account, { checkNumber: settings.next_check_number, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }, true), 'check-preview.pdf');
+    try {
+      await openPdf(await checkData(settings, account, { checkNumber: settings.next_check_number, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }, true), 'check-preview.pdf');
+    } catch (e) {
+      setError(friendlyError(e));
+    }
   }
   async function issue() {
     if (!settings) return;
@@ -130,7 +139,13 @@ function PrintCheckDialog({ payout, onClose, onDone }: { payout: Row; onClose: (
     const { data, error: e } = await supabase.rpc('issue_check', { p_payout: payout.id, p_account: account, p_memo: memo || null });
     if (e) { setBusy(false); return setError(e.message); }
     const n = ((data ?? []) as Row[])[0].check_number;
-    await openPdf(await checkData(settings, account, { checkNumber: n, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }), `check-${n}.pdf`);
+    try {
+      await openPdf(await checkData(settings, account, { checkNumber: n, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }), `check-${n}.pdf`);
+    } catch (e) {
+      // The check is recorded; only the PDF failed. Say so, so it's printed again rather than issued twice.
+      setBusy(false);
+      return setError(`Check #${n} was recorded, but its PDF couldn't be made: ${friendlyError(e)} Then use "Print again" on this payout.`);
+    }
     setBusy(false);
     onDone();
   }
@@ -155,12 +170,15 @@ function PrintCheckDialog({ payout, onClose, onDone }: { payout: Row; onClose: (
       {ready(settings) && <p className="muted small">This will be check #{settings!.next_check_number} on {settings!.bank_name}.</p>}
       <label className="field"><span>Memo</span><input value={memo} onChange={e => setMemo(e.target.value)} /></label>
       {hasFont === false && <p className="date-note"><TriangleAlert size={14} /> No MICR font is set up, so checks can't be printed yet. <Link to="/checks">Add it on the Checks page</Link>.</p>}
+      {printer === 'stale' && (
+        <div className="error">{STALE_MESSAGE} <button type="button" className="btn" onClick={() => window.location.reload()}>Reload</button></div>
+      )}
       {error && <div className="error">{error}</div>}
       <div className="form-actions">
-        <button type="button" className="btn" disabled={!ready(settings)} onClick={preview}>Preview (marked VOID)</button>
+        <button type="button" className="btn" disabled={!ready(settings) || printer !== 'ready'} onClick={preview}>Preview (marked VOID)</button>
         <div className="spacer" />
         <button type="button" className="btn" onClick={onClose}>Cancel</button>
-        <button type="button" className="btn primary" disabled={busy || !ready(settings) || !hasFont || !payout.payee} onClick={issue}>Print and record check</button>
+        <button type="button" className="btn primary" disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issue}>Print and record check</button>
       </div>
     </Overlay>
   );
@@ -305,14 +323,14 @@ export function ChecksPage() {
     { key: 'amount', label: 'Amount', render: r => money(r.amount), align: 'right' },
     { key: 'status', label: 'Status', value: r => STATUS[r.status]?.label, render: r => <CheckPill status={r.status} /> },
     { key: 'days_outstanding', label: 'Days out', align: 'right' },
-    { key: 'campaign', label: 'Campaign', value: r => (r.campaign_id ? `${r.campaign_name ?? ''} - ${r.campaign_id}` : '') },
+    { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => (r.campaign_id ? `${r.campaign_name ?? ''} - ${r.campaign_id}` : '') },
     { key: 'memo', label: 'Memo', long: true, optional: true },
     { key: 'status_reason', label: 'Reason', optional: true },
     { key: 'issued_by', label: 'Printed by', optional: true },
     {
       key: 'actions', label: '', render: r => (
         <RowMenu label="Check actions" items={[
-          { label: 'Print again', onClick: () => { reprintCheck(r.id).catch(e => setError(e.message)); } },
+          { label: 'Print again', onClick: () => { reprintCheck(r.id).catch(e => setError(friendlyError(e))); } },
           { label: 'Mark cleared', onClick: () => setTo(r, 'cleared'), hidden: r.status !== 'outstanding' },
           { label: 'Mark not cleared', onClick: () => setTo(r, 'outstanding'), hidden: r.status !== 'cleared' },
           { label: 'Mark lost', onClick: () => setTo(r, 'lost'), hidden: r.status !== 'outstanding' },
