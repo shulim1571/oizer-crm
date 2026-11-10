@@ -191,7 +191,7 @@ export function DataImportPage() {
           { key: 'imported_at', label: 'When', render: r => dateTime(r.imported_at), value: r => dateTime(r.imported_at) },
           { key: 'kind', label: 'Type' },
           { key: 'file_name', label: 'File' },
-          { key: 'campaign_id', label: 'Campaign' },
+          { key: 'campaign_id', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id },
           { key: 'created', label: 'New', align: 'right' },
           { key: 'linked', label: 'Matched', align: 'right' },
           { key: 'updated', label: 'Updated', align: 'right' },

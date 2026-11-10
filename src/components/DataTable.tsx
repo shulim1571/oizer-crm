@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Columns3, Filter, MoreHorizontal, Printer, X } from 'lucide-react';
 import { logActivity, type Row } from '../lib/supabase';
 import { dateTime, download, money, toCsv } from '../lib/format';
@@ -22,6 +23,8 @@ export interface Column {
   optional?: boolean;
   /** Long text (notes, details): shown on one line, click to read it all. */
   long?: boolean;
+  /** The campaign this cell names: its text becomes a link to the campaign's page. */
+  campaignLink?: (row: Row) => string | null | undefined;
 }
 
 /** A secondary action for the table's "More" menu. */
@@ -279,6 +282,11 @@ export default function DataTable(p: Props) {
 
   // Long text stays on one line until clicked; the full text is also in the tooltip.
   const cell = (c: Column, r: Row) => {
+    const campaign = c.campaignLink?.(r);
+    if (campaign) {
+      const shown = c.render ? c.render(r) : display(val(c, r));
+      return <Link className="cell-link" to={`/campaigns/${encodeURIComponent(campaign)}`} onClick={e => e.stopPropagation()}>{shown || campaign}</Link>;
+    }
     if (c.render && !c.long) return c.render(r);
     const text = display(val(c, r));
     if (!c.long && text.length <= 80) return text;

@@ -184,7 +184,7 @@ export function MachinesPage() {
     { key: 'status', label: 'Status', value: r => STATUS[r.status]?.label, render: r => <BookingPill status={r.status} /> },
     { key: 'machine_nickname', label: 'Machine', value: machineLabel },
     { key: 'queue_position', label: 'In line', optional: true, align: 'right' },
-    { key: 'campaign', label: 'Campaign', value: r => `${r.campaign_name ?? ''} - ${r.campaign_id}`, width: 190 },
+    { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => `${r.campaign_name ?? ''} - ${r.campaign_id}`, width: 190 },
     ...(isAdmin ? [{ key: 'fundraiser', label: 'Fundraiser' }] : []),
     { key: 'notes', label: 'Notes', long: true },
     { key: 'admin_notes', label: 'From the office', long: true, width: 200 },
@@ -234,7 +234,7 @@ export function MachineRegistryPage() {
         onOpen={r => setOpen(r.id)}
         columns={[
           { key: 'nickname', label: 'Machine', value: r => `Machine ${r.nickname}` },
-          { key: 'campaign', label: 'Campaign', value: r => name(r) || (r.active ? 'Unassigned' : ''), width: 240 },
+          { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => name(r) || (r.active ? 'Unassigned' : ''), width: 240 },
           { key: 'active', label: 'Status', value: r => (r.active ? 'Active' : 'Retired'), render: r => <Pill tone={r.active ? 'green' : ''}>{r.active ? 'Active' : 'Retired'}</Pill> },
           { key: 'notes', label: 'Notes' },
         ]}
@@ -386,7 +386,7 @@ function MachineDialog({ id, onClose, onChanged }: { id: string; onClose: () => 
             columns={[
               { key: 'booking_date', label: 'Date' },
               { key: 'fundraiser', label: 'Fundraiser' },
-              { key: 'campaign', label: 'Campaign', value: r => `${r.campaign_name ?? ''} - ${r.campaign_id}` },
+              { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => `${r.campaign_name ?? ''} - ${r.campaign_id}` },
               { key: 'status', label: 'Status', value: r => STATUS[r.status]?.label, render: r => <BookingPill status={r.status} /> },
               { key: 'admin_notes', label: 'Note' },
             ]}

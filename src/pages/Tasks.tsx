@@ -37,7 +37,7 @@ const columns = (showOwner: boolean): Column[] => [
   { key: 'status', label: 'Status', value: statusOf, render: r => <StatusPill value={statusOf(r)} /> },
   { key: 'due_date', label: 'Due' },
   ...(showOwner ? [{ key: 'owner', label: 'Fundraiser', value: (r: Row) => r.owner?.full_name ?? 'Shared on campaign' }] : []),
-  { key: 'campaign', label: 'Campaign', value: (r: Row) => campLabel(r.campaigns), width: 190 },
+  { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: (r: Row) => campLabel(r.campaigns), width: 190 },
   { key: 'donor', label: 'Donor', value: (r: Row) => r.donors?.display_name },
   { key: 'description', label: 'Description' },
   { key: 'created_at', label: 'Created', render: (r: Row) => dateTime(r.created_at) },

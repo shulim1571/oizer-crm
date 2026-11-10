@@ -255,7 +255,7 @@ export function RecurringPage() {
   const sum = (k: string) => active.reduce((t, r) => t + Number(r.amount) * Number(r[k] ?? 0), 0);
   const columns: Column[] = [
     { key: 'donor_name', label: 'Donor', width: 170 },
-    { key: 'campaign_label', label: 'Campaign', width: 200 },
+    { key: 'campaign_label', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, width: 200 },
     { key: 'amount', label: 'Amount', align: 'right', render: r => money(r.amount), value: r => Number(r.amount) },
     { key: 'frequency', label: 'How often', value: r => freqLabel(r.frequency) },
     { key: 'payments', label: 'Payments', value: progress },

@@ -71,7 +71,7 @@ export default function FeesPage() {
         canEdit={canEdit}
         defaults={{ fee_type: 'none', fee_percent: 0, fee_flat: 0 }}
         columns={[
-          { key: 'campaign', label: 'Campaign', value: r => campLabel(r.campaigns), width: 220 },
+          { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => campLabel(r.campaigns), width: 220 },
           { key: 'method', label: 'Method', value: r => r.payment_methods?.name },
           { key: 'fee', label: 'Fee', value: feeText },
         ]}

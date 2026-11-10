@@ -128,7 +128,7 @@ export function AccountDetail() {
             loading={expenses.loading}
             error={expenses.error}
             columns={[
-              { key: 'campaign', label: 'Campaign', value: r => campLabel(r.campaigns), width: 200 },
+              { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => campLabel(r.campaigns), width: 200 },
               { key: 'payee', label: 'To' },
               { key: 'amount', label: 'Amount', render: r => <b className="num">{money(r.amount)}</b>, align: 'right' },
               { key: 'method', label: 'Method' },

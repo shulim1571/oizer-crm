@@ -289,7 +289,7 @@ export function PayoutRequestsPage() {
   const columns: Column[] = [
     { key: 'created_at', label: 'Requested', render: r => dateTime(r.created_at) },
     { key: 'status', label: 'Status', value: r => REQUEST_STATUS[r.status]?.label, render: r => <RequestPill status={r.status} /> },
-    { key: 'campaign', label: 'Campaign', value: r => `${r.campaigns?.internal_name || r.campaigns?.external_name || ''} - ${r.campaign_id}`, width: 200 },
+    { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => `${r.campaigns?.internal_name || r.campaigns?.external_name || ''} - ${r.campaign_id}`, width: 200 },
     { key: 'amount', label: 'Amount', value: amountText, align: 'right' },
     { key: 'recipient_name', label: 'Recipient' },
     { key: 'method', label: 'Method' },

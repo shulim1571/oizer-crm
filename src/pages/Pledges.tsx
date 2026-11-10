@@ -24,7 +24,7 @@ const label = (s: string) => s[0].toUpperCase() + s.slice(1);
 export const pledgeColumns = (hideCampaign = false): Column[] => [
   { key: 'reference', label: 'Pledge', width: 150 },
   { key: 'donor_name', label: 'Donor', width: 180 },
-  ...(hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', value: (r: Row) => `${r.campaign_internal || r.campaign_external || ''} - ${r.campaign_id}`, width: 200 }]),
+  ...(hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: (r: Row) => `${r.campaign_internal || r.campaign_external || ''} - ${r.campaign_id}`, width: 200 }]),
   { key: 'amount', label: 'Pledged', render: (r: Row) => money(r.amount), align: 'right' as const },
   { key: 'received', label: 'Received', render: (r: Row) => money(r.received), align: 'right' as const },
   { key: 'balance', label: 'Remaining', render: (r: Row) => money(r.balance), align: 'right' as const },

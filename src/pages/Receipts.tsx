@@ -208,7 +208,7 @@ export function ReceiptsPage() {
     { key: 'receipt_date', label: 'Date' },
     { key: 'donor_name', label: 'Donor', width: 180 },
     { key: 'amount', label: 'Amount', render: r => money(r.amount), align: 'right' },
-    { key: 'campaign_name', label: 'Campaign', width: 180 },
+    { key: 'campaign_name', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, width: 180 },
     { key: 'void_reason', label: 'Voided because' },
     { key: 'issued_at', label: 'Issued', render: r => dateTime(r.issued_at) },
     { key: 'issued_by', label: 'By' },

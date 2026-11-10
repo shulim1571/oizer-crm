@@ -40,7 +40,7 @@ export const voucherColumns = (hideCampaign = false): Column[] => [
   { key: 'issuer_number', label: 'Issuer #', optional: true },
   { key: 'account_number', label: 'Account #', optional: true },
   { key: 'donor_name', label: 'Donor', width: 170 },
-  ...(hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', value: (r: Row) => `${r.campaign_internal || r.campaign_external || ''} - ${r.campaign_id}`, width: 200 }]),
+  ...(hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: (r: Row) => `${r.campaign_internal || r.campaign_external || ''} - ${r.campaign_id}`, width: 200 }]),
   { key: 'face_value', label: 'Face value', render: (r: Row) => money(r.face_value), align: 'right' as const },
   { key: 'total_funded', label: 'Funded', render: (r: Row) => money(r.total_funded), align: 'right' as const },
   { key: 'total_fees', label: 'Fees', optional: true, render: (r: Row) => money(r.total_fees), align: 'right' as const },

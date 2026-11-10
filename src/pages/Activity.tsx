@@ -46,7 +46,7 @@ export default function ActivityPage() {
         { key: 'action', label: 'Action', value: r => ACTIONS[r.action] ?? r.action },
         { key: 'table_name', label: 'Record type', optional: true },
         { key: 'record_id', label: 'Record' },
-        { key: 'campaign_id', label: 'Campaign' },
+        { key: 'campaign_id', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id },
         { key: 'changes', label: 'Details', long: true, value: describe, width: 360 },
         { key: 'ip', label: 'IP', optional: true },
       ]}

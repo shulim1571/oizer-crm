@@ -118,7 +118,7 @@ export function SourceReportPage() {
         columns={[
           { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), value: r => dateTime(r.created_at) },
           { key: 'donor_name', label: 'Donor', width: 180 },
-          { key: 'campaign_id', label: 'Campaign' },
+          { key: 'campaign_id', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id },
           { key: 'amount', label: 'Amount', render: r => money(r.amount), align: 'right' },
           { key: 'source_tag', label: 'Source', width: 200 },
         ]}

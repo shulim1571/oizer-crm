@@ -6,7 +6,7 @@ import AdminLink from '../components/AdminLink';
 import { useState } from 'react';
 import { PayoutStatusPill, payoutStatus } from './Payouts';
 import { Balance, Pill, StatusPill } from '../components/Pill';
-import { supabase } from '../lib/supabase';
+import { supabase, type Row } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, yn } from '../lib/format';
 import {
@@ -27,7 +27,7 @@ export function ExpensesPage() {
       select={`*, campaigns(${CAMP}), accounts(name)`}
       order={{ column: 'created_at', ascending: false }}
       columns={[
-        { key: 'campaign', label: 'Campaign', value: r => campLabel(r.campaigns), width: 200 },
+        { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => campLabel(r.campaigns), width: 200 },
         { key: 'status', label: 'Status', value: payoutStatus, render: r => <PayoutStatusPill row={r} /> },
         { key: 'payee', label: 'To', width: 160 },
         { key: 'description', label: 'Description', long: true },

@@ -49,7 +49,7 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
       {r.possible_duplicate && <> <StatusPill value="Possible duplicate" /></>}
     </>
   ) },
-  ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', width: 180, value: (r: Row) => campLabel(r.campaigns), filter: { column: 'campaign_internal', type: 'text' as const } }]),
+  ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, width: 180, value: (r: Row) => campLabel(r.campaigns), filter: { column: 'campaign_internal', type: 'text' as const } }]),
   { key: 'payment_method', label: 'Method', filter: { column: 'payment_method', type: 'text' } },
   { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170, filter: { column: 'created_at', type: 'date' } },
   // A failed charge took no money, so it shows no fee and no net (the database stores both as zero).

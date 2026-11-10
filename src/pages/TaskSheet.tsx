@@ -56,7 +56,7 @@ const age = (at: string) => {
 const columns: Column[] = [
   { key: 'task_type', label: 'Type', value: r => TYPES[r.task_type]?.label, render: r => <><TypePill type={r.task_type} />{r.held && <> <Pill>Held</Pill></>}</>, width: 210 },
   { key: 'fundraiser', label: 'Fundraiser', width: 140 },
-  { key: 'campaign', label: 'Campaign', value: r => (r.campaign_id ? `${r.campaign_name ?? ''} - ${r.campaign_id}` : ''), width: 190 },
+  { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => (r.campaign_id ? `${r.campaign_name ?? ''} - ${r.campaign_id}` : ''), width: 190 },
   { key: 'amount', label: 'Amount', render: r => r.amount != null && money(r.amount), align: 'right' },
   { key: 'summary', label: 'Details', width: 280, long: true },
   { key: 'submitted_at', label: 'Date', render: r => dateTime(r.submitted_at) },

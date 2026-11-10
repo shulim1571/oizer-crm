@@ -873,3 +873,6 @@ tr.selected td { background: var(--accent-soft); }
   .give-part-details { border-right: 1px solid var(--give-line); padding-right: 32px; }
   .give-rtl .give-part-details { border-right: 0; padding-right: 0; border-left: 1px solid var(--give-line); padding-left: 32px; }
 }
+.balance-note { border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 8px 12px; margin: 8px 0; font-size: 14px; }
+.balance-note.neg b, .neg-text { color: var(--red, #c0392b); }
+.btn.small { padding: 4px 9px; font-size: 12.5px; gap: 5px; white-space: nowrap; }
