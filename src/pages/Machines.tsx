@@ -7,7 +7,7 @@ import SearchSelect from '../components/SearchSelect';
 import { Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
 import { dateTime, localToday } from '../lib/format';
-import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
+import { campaignOptions, clearLookups, managerOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
@@ -88,6 +88,18 @@ export function RequestForm({ onDone, initialDate, title = 'Request a machine' }
   const [campaign, setCampaign] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [options, setOptions] = useState<Option[]>([]);
+  // Admins book for a fundraiser: the booking goes under their name, and the campaigns narrow to theirs.
+  const { isAdmin } = useAuth();
+  const [fundraiser, setFundraiser] = useState<string | null>(null);
+  const [fundraisers, setFundraisers] = useState<Option[]>([]);
+  const [teams, setTeams] = useState<Map<string, string[]>>(new Map());
+  useEffect(() => {
+    if (!isAdmin) return;
+    void managerOptions().then(setFundraisers);
+    void supabase.from('campaigns').select('id, manager_id, sub_manager_ids').neq('status', 'closed').then(({ data }) =>
+      setTeams(new Map(((data ?? []) as Row[]).map(c => [String(c.id), [c.manager_id, ...(c.sub_manager_ids ?? [])].filter(Boolean)]))));
+  }, [isAdmin]);
+  const campaignChoices = isAdmin && fundraiser ? options.filter(o => teams.get(o.value)?.includes(fundraiser)) : options;
   const [error, setError] = useState<string | null>(null);
   const [placed, setPlaced] = useState<Row | null>(null);
   const [version, setVersion] = useState(0);
@@ -102,7 +114,7 @@ export function RequestForm({ onDone, initialDate, title = 'Request a machine' }
   async function submit() {
     setError(null);
     setPlaced(null);
-    const { data, error: e } = await supabase.rpc('request_machine', { p_date: date, p_campaign: campaign, p_notes: notes });
+    const { data, error: e } = await supabase.rpc('request_machine', { p_date: date, p_campaign: campaign, p_notes: notes, p_manager: isAdmin ? fundraiser : null });
     if (e) return setError(e.message);
     const { data: row } = await supabase.from('machine_booking_list').select('*').eq('id', data).maybeSingle();
     setPlaced(row);
@@ -119,8 +131,15 @@ export function RequestForm({ onDone, initialDate, title = 'Request a machine' }
           <input type="date" min={localToday()} value={date} onChange={e => { setDate(e.target.value); setPlaced(null); }} />
           <DateNote date={date} />
         </label>
+        {isAdmin && (
+          <label className="field"><span>Fundraiser *</span>
+            <SearchSelect value={fundraiser} options={fundraisers} required placeholder="Who needs the machine…"
+              onChange={v => { setFundraiser(v); if (v && campaign && !teams.get(campaign)?.includes(v)) setCampaign(null); }} />
+          </label>
+        )}
         <label className="field"><span>Campaign *</span>
-          <SearchSelect value={campaign} options={options} onChange={setCampaign} placeholder="Which campaign it's for…" required />
+          <SearchSelect value={campaign} options={campaignChoices} onChange={setCampaign} required
+            placeholder={isAdmin && fundraiser && campaignChoices.length === 0 ? 'This fundraiser has no open campaigns' : "Which campaign it's for…"} />
         </label>
       </div>
       <label className="field"><span>Notes</span><input value={notes} onChange={e => setNotes(e.target.value)} /></label>
@@ -129,13 +148,13 @@ export function RequestForm({ onDone, initialDate, title = 'Request a machine' }
       {error && <div className="error">{error}</div>}
       {placed && (
         <div className="notice">
-          Request logged for {placed.booking_date}. You're number {placed.queue_position} in line that day
-          {placed.status === 'waitlisted' ? ', on the waitlist.' : ', waiting for the office to assign a machine.'}
+          {isAdmin ? `Booked for ${placed.fundraiser ?? 'the fundraiser'} on ${placed.booking_date}. Number ${placed.queue_position} in line that day` : `Request logged for ${placed.booking_date}. You're number ${placed.queue_position} in line that day`}
+          {placed.status === 'waitlisted' ? ', on the waitlist.' : ', waiting for a machine to be assigned.'}
         </div>
       )}
       <div className="form-actions">
         <div className="spacer" />
-        <button type="button" className="btn primary" disabled={!date || !campaign} onClick={submit}>Submit request</button>
+        <button type="button" className="btn primary" disabled={!date || !campaign || (isAdmin && !fundraiser)} onClick={submit}>{isAdmin ? 'Add booking' : 'Submit request'}</button>
       </div>
     </div>
   );

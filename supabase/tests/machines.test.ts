@@ -256,3 +256,35 @@ describe('machine booking', () => {
     expect(await one(db, `select available from public.machine_availability($1, $1)`, [FUTURE], OTHER_ADMIN)).toMatchObject({ available: 1 });
   });
 });
+
+describe('admin booking for a fundraiser', () => {
+  let db: PGlite;
+  beforeEach(async () => { db = await seededDb(); });
+  const book = (manager: string | null, campaign = '1003', user = ADMIN) =>
+    one<{ id: string }>(db, `select public.request_machine($1, $2, null, $3) as id`, [FUTURE, campaign, manager], user).then(r => r.id);
+  const row = (id: string) => one(db, `select manager_id, status, campaign_id from public.machine_bookings where id = $1`, [id]);
+
+  it('puts the booking under the chosen fundraiser as a normal pending request', async () => {
+    await machine(db, 'DP_1');
+    // 1003's primary is m2; m1 is a secondary there.
+    expect(await row(await book('m1'))).toEqual({ manager_id: 'm1', status: 'pending', campaign_id: '1003' });
+    // Without a choice it goes under the campaign's primary, as before.
+    expect((await row(await book(null))).manager_id).toBe('m2');
+    // Machines are still assigned and confirmed separately; when they're all taken it waits in line like any request.
+    expect((await row(await book('m2'))).status).toBe('waitlisted');
+  });
+
+  it('only takes an active fundraiser who is on the campaign', async () => {
+    await machine(db, 'DP_1');
+    await expect(book('m1', '1002')).rejects.toThrow(/isn't on campaign 1002/);
+    await expect(book('nobody')).rejects.toThrow(/active fundraiser/);
+    await db.query(`update public.managers set status = 'suspended' where id = 'm1'`);
+    await expect(book('m1')).rejects.toThrow(/active fundraiser/);
+  });
+
+  it("doesn't let a fundraiser book under someone else", async () => {
+    await machine(db, 'DP_1');
+    await expect(book('m2', '1003', MANAGER_1)).rejects.toThrow(/only book a machine for yourself/);
+    expect((await row(await book('m1', '1003', MANAGER_1))).manager_id).toBe('m1');
+  });
+});
