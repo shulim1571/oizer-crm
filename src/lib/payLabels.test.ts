@@ -25,12 +25,12 @@ describe('payment page method labels', () => {
 
   it('put card number, expiry and CVV on one line, in that order, and first and last name side by side', () => {
     const pay = readFileSync('src/pages/Payments.tsx', 'utf8');
-    const fields = pay.slice(pay.indexOf('<div ref={box} className="card-fields">'));
+    const fields = pay.slice(pay.indexOf("<div ref={box} className={`card-fields"));
     const at = (s: string) => fields.indexOf(s);
     expect(at('data-ifields-id="card-number"')).toBeLessThan(at('card-exp'));
     expect(at('card-exp')).toBeLessThan(at('data-ifields-id="cvv"'));
     const css = readFileSync('src/styles.css', 'utf8');
-    expect(css).toMatch(/\.card-fields \{[^}]*grid-template-columns: minmax\(0, 1fr\) 96px 84px/);
+    expect(css).toMatch(/\.card-fields \{[^}]*grid-template-columns: minmax\(0, 1fr\) 88px 76px/);
     expect(css).not.toMatch(/\.card-fields \{ grid-template-columns: minmax\(0, 1fr\); \}/);
     const give = readFileSync('src/pages/Give.tsx', 'utf8');
     expect(give).toMatch(/<div className="give-names wide">\s*<label[^]*?first_name[^]*?last_name[^]*?<\/div>/);
@@ -42,5 +42,20 @@ describe('payment page method labels', () => {
       .toEqual(['Make sure to include the campaign ID', 'הקפידו לציין את מספר הקמפיין', 'מאכט זיכער צו שרייבן די קאמפעין נומער']);
     const other = give.slice(give.indexOf('{t.other_ways}'), give.indexOf('</section>', give.indexOf('{t.other_ways}')));
     expect(other).toContain('{t.include_id}: <b>{c.id}</b>');
+  });
+});
+
+describe('card row follow-up (Moshe Henig, 2026-11-10: not even; label expiry "Exp.")', () => {
+  it('labels expiry Exp. and gives the three fields one height and one label line', () => {
+    const give = readFileSync('src/pages/Give.tsx', 'utf8');
+    const pay = readFileSync('src/pages/Payments.tsx', 'utf8');
+    const css = readFileSync('src/styles.css', 'utf8');
+    expect(give).toContain("exp: 'Exp.'");
+    expect(pay).toContain("exp: 'Exp.'");
+    expect(css).toMatch(/\.card-fields > \.field > span \{[^}]*height: 18px;[^}]*white-space: nowrap/);
+    expect(css).toMatch(/\.card-fields \.ifield \{[^}]*height: 40px/);
+    expect(css).toMatch(/\.card-fields \.card-exp input \{[^}]*height: 40px/);
+    expect(css).toMatch(/\.give \.card-fields\.tall \.ifield, \.give \.card-fields\.tall \.card-exp input \{ height: 46px/);
+    expect(pay).toContain("const h = tall ? 46 : 40;");
   });
 });

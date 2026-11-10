@@ -19,7 +19,7 @@ const T: Record<Lang, Record<string, string>> = {
     raised: 'raised of', goal: 'goal', amount: 'Amount', other: 'Other amount', cover: 'I\'d like to cover the processing fee so 100% of my donation goes to the campaign',
     fee: 'fee', total: 'Total charge', first: 'First name', last: 'Last name', phone: 'Phone', email: 'Email (optional)', country: 'Country',
     address: 'Address (optional)', zip: 'ZIP code', postal: 'Postal code', postcode: 'Postcode', notes: 'Message (optional)', card: 'Card number', cvv: 'CVV',
-    exp: 'Expiry', donate: 'Donate', processing: 'Processing…', loading: 'Loading the secure card fields…', other_ways: 'Other ways to give', include_id: 'Make sure to include the campaign ID',
+    exp: 'Exp.', donate: 'Donate', processing: 'Processing…', loading: 'Loading the secure card fields…', other_ways: 'Other ways to give', include_id: 'Make sure to include the campaign ID',
     checks: 'Checks payable to', zelle: 'Zelle', ein: 'EIN', wall: 'Recent donors', anonymous: 'Anonymous', thanks: 'Thank you for your donation to',
     charged: 'Charged', receipt: 'Send me a receipt', receipt_sent: 'Thank you. The office will send your receipt.', another: 'Make another donation',
     confirm: 'You\'re about to donate {amount}. Please confirm this is correct.', min: 'The smallest gift here is {amount}.', choose: 'Choose an amount.',
@@ -389,7 +389,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
       {method === 'card' && (
         <>
           <p className="give-safe" dir="auto"><span aria-hidden="true">🔒</span> {t.safe}</p>
-          <CardFields ifieldsKey={data.payments.ifields_key} onTokens={setTokens} exp={exp} onExp={setExp} labels={{ card: t.card, cvv: t.cvv, exp: t.exp, loading: t.loading }} />
+          <CardFields ifieldsKey={data.payments.ifields_key} onTokens={setTokens} exp={exp} onExp={setExp} tall labels={{ card: t.card, cvv: t.cvv, exp: t.exp, loading: t.loading }} />
         </>
       )}
       {method === 'ach' && <BankFields value={bank} onChange={setBank} L={L} authorization={data.payments.ach_authorization} orgName={data.org.name} />}

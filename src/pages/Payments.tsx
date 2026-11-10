@@ -74,8 +74,10 @@ export const expInput = (raw: string) => { const d = raw.replace(/\D/g, '').slic
  * Sola's card number and CVV fields, with the expiry between them: card number, expiry, CVV on one line
  * (Moshe Henig, 2026-11-10).
  */
-export function CardFields({ ifieldsKey, onTokens, exp, onExp, labels = { card: 'Card number', cvv: 'CVV', exp: 'Expiry', loading: 'Loading Sola\'s secure card fields…' } }: {
+export function CardFields({ ifieldsKey, onTokens, exp, onExp, tall = false, labels = { card: 'Card number', cvv: 'CVV', exp: 'Exp.', loading: 'Loading Sola\'s secure card fields…' } }: {
   ifieldsKey: string; onTokens: (get: () => Promise<{ card: string; cvv: string }>) => void; exp: string; onExp: (v: string) => void;
+  /** The payment page's 46px fields instead of the office's 40px. */
+  tall?: boolean;
   labels?: { card: string; cvv: string; exp: string; loading: string };
 }) {
   const box = useRef<HTMLDivElement>(null);
@@ -90,7 +92,8 @@ export function CardFields({ ifieldsKey, onTokens, exp, onExp, labels = { card: 
     if (!ready) return;
     w.setAccount?.(ifieldsKey, 'Oizer CRM', '1.0');
     w.enableAutoFormatting?.(' ');
-    const style = { border: '1px solid #d9dce3', 'border-radius': '8px', padding: '8px 10px', 'font-size': '15px', width: '100%', 'box-sizing': 'border-box', height: '38px' };
+    const h = tall ? 46 : 40;
+    const style = { border: '1px solid #d9dce3', 'border-radius': tall ? '10px' : '8px', padding: '0 10px', margin: '0', 'font-size': tall ? '16px' : '15px', width: '100%', 'box-sizing': 'border-box', height: `${h}px`, 'line-height': `${h - 2}px` };
     w.setIfieldStyle?.('card-number', style);
     w.setIfieldStyle?.('cvv', style);
     onTokens(() => new Promise((resolve, reject) => {
@@ -102,10 +105,10 @@ export function CardFields({ ifieldsKey, onTokens, exp, onExp, labels = { card: 
         resolve({ card, cvv });
       }, () => reject(new Error(box.current?.querySelector('[data-ifields-id="card-data-error"]')?.textContent || 'Check the card number and CVV.')), 30000);
     }));
-  }, [ready, ifieldsKey, onTokens]);
+  }, [ready, ifieldsKey, onTokens, tall]);
   if (!ready) return error ? <div className="error">{error}</div> : <p className="muted small">{labels.loading}</p>;
   return (
-    <div ref={box} className="card-fields">
+    <div ref={box} className={`card-fields ${tall ? 'tall' : ''}`}>
       <label className="field"><span dir="auto">{labels.card}</span>
         <iframe title={labels.card} className="ifield" data-ifields-id="card-number" data-ifields-placeholder={labels.card} src={`${IFIELDS}/ifield.htm`} /></label>
       <input type="hidden" data-ifields-id="card-number-token" name="xCardNum" />
