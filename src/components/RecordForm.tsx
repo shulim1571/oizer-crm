@@ -1,3 +1,4 @@
+import CampaignBalanceNote from './CampaignBalanceNote';
 import { NewDonorDialog } from './DonorPicker';
 import { useEffect, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
@@ -162,6 +163,7 @@ export default function RecordForm(p: Props) {
           <div className="fields">{p.fields.filter(f => f.advanced).map(fieldBox)}</div>
         </details>
       )}
+      {p.table === 'expenses' && !p.onBulk && <CampaignBalanceNote campaignId={values.campaign_id} amount={values.amount} />}
       {(error || p.bulkError) && <div className="error">{error ?? p.bulkError}</div>}
       {p.onBulk && <p className="muted small">Only fields you fill in are changed. Everything else stays as it is on each transaction.</p>}
       {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <DonationActions record={p.record!} onDone={p.onSaved} />}
