@@ -10,7 +10,7 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
-import { donationFields } from '../lib/schemas';
+import { donationFields, newDonationFields } from '../lib/schemas';
 import TransactionBulk from './TransactionBulk';
 import { DONATION_KINDS, DONATION_SELECT, donationColumns, donationKind, isLive } from './donationColumns';
 import { CardChargeDialog } from './Payments';
@@ -314,7 +314,7 @@ export function NewDonation() {
         table="donations"
         title="Donation details"
         saveLabel="Record donation"
-        fields={donationFields}
+        fields={newDonationFields}
         defaults={{ type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() }}
         onClose={() => nav(-1)}
         onSaved={row => { setLast(row); setKey(k => k + 1); }}

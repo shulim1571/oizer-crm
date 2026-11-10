@@ -1,4 +1,5 @@
 import type { Field } from '../components/RecordForm';
+import type { Row } from './supabase';
 import { localToday } from './format';
 import {
   CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, payeeOptions, payoutMethodOptions, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
@@ -65,6 +66,29 @@ export const donationFields: Field[] = [
   { name: 'created_at', label: 'Timestamp', advanced: true, type: 'datetime' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
+
+/** The payment method, for showing fields that only apply to some methods. */
+const method = (v: Row) => String(v.payment_method ?? '').trim().toLowerCase();
+const isCheck = (v: Row) => method(v).startsWith('check');
+const isCashOrCheck = (v: Row) => isCheck(v) || method(v).startsWith('cash');
+const CHECK_ONLY = ['check_number', 'post_dated', 'check_date'];
+/** Batch rows come in through vouchers and batch entry, which have their own forms. */
+const BATCH_ONLY = ['batch_id', 'funded', 'batch_status', 'batch_pending'];
+
+/**
+ * The New Donation form (Moshe Henig, 2026-11-10): check fields only for a check, Delivered only for cash or a
+ * check, no batch fields or Batch type (vouchers have their own form), and Manual fee always in view.
+ * Editing a donation keeps the full form, so batch rows can still be corrected.
+ */
+export const newDonationFields: Field[] = donationFields
+  .filter(f => !BATCH_ONLY.includes(f.name))
+  .map(f => {
+    if (f.name === 'type') return { ...f, options: DONATION_TYPES.filter(o => o.value !== 'Batch') };
+    if (CHECK_ONLY.includes(f.name)) return { ...f, showIf: isCheck };
+    if (f.name === 'delivered') return { ...f, showIf: isCashOrCheck, advanced: false };
+    if (f.name === 'manual_fee') return { ...f, advanced: false };
+    return f;
+  });
 
 /** What a fundraiser with the override fills in. It always waits for an admin. */
 export const fundraiserDonationFields: Field[] = [

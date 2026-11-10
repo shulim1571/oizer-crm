@@ -26,6 +26,8 @@ export interface Field {
   advanced?: boolean;
   /** Shown but can't be changed, and left out when saving. */
   readOnly?: boolean;
+  /** Shown (and saved) only while this is true of what's typed in the form. */
+  showIf?: (values: Row) => boolean;
   /** How to make a new one from right here, without leaving this form. */
   create?: () => { noun: string; table: string; fields: Field[]; defaults?: Row; pk?: string };
 }
@@ -79,6 +81,7 @@ export default function RecordForm(p: Props) {
     }
     return f;
   });
+  const shownFields = fields.filter(f => !f.showIf || f.showIf(values));
 
   const loadOptions = (fields: Field[]) => {
     for (const f of fields) {
@@ -124,7 +127,7 @@ export default function RecordForm(p: Props) {
     setError(null);
     const payload: Row = isNew ? { ...p.defaults } : {};
     for (const f of fields) {
-      if (f.readOnly) continue;
+      if (f.readOnly || (f.showIf && !f.showIf(values))) continue;
       let v = values[f.name];
       if (v === '' || v === undefined) v = null;
       if (f.type === 'number' && v != null) v = Number(v);
@@ -176,12 +179,12 @@ export default function RecordForm(p: Props) {
       {p.description && <p className="muted small form-desc">{p.description}</p>}
       {donationEdit && processed && <p className="muted small">This payment went through the card processor, so its status, amount, method, fee and time can't be edited here. Use Refund or Void at Sola, or Retry for a failed charge.</p>}
       <div className="fields">
-        {fields.filter(f => !f.advanced).map(fieldBox)}
+        {shownFields.filter(f => !f.advanced).map(fieldBox)}
       </div>
-      {fields.some(f => f.advanced) && (
-        <details className="help advanced-fields" open={fields.some(f => f.advanced && !isNew && values[f.name] != null && values[f.name] !== '' && values[f.name] !== false)}>
+      {shownFields.some(f => f.advanced) && (
+        <details className="help advanced-fields" open={shownFields.some(f => f.advanced && !isNew && values[f.name] != null && values[f.name] !== '' && values[f.name] !== false)}>
           <summary>Advanced / accounting</summary>
-          <div className="fields">{fields.filter(f => f.advanced).map(fieldBox)}</div>
+          <div className="fields">{shownFields.filter(f => f.advanced).map(fieldBox)}</div>
         </details>
       )}
       {p.table === 'expenses' && !p.onBulk && <CampaignBalanceNote campaignId={values.campaign_id} amount={values.amount} />}

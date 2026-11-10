@@ -15,7 +15,7 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, pct, yn } from '../lib/format';
-import { campaignFields, donationFields, expenseFields, fundraiserDonationFields, newPayoutDefaults, taskFields, transferEditFields } from '../lib/schemas';
+import { campaignFields, donationFields, expenseFields, newDonationFields, fundraiserDonationFields, newPayoutDefaults, taskFields, transferEditFields } from '../lib/schemas';
 import { clearLookups } from '../lib/lookups';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
 import { STATUS_LABEL } from './Campaigns';
@@ -127,7 +127,7 @@ export default function CampaignDetail() {
   const tabConfig = {
     donations: {
       columns: donationColumns({ hideCampaign: true }),
-      add: !isAdmin && canEnter ? { table: 'donations', title: 'New payment (held for approval)', fields: fundraiserDonationFields, defaults: { campaign_id: id, source: 'Manual' } } : isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() } },
+      add: !isAdmin && canEnter ? { table: 'donations', title: 'New payment (held for approval)', fields: fundraiserDonationFields, defaults: { campaign_id: id, source: 'Manual' } } : isAdmin && { table: 'donations', title: 'New Donation', fields: newDonationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() } },
       edit: isAdmin && { table: 'donations', title: 'Edit Donation', fields: donationFields },
     },
     expenses: {
