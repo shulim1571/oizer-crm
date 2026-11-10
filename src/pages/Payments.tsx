@@ -1,3 +1,4 @@
+import DonorPicker from '../components/DonorPicker';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CreditCard, KeyRound, Trash2, X } from 'lucide-react';
@@ -6,7 +7,7 @@ import { Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
 import { dateTime, localToday, money } from '../lib/format';
 import { nextDate } from '../lib/recurring';
-import { campaignOptions, donorOptions, type Option } from '../lib/lookups';
+import { campaignOptions, type Option } from '../lib/lookups';
 import { requestOrgId, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
@@ -119,7 +120,6 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
 }) {
   const config = usePaymentConfig();
   const [campaigns, setCampaigns] = useState<Option[]>([]);
-  const [donors, setDonors] = useState<Option[]>([]);
   const [campaign, setCampaign] = useState<string | null>(campaignId ?? null);
   const [donor, setDonor] = useState<string | null>(donorId ?? null);
   const [cards, setCards] = useState<Row[]>([]);
@@ -144,7 +144,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
   const tokens = useRef<() => Promise<{ card: string; cvv: string }>>();
   const setTokens = useRef((get: () => Promise<{ card: string; cvv: string }>) => { tokens.current = get; }).current;
 
-  useEffect(() => { void campaignOptions().then(setCampaigns); void donorOptions().then(setDonors); }, []);
+  useEffect(() => { void campaignOptions().then(setCampaigns); }, []);
   useEffect(() => {
     setCards([]);
     if (!donor) return;
@@ -257,7 +257,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, onClose, onDone 
             OJC 6900664467242419; Pledger 6599973975864259; Donors Fund 6599992999456587 (under $5).</p>}
           <div className="fields">
             <label className="field"><span>Campaign</span><SearchSelect value={campaign} options={campaigns} onChange={setCampaign} required /></label>
-            <label className="field"><span>Donor</span><SearchSelect value={donor} options={donors} onChange={v => { setDonor(v); setCard(''); }} placeholder="Optional" /></label>
+            <label className="field"><span>Donor</span><DonorPicker value={donor} onChange={v => { setDonor(v); setCard(''); }} placeholder="Optional · search or add a donor" /></label>
             <label className="field"><span>Amount</span><input type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></label>
             {cards.length > 0 && (
               <label className="field"><span>Card</span>

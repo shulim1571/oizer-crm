@@ -1,3 +1,4 @@
+import DonorPicker from '../components/DonorPicker';
 import { useEffect, useMemo, useState } from 'react';
 import { Copy, Mail, MessageSquare, Paperclip, Send, Trash2, X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
@@ -294,7 +295,7 @@ export function OutreachPage() {
       {step === 2 && <div className="panel-box">
         <h2>Recipients ({recipients.length})</h2>
         <div className="fields">
-          <label className="field"><span>Add a donor</span><SearchSelect value={null} options={donors} onChange={v => addPerson('donor', v)} placeholder="Search donors" /></label>
+          <label className="field"><span>Add a donor</span><DonorPicker value={null} onChange={v => addPerson('donor', v)} placeholder="Search or add a donor" /></label>
           <label className="field"><span>Add a fundraiser</span><SearchSelect value={null} options={managers} onChange={v => addPerson('fundraiser', v)} placeholder="Search fundraisers" /></label>
           <label className="field"><span>Add a group</span>
             <select value={group} onChange={e => setGroup(e.target.value)}>{GROUPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>

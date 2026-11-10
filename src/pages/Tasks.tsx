@@ -1,3 +1,4 @@
+import { NewDonorDialog } from '../components/DonorPicker';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X } from 'lucide-react';
@@ -163,6 +164,7 @@ function NewCallListDialog({ onClose, onDone }: { onClose: () => void; onDone: (
   const [managers, setManagers] = useState<Option[]>([]);
   const [donors, setDonors] = useState<Option[]>([]);
   const [onCampaign, setOnCampaign] = useState<Set<string> | null>(null);
+  const [addingDonor, setAddingDonor] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -205,7 +207,16 @@ function NewCallListDialog({ onClose, onDone }: { onClose: () => void; onDone: (
           <label className="field"><span>Due</span><input type="date" value={due} onChange={e => setDue(e.target.value)} /><DateNote date={due} /></label>
           {isAdmin && <label className="field"><span>For fundraiser</span><SearchSelect value={owner} options={managers} onChange={setOwner} placeholder="Optional…" /></label>}
         </div>
-        <label className="field"><span>Donors ({picked.size} chosen)</span><input value={search} placeholder="Search donors…" onChange={e => setSearch(e.target.value)} /></label>
+        <label className="field"><span>Donors ({picked.size} chosen) · <button type="button" className="link" onClick={() => setAddingDonor(true)}>+ New donor</button></span>
+          <input value={search} placeholder="Search donors…" onChange={e => setSearch(e.target.value)} /></label>
+        {addingDonor && (
+          <NewDonorDialog name={search} onClose={() => setAddingDonor(false)} onSaved={async row => {
+            setAddingDonor(false);
+            setDonors(await donorOptions());
+            setPicked(p => new Set(p).add(String(row.id)));
+            setSearch('');
+          }} />
+        )}
         <div className="pick-list">
           {shown.map(d => (
             <label className="inline-check" key={d.value}><input type="checkbox" checked={picked.has(d.value)} onChange={() => toggle(d.value)} /> {d.label}</label>

@@ -1,3 +1,4 @@
+import { NewDonorDialog } from './DonorPicker';
 import { useEffect, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
 import { supabase, type Row } from '../lib/supabase';
@@ -50,7 +51,7 @@ interface Props {
 const NEW_OPTION = '__create_new__';
 
 export default function RecordForm(p: Props) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, canWork } = useAuth();
   const pk = p.pk ?? 'id';
   const isNew = !p.record;
   const [creating, setCreating] = useState<Field | null>(null);
@@ -74,7 +75,8 @@ export default function RecordForm(p: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const createFor = (f: Field) => (f.create && isAdmin ? { onCreate: () => setCreating(f), createLabel: f.create().noun } : {});
+  // Admins can add anything from here; fundraisers can add a donor (through their own donor form).
+  const createFor = (f: Field) => (f.create && (isAdmin || (canWork && f.create().table === 'donors')) ? { onCreate: () => setCreating(f), createLabel: f.create().noun } : {});
 
   // The new record is selected, and everything already typed in this form stays as it was.
   function created(f: Field, row: Row) {
@@ -130,6 +132,7 @@ export default function RecordForm(p: Props) {
 
   const nested = creating && (() => {
     const spec = creating.create!();
+    if (spec.table === 'donors') return <NewDonorDialog onClose={() => setCreating(null)} onSaved={row => created(creating, row)} />;
     return (
       <RecordForm
         table={spec.table}

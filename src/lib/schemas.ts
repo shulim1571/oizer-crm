@@ -7,7 +7,8 @@ import {
 const create = {
   campaign: () => ({ noun: 'campaign', table: 'campaigns', fields: newCampaignFields, defaults: { status: 'active' } }),
   fundraiser: () => ({ noun: 'fundraiser', table: 'managers', fields: personFields }),
-  donor: () => ({ noun: 'donor', table: 'donors', fields: donorFields }),
+  // Opened through NewDonorDialog, which gives fundraisers their own short donor form.
+  donor: () => ({ noun: 'donor', table: 'donors', fields: donorFields, defaults: { country: 'US' } }),
   collector: () => ({ noun: 'collector', table: 'collectors', fields: personFields }),
   source: () => ({ noun: 'source', table: 'sources', fields: sourceFields }),
   account: () => ({ noun: 'account', table: 'accounts', fields: accountFields }),
@@ -75,7 +76,7 @@ export const fundraiserDonationFields: Field[] = [
 ];
 
 const pledgeWho: Field[] = [
-  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, help: 'Payments match automatically only when a donor is linked' },
+  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, create: create.donor, help: 'Payments match automatically only when a donor is linked' },
   { name: 'name', label: 'Name, if not linked' },
   { name: 'phone', label: 'Phone' },
 ];
@@ -110,7 +111,7 @@ export const voucherFields: Field[] = [
   { name: 'issuer', label: 'Voucher issuer', type: 'select', options: voucherIssuerOptions, required: true },
   { name: 'issuer_number', label: 'Issuer voucher / batch #' },
   { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
-  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions },
+  { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, create: create.donor },
   { name: 'name', label: 'Donor name, if not linked' },
   { name: 'face_value', label: 'Face value', type: 'number', required: true },
   { name: 'fee_type', label: 'Fee type', type: 'select', options: [['flat', 'Flat $'], ['percent', '% rate'], ['none', 'None']].map(([value, label]) => ({ value, label })), help: "Leave empty to use the issuer's rate from Methods & Fees. Set once: it can't change after funds arrive." },
