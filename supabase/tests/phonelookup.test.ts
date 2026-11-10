@@ -140,14 +140,14 @@ describe('phone and text lookup', () => {
       await add('r4', '1001', 99, { at: '2030-01-01T19:00:00Z', status: 'failed' });
     });
 
-    it('lists an admin’s latest transactions across campaigns, minimal and newest first', async () => {
+    it('lists an admin’s latest transactions across campaigns, with the donor’s full name, newest first', async () => {
       const r = await text(db, ADMIN_PHONE, 'recent');
       const lines = r!.split('\n');
       expect(lines[0]).toBe('Recent:');
-      expect(lines.slice(1, 4)).toEqual(['1/1 $54.00 #1001 Y.G.', '1/1 $36.00 #1002 Anon', '1/1 $180.00 #1001 M.K.']);
+      expect(lines.slice(1, 4)).toEqual(['1/1 $54.00 #1001 Yossi Gold', '1/1 $36.00 #1002 Anon', '1/1 $180.00 #1001 Moshe Klein']);
       expect(lines.length).toBeLessThanOrEqual(6);
       expect(r).not.toContain('$99.00');           // a failed charge isn't listed
-      expect(r).not.toMatch(/Klein|Weiss|Gold/);   // initials only
+      expect(r).not.toMatch(/\(845\)|@/);          // names only: no phones or emails
       const one = (await text(db, ADMIN_PHONE, 'Recent 1002'))!.split('\n');
       expect(one.slice(0, 2)).toEqual(['Recent for #1002:', '1/1 $36.00 #1002 Anon']);
       expect(one.slice(1).every(l => l.includes('#1002'))).toBe(true);
@@ -182,7 +182,7 @@ describe('phone and text lookup', () => {
     it('leaves Donary donations out of every automatic reply when the setting is on (off by default)', async () => {
       expect(await admin(db, `select exclude_donary from public.phone_lookup_status()`)).toEqual([{ exclude_donary: false }]);
       const before = await lookup(db, M1_PHONE, '1001', null);
-      expect(await text(db, ADMIN_PHONE, 'recent 1001')).toContain('Y.G.');
+      expect(await text(db, ADMIN_PHONE, 'recent 1001')).toContain('Yossi Gold');
 
       await admin(db, `select public.save_phone_lookup(true, false, true)`);
       expect(await admin(db, `select exclude_donary from public.phone_lookup_status()`)).toEqual([{ exclude_donary: true }]);
@@ -190,7 +190,7 @@ describe('phone and text lookup', () => {
       expect(Number(after.campaign.raised)).toBeCloseTo(Number(before.campaign.raised) - 54, 2);
       expect(Number(after.campaign.balance)).toBeCloseTo(Number(before.campaign.balance) - 54, 2);
       expect(await text(db, M1_PHONE, '1001')).toContain(`Raised $${money(Number(before.campaign.raised) - 54)}`);
-      expect(await text(db, ADMIN_PHONE, 'recent 1001')).not.toContain('Y.G.');
+      expect(await text(db, ADMIN_PHONE, 'recent 1001')).not.toContain('Yossi Gold');
       expect(await text(db, M1_PHONE, 'bal')).toMatch(/^1001 /);
       // Saving the switches without the new setting keeps it as it was; only the Super Admin can change it.
       await admin(db, `select public.save_phone_lookup(true, true)`);

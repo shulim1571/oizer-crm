@@ -54,7 +54,7 @@ export default function PhoneLookupPage() {
         </p>
         <ul className="muted small">
           <li>Text <code>BAL</code> for your campaigns, <code>1001</code> for one of them, or <code>1001 1234</code> with a PIN. <code>MENU</code> explains.</li>
-          <li>Admins and fundraisers can text <code>RECENT</code> for their last 5 transactions, or <code>RECENT 1001</code> for one campaign: date, amount, campaign and donor initials. Admins are matched by the phone on their notification settings, fundraisers by a registered phone. Up to 10 an hour per phone; an unknown phone gets one reply a day saying it isn’t registered.</li>
+          <li>Admins and fundraisers can text <code>RECENT</code> for their last 5 transactions, or <code>RECENT 1001</code> for one campaign: date, amount, campaign and the donor’s name (Anon for anonymous gifts). Admins are matched by the phone on their notification settings, fundraisers by a registered phone. Up to 10 an hour per phone; an unknown phone gets one reply a day saying it isn’t registered.</li>
           <li>Call and enter the campaign number, then the PIN; fundraisers can press star for all their campaigns.</li>
         </ul>
         {isSuperAdmin ? (
