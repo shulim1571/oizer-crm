@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Plus, Receipt, Scale, Star, TrendingUp } from 'lucide-react';
+import { Clock, ExternalLink, Plus, Receipt, Scale, Star, TrendingUp } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import Kpi from '../components/Kpi';
@@ -12,6 +12,7 @@ import { useAuth } from '../lib/auth';
 import { money, pct } from '../lib/format';
 import { newCampaignFields } from '../lib/schemas';
 import { TemplateStep } from './Templates';
+import { paymentUrl } from './Outreach';
 
 export const campaignColumns: Column[] = [
   {
@@ -59,13 +60,21 @@ export default function Campaigns({ mode }: { mode: Mode }) {
     [mode],
   );
 
+  // Every campaign gets a button to its payment page (Moshe Henig). Closed campaigns take no gifts, so none there.
+  const payColumn: Column = {
+    key: 'payment_page', label: 'Payment page', value: () => '',
+    render: (r: Row) => r.status === 'closed' ? null : (
+      <a className="btn small" href={paymentUrl(r)} target="_blank" rel="noopener noreferrer" title="Open this campaign's payment page"
+        onClick={e => e.stopPropagation()}><ExternalLink size={14} /> Payment page</a>
+    ),
+  };
   const columns = mode === 'all'
     ? [...campaignColumns, {
         key: 'status', label: 'Status',
         value: (r: Row) => STATUS_LABEL[r.status],
         render: (r: Row) => <StatusPill value={STATUS_LABEL[r.status]} />,
-      }]
-    : campaignColumns;
+      }, payColumn]
+    : [...campaignColumns, payColumn];
 
   return (
     <>

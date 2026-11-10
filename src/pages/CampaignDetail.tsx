@@ -1,8 +1,9 @@
 import RowMenu from '../components/RowMenu';
+import { CardChargeDialog } from './Payments';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Clock, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Share2, Star, StickyNote, TrendingUp,
+  ArrowLeft, Clock, CreditCard, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Share2, Star, StickyNote, TrendingUp,
 } from 'lucide-react';
 import { ShareDialog, paymentUrl } from './Outreach';
 import DataTable from '../components/DataTable';
@@ -35,6 +36,7 @@ export default function CampaignDetail() {
   const nav = useNavigate();
   const { isAdmin, canWork, permissions, defaultAccountId } = useAuth();
   const [tab, setTab] = useState<Tab>('donations');
+  const [charging, setCharging] = useState(false);
   const [form, setForm] = useState<{ table: string; title: string; fields: Field[]; record?: Row | null; defaults?: Row } | null>(null);
   const [version, setVersion] = useState(0);
   const [canEnter, setCanEnter] = useState(false);
@@ -210,16 +212,11 @@ export default function CampaignDetail() {
           </div>
         </div>
         <div className="spacer" />
-        {isAdmin && (
-          <button className="btn" onClick={() => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c })}>
-            <Pencil size={16} /> Edit
-          </button>
-        )}
-        {canWork && c.status !== 'closed'
-          ? <button className="btn primary" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>
-          : <a className="btn primary" href={paymentUrl(c)} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>}
+        {/* Moshe Henig: the payment page sits where Edit was; Edit is in More. */}
+        {c.status !== 'closed' && <a className="btn" href={paymentUrl(c)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Open payment page</a>}
+        {canWork && c.status !== 'closed' && <button className="btn primary" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>}
         <RowMenu label="More campaign actions" text="More" items={[
-          { label: 'Open the payment page', onClick: () => window.open(paymentUrl(c), '_blank', 'noopener'), hidden: !(canWork && c.status !== 'closed') },
+          { label: 'Edit campaign', icon: <Pencil size={14} />, onClick: () => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c }), hidden: !isAdmin },
           { label: 'Batch entry', onClick: () => nav(`/campaigns/${encodeURIComponent(id)}/batch`), hidden: !(canEnter && c.status !== 'closed') },
           { label: 'Report', onClick: () => setReporting('report'), hidden: !canWork },
           { label: 'Donor list', onClick: () => setReporting('donors'), hidden: !canWork },
@@ -289,6 +286,15 @@ export default function CampaignDetail() {
             </>
           : tab === 'pledges' ? canWork && c.status !== 'closed' && <NewPledgeButtons campaignId={id} onSaved={() => setVersion(v => v + 1)} />
           : tab === 'vouchers' ? isAdmin && c.status !== 'closed' && <NewVoucherButton campaignId={id} onSaved={() => setVersion(v => v + 1)} />
+          : tab === 'donations' ? <>
+              {/* The same Charge a card as elsewhere (donor picker, saved cards, recurring), for this campaign. */}
+              {isAdmin && c.status !== 'closed' && <button type="button" className="btn" onClick={() => setCharging(true)}><CreditCard size={16} /> Charge a card</button>}
+              {tabConfig.add && (
+                <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
+                  <Plus size={16} /> Add donation
+                </button>
+              )}
+            </>
           : tabConfig.add && (
             <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
               <Plus size={16} /> Add
@@ -297,6 +303,7 @@ export default function CampaignDetail() {
         }
       />}
 
+      {charging && <CardChargeDialog campaignId={id} onClose={() => setCharging(false)} onDone={() => setVersion(v => v + 1)} />}
       {transferStart && <TransferDialog start={transferStart} onClose={() => setTransferStart(null)} onDone={() => { setTransferStart(null); setVersion(v => v + 1); }} />}
       {requesting && <RequestPayoutDialog campaignId={id} onClose={() => setRequesting(false)} onSaved={() => { setRequesting(false); alert('Your payout request was sent to the office. You can follow it under Payout Requests.'); }} />}
       {reporting === 'report' && <CampaignReportDialog campaign={c} onClose={() => setReporting(null)} />}
