@@ -846,3 +846,30 @@ tr.selected td { background: var(--accent-soft); }
 .empty-state { text-align: center; padding: 28px 18px; } .empty-state h2 { font-size: 16px; margin: 0 0 6px; }
 .report-detail > .view { padding: 8px 0 0; }
 .recurring-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 10px 0; background: var(--surface-2); }
+
+/* Payment page form in three parts (Moshe Henig, 2026-11-10). Phones: 1 Amount, 2 Your details, 3 Payment.
+   Desktop: 2 Your details on the left; 1 Amount above 3 Payment on the right, with Donate under Payment.
+   The progress bar and story sit full width above the form; donors and other ways to give below it. */
+.give-form { display: flex; flex-direction: column; }
+.give-part-amount { order: 1; }
+.give-part-details { order: 2; }
+.give-part-pay { order: 3; }
+.give-test { order: 0; }
+.give-form > .give-submit-bar { order: 4; }
+@media (min-width: 960px) {
+  .give-main { grid-template-columns: minmax(0, 1fr); max-width: 1040px; }
+  .give-main > .give-side > .give-progress { grid-column: 1; order: 1; }
+  .give-main > .give-side > .give-story-card { grid-column: 1; order: 2; }
+  .give-main > .give-form-card { grid-column: 1; grid-row: auto; order: 3; position: static; }
+  .give-main > .give-side > .give-wall { grid-column: 1; order: 4; }
+  .give-main > .give-side > .give-other { grid-column: 1; order: 5; }
+  .give-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "test test" "details amount" "details pay" "details submit"; column-gap: 32px; align-items: start; }
+  .give-form > .give-submit-bar { grid-area: submit; }
+  .give-test { grid-area: test; }
+  .give-part-details { grid-area: details; }
+  .give-part-amount { grid-area: amount; }
+  .give-part-pay { grid-area: pay; }
+  .give-part-details .give-grid { grid-template-columns: minmax(0, 1fr); }
+  .give-part-details { border-right: 1px solid var(--give-line); padding-right: 32px; }
+  .give-rtl .give-part-details { border-right: 0; padding-right: 0; border-left: 1px solid var(--give-line); padding-left: 32px; }
+}

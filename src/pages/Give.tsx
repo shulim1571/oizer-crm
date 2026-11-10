@@ -306,6 +306,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   return (
     <form className="give-form" onSubmit={e => { e.preventDefault(); void submit(); }}>
       {data.payments.sandbox && <p className="give-test" dir="auto">{method === 'card' ? t.test : t.test_other}</p>}
+      <div className="give-part give-part-amount">
       <h2 className="give-step" dir="auto"><span>1</span>{t.amount}</h2>
       {presets.length > 0 && (
         <div className="give-presets">
@@ -349,6 +350,9 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
         </div>
       )}
 
+      </div>
+
+      <div className="give-part give-part-details">
       <h2 className="give-step" dir="auto"><span>2</span>{t.details}</h2>
       <div className="give-grid">
         <label className="field"><span dir="auto">{t.first} *</span><input required dir="auto" value={d.first_name} onChange={set('first_name')} autoComplete="given-name" /></label>
@@ -370,6 +374,9 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
         <label className="field wide"><span dir="auto">{t.notes}</span><textarea dir="auto" rows={2} value={d.notes} onChange={set('notes')} /></label>
       </div>
 
+      </div>
+
+      <div className="give-part give-part-pay">
       <h2 className="give-step" dir="auto"><span>3</span>{L.pay_with}</h2>
       <MethodTabs value={method} program={program} ach={!!data.payments.ach} daf={data.payments.daf ?? []} L={L}
         onChange={(m, prog) => { setMethod(m); setProgram(prog); setDaf(emptyDaf()); setError(null); }} />
@@ -393,6 +400,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
             <button type="button" className="btn" onClick={() => setConfirming(false)}>{t.no}</button></div></div>
       )}
       {error && <div className="error" dir="auto">{error}</div>}
+      </div>
       <div className="give-submit-bar">
       <button type="submit" className="btn primary give-submit" disabled={busy || (method === 'card' && expDigits.length !== 4)}>{busy ? t.processing : `${t.donate}${chosen ? ` ${usd(total)}` : ''}`}</button>
       </div>
