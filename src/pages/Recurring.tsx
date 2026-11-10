@@ -283,8 +283,28 @@ export function RecurringPage() {
 /** On the Task Sheet: a recurring donation that failed three times. */
 export function RecurringFailed({ id, onDone }: { id: string; onDone: () => void }) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const q = useQuery(async () => (await supabase.from('recurring_list').select('*').eq('id', id).maybeSingle()).data as Row | null, [id]);
+  const r = q.data as Row | null;
+  async function retry() {
+    setError(null);
+    const { error: e } = await supabase.rpc('set_recurring_status', { p_id: id, p_action: 'retry' });
+    if (e) return setError(e.message);
+    onDone();
+  }
   return (
     <div className="donation-actions">
+      {r && (
+        <dl className="record-facts">
+          <dt>Donor</dt><dd>{r.donor_name ?? '—'}</dd>
+          <dt>Schedule</dt><dd>{money(r.amount)} {freqLabel(r.frequency).toLowerCase()} · {progress(r)} · {cardText(r)}</dd>
+          <dt>Campaign</dt><dd>{r.campaign_label}</dd>
+          <dt>Failed</dt><dd>{r.failures} time{r.failures === 1 ? '' : 's'}{r.last_error ? ` · ${r.last_error}` : ''}</dd>
+          <dt>Next</dt><dd>{r.status === 'paused' ? 'Paused until the card is updated or it’s retried' : r.retry_on ? `Tried again ${day(r.retry_on)}` : day(r.next_charge)}</dd>
+        </dl>
+      )}
+      {error && <div className="error">{error}</div>}
+      {r && r.status !== 'cancelled' && r.status !== 'completed' && <button type="button" className="btn" onClick={retry}>Retry now</button>}
       <button type="button" className="btn primary" onClick={() => setOpen(true)}>Update card, retry or cancel</button>
       {open && <RecurringDialog id={id} onClose={() => { setOpen(false); onDone(); }} onChanged={() => {}} />}
     </div>

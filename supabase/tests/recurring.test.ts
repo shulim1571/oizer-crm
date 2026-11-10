@@ -81,19 +81,57 @@ describe('recurring donations', () => {
       const r = await rec(db);
       expect(r).toMatchObject({ failures: i, status: 'active', payments_made: 1, last_error: 'Insufficient funds' });
       expect(r.retry_on.toISOString().slice(0, 10)).toBe((await db.query<{ d: string }>(`select ((now() at time zone 'America/New_York')::date + ${wait})::text d`)).rows[0].d);
+      // Every failure is on the Task Sheet, not only the third.
+      const [item] = await rows(db, ADMIN, `select summary from public.admin_task_sheet where task_type = 'recurring_failed'`);
+      expect(item.summary).toMatch(new RegExp(`^Chaim Gold: \\$25\\.00 each month to First campaign \\(1001\\) · failed ${i === 1 ? 'once' : 'twice'} \\(Insufficient funds\\) · tried again `));
     }
     await db.query(`update public.recurring_donations set retry_on = current_date - 1`);
     const [c] = await claim(db);
     await record(db, c.id, { xResult: 'D', xError: 'Card expired', xRefNum: 'F3' });
     expect(await rec(db)).toMatchObject({ failures: 3, status: 'paused', pause_reason: 'Three charges failed' });
     const [t] = await rows(db, ADMIN, `select task_type, summary from public.admin_task_sheet where task_type = 'recurring_failed'`);
-    expect(t.summary).toBe('Chaim Gold: $25.00 each month failed 3 times · Card expired');
+    expect(t.summary).toBe("Chaim Gold: $25.00 each month to First campaign (1001) · failed 3 times (Card expired) · paused until the card is updated or it's retried");
+    expect(await rows(db, ADMIN, `select 1 from public.admin_task_sheet where task_type = 'recurring_failed'`)).toHaveLength(1);
     const notices = (await db.query<{ to_address: string; subject: string }>(`select to_address, subject from public.messages where kind = 'recurring_failed' order by created_at`)).rows;
     expect(notices.map(n => n.subject)).toEqual(expect.arrayContaining(['A recurring charge failed', 'Recurring donation paused after 3 failed charges']));
     expect(notices.some(n => n.to_address === 'one@example.org')).toBe(true);
+    // The fundraiser on the campaign hears about every failure (1, 2 and the pause); admins about the first and the pause.
+    const to = (addr: string) => notices.filter(n => n.to_address === addr).length;
+    expect(to('one@example.org')).toBe(3);
+    expect(to('office@example.org')).toBe(2);
+    expect(notices.filter(n => n.subject === 'A recurring charge failed again').map(n => n.to_address)).toEqual(['one@example.org']);
     await sql(db, `select public.set_recurring_status($1, 'retry')`, [(await rec(db)).id]);
     expect(await rows(db, ADMIN, `select 1 from public.admin_task_sheet where task_type = 'recurring_failed'`)).toEqual([]);
     expect(await claim(db)).toHaveLength(1);
+  });
+
+  it('take a failed charge off the Task Sheet when a later one goes through, and put it back if a retry fails', async () => {
+    const g = await pageGift(db, 30, { frequency: 'weekly' });
+    await record(db, g.id, OK('S1'));
+    const open = async () => rows(db, ADMIN, `select summary from public.admin_task_sheet where task_type = 'recurring_failed'`);
+    await db.query(`update public.recurring_donations set next_charge = current_date - 1`);
+    let [c] = await claim(db);
+    await record(db, c.id, { xResult: 'D', xError: 'Do not honor', xRefNum: 'S2' });
+    expect(await open()).toHaveLength(1);
+    // The office retries now: off the sheet; the retry fails: back on.
+    await sql(db, `select public.set_recurring_status($1, 'retry')`, [(await rec(db)).id]);
+    expect(await open()).toEqual([]);
+    [c] = await claim(db);
+    await record(db, c.id, { xResult: 'D', xError: 'Do not honor', xRefNum: 'S3' });
+    expect((await open())[0].summary).toMatch(/failed twice \(Do not honor\)/);
+    // The next charge goes through: off the sheet for good.
+    await db.query(`update public.recurring_donations set retry_on = current_date - 1`);
+    [c] = await claim(db);
+    await record(db, c.id, OK('S4'));
+    expect(await open()).toEqual([]);
+    expect(await rec(db)).toMatchObject({ failures: 0, status: 'active' });
+    // A cancelled schedule doesn't leave an item behind either.
+    await db.query(`update public.recurring_donations set next_charge = current_date - 1`);
+    [c] = await claim(db);
+    await record(db, c.id, { xResult: 'D', xError: 'Card expired', xRefNum: 'S5' });
+    expect(await open()).toHaveLength(1);
+    await sql(db, `select public.set_recurring_status($1, 'cancel', 'Donor asked')`, [(await rec(db)).id]);
+    expect(await open()).toEqual([]);
   });
 
   it('land a charge for a closed campaign as unattributed', async () => {
