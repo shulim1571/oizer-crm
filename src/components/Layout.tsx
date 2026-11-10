@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, CreditCard, FileCheck, FilePlus, Globe, Handshake, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Printer, Receipt, RefreshCw, Repeat, Scale, Search, Send, ShieldCheck, Smartphone, Ticket, Upload, UserCircle, Users, Wallet,
+  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, CreditCard, FileCheck, Globe, Handshake, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Printer, Receipt, RefreshCw, Repeat, Scale, Search, Send, ShieldCheck, Smartphone, Ticket, Upload, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
@@ -52,8 +52,8 @@ const NAV: NavSection[] = [
     items: [
       { to: '/campaigns/active', label: 'Campaigns', icon: <Landmark size={I} />,
         tabs: [{ to: '/campaigns/active', label: 'Active' }, { to: '/campaigns/all', label: 'All' }, { to: '/campaigns/archived', label: 'Archived' },
-          { to: '/campaigns/closed', label: 'Closed' }, { to: '/campaigns/exchange', label: 'Exchange', admin: true }] },
-      { to: '/requests', label: 'Campaign Requests', icon: <FilePlus size={I} /> },
+          { to: '/campaigns/closed', label: 'Closed' }, { to: '/campaigns/exchange', label: 'Exchange', admin: true },
+          { to: '/campaigns/requests', label: 'Requests' }] },
       // Admins open the calendar, where bookings show on their day; fundraisers go straight to their bookings.
       { to: '/machines', label: 'Machine Bookings', icon: <CalendarDays size={I} />,
         tabs: [{ to: '/calendar', label: 'Calendar', admin: true }, { to: '/machines', label: 'Bookings' }] },

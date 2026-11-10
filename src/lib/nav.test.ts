@@ -27,6 +27,12 @@ describe('sidebar', () => {
     expect(seen.filter((p, i) => seen.indexOf(p) !== i)).toEqual([]);
   });
 
+  it('keeps Campaign Requests as a Campaigns tab, and sends the old address there', () => {
+    expect(navBlock).toMatch(/\{ to: '\/campaigns\/requests', label: 'Requests' \}/);
+    expect(linked).not.toContain('/requests');
+    expect(app).toMatch(/path="requests" element=\{<Navigate to="\/campaigns\/requests" replace \/>\}/);
+  });
+
   it('stays compact', () => {
     const entries = navBlock.match(/icon: </g) ?? [];
     expect(entries.length).toBeLessThanOrEqual(32);

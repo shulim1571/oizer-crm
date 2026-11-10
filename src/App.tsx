@@ -161,6 +161,7 @@ export default function App() {
         <Route path="campaigns/archived" element={<Campaigns mode="archived" />} />
         <Route path="campaigns/closed" element={<Campaigns mode="closed" />} />
         <Route path="campaigns/exchange" element={<AdminOnly><Campaigns mode="exchange" /></AdminOnly>} />
+        <Route path="campaigns/requests" element={<RequestsPage />} />
         <Route path="campaigns/:id" element={<CampaignDetail />} />
         <Route path="campaigns/:id/batch" element={<BatchEntry />} />
         <Route path="donations/batch" element={<AdminOnly><BatchEntry /></AdminOnly>} />
@@ -204,7 +205,8 @@ export default function App() {
         <Route path="donors/:id" element={<DonorDetail />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="task-sheet" element={<AdminOnly><TaskSheetPage /></AdminOnly>} />
-        <Route path="requests" element={<RequestsPage />} />
+        {/* Campaign Requests moved under Campaigns; old links (and notification emails) still land there. */}
+        <Route path="requests" element={<Navigate to="/campaigns/requests" replace />} />
         <Route path="users" element={<AdminOnly><UsersPage /></AdminOnly>} />
         <Route path="activity" element={<AdminOnly><ActivityPage /></AdminOnly>} />
         <Route path="organization" element={<AdminOnly><OrganizationPage /></AdminOnly>} />
