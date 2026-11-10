@@ -34,3 +34,10 @@ export function gateCheck(gateSecret: string | null | undefined, headers: { get(
   if (!sameSecret(gateSecret, headers.get('x-give-gate'))) return { ok: false };
   return { ok: true, ip: (headers.get('x-oizer-client-ip') ?? '').trim() || direct };
 }
+
+/** The donor details every payment needs (Moshe Henig, 2026-11-10: the ZIP or postal code is required). */
+export function donorProblem(d: Record<string, unknown> | null | undefined): string | null {
+  const has = (k: string) => typeof d?.[k] === 'string' && (d[k] as string).trim() !== '';
+  if (!has('zip')) return 'Enter your ZIP or postal code.';
+  return null;
+}

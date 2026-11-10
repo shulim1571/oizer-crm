@@ -74,10 +74,8 @@ export function SaveCardDialog({ donorId, onClose, onSaved }: { donorId: string;
           )}
           {kind === 'ach' ? <BankFields value={bank} onChange={setBank} L={OFFICE_PAY} authorization={cfg.ach_authorization_text} /> : (
             <>
-              <CardFields ifieldsKey={cfg.ifields_key} onTokens={setTokens} />
+              <CardFields ifieldsKey={cfg.ifields_key} onTokens={setTokens} exp={exp} onExp={setExp} />
               <div className="fields">
-                <label className="field"><span>Expiry (MM/YY)</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" value={exp}
-                  onChange={e => { const d = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d); }} /></label>
                 <label className="field"><span>Name on card</span><input value={name} onChange={e => setName(e.target.value)} /></label>
                 <label className="field"><span>Billing ZIP</span><input value={zip} onChange={e => setZip(e.target.value)} /></label>
               </div>
@@ -99,7 +97,8 @@ export function SetupRecurringDialog({ donor, cards, cardId, onClose, onDone }: 
   const [campaigns, setCampaigns] = useState<Option[]>([]);
   const [f, setF] = useState({
     campaign: null as string | null, card: cardId ?? cards[0]?.id ?? '', amount: '', frequency: 'monthly', start: new Date().toLocaleDateString('en-CA'),
-    fixed: false, count: '12', email: donor.email ?? '', phone: '',
+    // A set number of payments unless chosen otherwise (Moshe Henig, 2026-11-10).
+    fixed: true, count: '12', email: donor.email ?? '', phone: '',
   });
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { void campaignOptions().then(setCampaigns); }, []);
@@ -128,7 +127,7 @@ export function SetupRecurringDialog({ donor, cards, cardId, onClose, onDone }: 
           <select value={f.frequency} onChange={e => set('frequency', e.target.value)}>{FREQUENCIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
         <label className="field"><span>First charge</span><input type="date" value={f.start} onChange={e => set('start', e.target.value)} /></label>
         <label className="field"><span>Payments</span>
-          <select value={f.fixed ? 'n' : 'until'} onChange={e => set('fixed', e.target.value === 'n')}><option value="until">Until cancelled</option><option value="n">A set number</option></select></label>
+          <select value={f.fixed ? 'n' : 'until'} onChange={e => set('fixed', e.target.value === 'n')}><option value="n">A set number</option><option value="until">Until cancelled</option></select></label>
         {f.fixed && <label className="field"><span>Number of payments</span><input type="number" min={1} max={520} value={f.count} onChange={e => set('count', e.target.value)} /></label>}
         <label className="field"><span>Email the donor at</span><input type="email" value={f.email} onChange={e => set('email', e.target.value)} /></label>
         <label className="field"><span>Text the donor at</span><input type="tel" value={f.phone} onChange={e => set('phone', e.target.value)} placeholder="Optional" /></label>

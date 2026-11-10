@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { botCheckDecision, gateCheck, sameSecret } from './giveGuard';
+import { botCheckDecision, donorProblem, gateCheck, sameSecret } from './giveGuard';
 
 const headers = (h: Record<string, string>) => ({ get: (n: string) => h[n.toLowerCase()] ?? null });
 
@@ -28,5 +28,13 @@ describe('give function guards', () => {
     expect(sameSecret('abc', 'abcd')).toBe(false);
     expect(sameSecret('abc', '')).toBe(false);
     expect(sameSecret('abc', null)).toBe(false);
+  });
+
+  it('require the ZIP or postal code', () => {
+    expect(donorProblem({ first_name: 'Moshe', zip: '' })).toMatch(/ZIP or postal code/);
+    expect(donorProblem({ zip: '   ' })).toMatch(/ZIP/);
+    expect(donorProblem(null)).toMatch(/ZIP/);
+    expect(donorProblem({ zip: '10952' })).toBeNull();
+    expect(donorProblem({ zip: 'SW1A 1AA' })).toBeNull();
   });
 });

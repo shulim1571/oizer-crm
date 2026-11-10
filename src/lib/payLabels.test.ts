@@ -16,4 +16,23 @@ describe('payment page method labels', () => {
     const css = readFileSync('src/styles.css', 'utf8');
     expect(css).toMatch(/\.pay-methods \{[^}]*flex-wrap: nowrap/);
   });
+
+  it('ask for the ZIP as required, and list no card brands', () => {
+    const give = readFileSync('src/pages/Give.tsx', 'utf8');
+    expect(give).toMatch(/\{zipLabel\} \*<\/span><input required/);
+    expect(give).not.toMatch(/give-logos|Mastercard|Discover/);
+  });
+
+  it('put card number, expiry and CVV on one line, in that order, and first and last name side by side', () => {
+    const pay = readFileSync('src/pages/Payments.tsx', 'utf8');
+    const fields = pay.slice(pay.indexOf('<div ref={box} className="card-fields">'));
+    const at = (s: string) => fields.indexOf(s);
+    expect(at('data-ifields-id="card-number"')).toBeLessThan(at('card-exp'));
+    expect(at('card-exp')).toBeLessThan(at('data-ifields-id="cvv"'));
+    const css = readFileSync('src/styles.css', 'utf8');
+    expect(css).toMatch(/\.card-fields \{[^}]*grid-template-columns: minmax\(0, 1fr\) 96px 84px/);
+    expect(css).not.toMatch(/\.card-fields \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+    const give = readFileSync('src/pages/Give.tsx', 'utf8');
+    expect(give).toMatch(/<div className="give-names wide">\s*<label[^]*?first_name[^]*?last_name[^]*?<\/div>/);
+  });
 });

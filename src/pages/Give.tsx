@@ -18,7 +18,7 @@ const T: Record<Lang, Record<string, string>> = {
     raised: 'raised of', goal: 'goal', amount: 'Amount', other: 'Other amount', cover: 'I\'d like to cover the processing fee so 100% of my donation goes to the campaign',
     fee: 'fee', total: 'Total charge', first: 'First name', last: 'Last name', phone: 'Phone', email: 'Email (optional)', country: 'Country',
     address: 'Address (optional)', zip: 'ZIP code', postal: 'Postal code', postcode: 'Postcode', notes: 'Message (optional)', card: 'Card number', cvv: 'CVV',
-    exp: 'Expiry (MM/YY)', donate: 'Donate', processing: 'Processing…', loading: 'Loading the secure card fields…', other_ways: 'Other ways to give',
+    exp: 'Expiry', donate: 'Donate', processing: 'Processing…', loading: 'Loading the secure card fields…', other_ways: 'Other ways to give',
     checks: 'Checks payable to', zelle: 'Zelle', ein: 'EIN', wall: 'Recent donors', anonymous: 'Anonymous', thanks: 'Thank you for your donation to',
     charged: 'Charged', receipt: 'Send me a receipt', receipt_sent: 'Thank you. The office will send your receipt.', another: 'Make another donation',
     confirm: 'You\'re about to donate {amount}. Please confirm this is correct.', min: 'The smallest gift here is {amount}.', choose: 'Choose an amount.',
@@ -31,7 +31,7 @@ const T: Record<Lang, Record<string, string>> = {
     raised: 'נאספו מתוך', goal: 'יעד', amount: 'סכום', other: 'סכום אחר', cover: 'אני מעוניין לכסות את עמלת הסליקה כדי שכל תרומתי תגיע למטרה',
     fee: 'עמלה', total: 'סך החיוב', first: 'שם פרטי', last: 'שם משפחה', phone: 'טלפון', email: 'דוא״ל (רשות)', country: 'מדינה',
     address: 'כתובת (רשות)', zip: 'מיקוד', postal: 'מיקוד', postcode: 'מיקוד', notes: 'הודעה (רשות)', card: 'מספר כרטיס', cvv: 'CVV',
-    exp: 'תוקף (MM/YY)', donate: 'לתרומה', processing: 'מעבד…', loading: 'טוען את שדות הכרטיס המאובטחים…', other_ways: 'דרכים נוספות לתרום',
+    exp: 'תוקף', donate: 'לתרומה', processing: 'מעבד…', loading: 'טוען את שדות הכרטיס המאובטחים…', other_ways: 'דרכים נוספות לתרום',
     checks: 'צ׳קים לפקודת', zelle: 'Zelle', ein: 'EIN', wall: 'תורמים אחרונים', anonymous: 'בעילום שם', thanks: 'תודה על תרומתך ל',
     charged: 'חויב', receipt: 'שלחו לי קבלה', receipt_sent: 'תודה. המשרד ישלח לך קבלה.', another: 'תרומה נוספת',
     confirm: 'אתה עומד לתרום {amount}. נא לאשר שהסכום נכון.', min: 'התרומה המינימלית היא {amount}.', choose: 'נא לבחור סכום.',
@@ -44,7 +44,7 @@ const T: Record<Lang, Record<string, string>> = {
     raised: 'געזאמלט פון', goal: 'ציל', amount: 'סכום', other: 'אן אנדער סכום', cover: 'איך וויל צאלן די באארבעטונג אפצאל, כדי מיין גאנצע נדבה זאל אנקומען צום ציל',
     fee: 'אפצאל', total: 'סך הכל', first: 'ערשטער נאמען', last: 'פאמיליע נאמען', phone: 'טעלעפאן', email: 'אימעיל (אויב געוואלט)', country: 'לאנד',
     address: 'אדרעס (אויב געוואלט)', zip: 'זיפ קאוד', postal: 'פאסט קאוד', postcode: 'פאסט קאוד', notes: 'מעסעדזש (אויב געוואלט)', card: 'קארטל נומער', cvv: 'CVV',
-    exp: 'ביז (MM/YY)', donate: 'נדבה געבן', processing: 'ארבעט…', loading: 'לאדט די זיכערע קארטל פעלדער…', other_ways: 'אנדערע וועגן צו געבן',
+    exp: 'ביז', donate: 'נדבה געבן', processing: 'ארבעט…', loading: 'לאדט די זיכערע קארטל פעלדער…', other_ways: 'אנדערע וועגן צו געבן',
     checks: 'טשעקס צו', zelle: 'Zelle', ein: 'EIN', wall: 'לעצטע נדבנים', anonymous: 'אנאנים', thanks: 'א דאנק פאר אייער נדבה צו',
     charged: 'באצאלט', receipt: 'שיקט מיר א קבלה', receipt_sent: 'א דאנק. דער אפיס וועט אייך שיקן א קבלה.', another: 'נאך א נדבה',
     confirm: 'איר גייט געבן {amount}. ביטע באשטעטיגט אז דאס איז ריכטיג.', min: 'די קלענסטע נדבה דא איז {amount}.', choose: 'ביטע קלייבט א סכום.',
@@ -233,7 +233,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   const TURNSTILE_KEY = (data.payments.turnstile_site_key as string | null) ?? PLATFORM_TURNSTILE_KEY;
 
   const todayIso = new Date().toLocaleDateString('en-CA');
-  const [rec, setRec] = useState({ on: false, frequency: 'monthly' as 'weekly' | 'monthly' | 'quarterly' | 'annually', start: todayIso, fixed: false, count: '12', textMe: false, agreed: false });
+  const [rec, setRec] = useState({ on: false, frequency: 'monthly' as 'weekly' | 'monthly' | 'quarterly' | 'annually', start: todayIso, fixed: true, count: '12', textMe: false, agreed: false });
   const chosen = other ? Number(other) : amount;
   useEffect(() => {
     if (!p.cover_fee || !cover || !(chosen && chosen > 0)) return setCoverTotal(null);
@@ -266,6 +266,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   async function submit(confirmed = false) {
     setError(null);
     if (!(chosen && chosen > 0)) return setError(t.choose);
+    if (!d.zip.trim()) return setError(`${zipLabel}: ${t.required}`);
     if (p.min && chosen < Number(p.min)) return setError(t.min.replace('{amount}', usd(Number(p.min))));
     if (rec.on && !rec.agreed) return setError(t.agree_needed);
     if (rec.on && rec.fixed && !(count && count >= 2)) return setError(t.payments);
@@ -340,7 +341,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
             {method !== 'daf' && <label className="field"><span dir="auto">{t.start}</span><input type="date" dir="ltr" min={todayIso} value={rec.start} onChange={e => setRec(r => ({ ...r, start: e.target.value }))} /></label>}
             <label className="field"><span dir="auto">{t.payments}</span>
               <select value={rec.fixed ? 'n' : 'until'} onChange={e => setRec(r => ({ ...r, fixed: e.target.value === 'n' }))}>
-                <option value="until">{t.until}</option><option value="n">{t.fixed}</option>
+                <option value="n">{t.fixed}</option><option value="until">{t.until}</option>
               </select></label>
             {rec.fixed && <label className="field"><span dir="auto">#</span><input type="number" min={2} max={520} dir="ltr" value={rec.count} onChange={e => setRec(r => ({ ...r, count: e.target.value }))} /></label>}
           </div>
@@ -355,13 +356,15 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
       <div className="give-part give-part-details">
       <h2 className="give-step" dir="auto"><span>2</span>{t.details}</h2>
       <div className="give-grid">
-        <label className="field"><span dir="auto">{t.first} *</span><input required dir="auto" value={d.first_name} onChange={set('first_name')} autoComplete="given-name" /></label>
-        <label className="field"><span dir="auto">{t.last} *</span><input required dir="auto" value={d.last_name} onChange={set('last_name')} autoComplete="family-name" /></label>
+        <div className="give-names wide">
+          <label className="field"><span dir="auto">{t.first} *</span><input required dir="auto" value={d.first_name} onChange={set('first_name')} autoComplete="given-name" /></label>
+          <label className="field"><span dir="auto">{t.last} *</span><input required dir="auto" value={d.last_name} onChange={set('last_name')} autoComplete="family-name" /></label>
+        </div>
         <label className="field"><span dir="auto">{t.phone} *</span><input required type="tel" dir="ltr" value={d.phone} onChange={set('phone')} autoComplete="tel" /></label>
         <label className="field"><span dir="auto">{t.email}</span><input type="email" dir="ltr" value={d.email} onChange={set('email')} autoComplete="email" /></label>
         <label className="field"><span dir="auto">{t.country}</span>
           <select value={d.country} onChange={set('country')}>{COUNTRIES.map(x => <option key={x}>{x}</option>)}</select></label>
-        <label className="field"><span dir="auto">{zipLabel}</span><input dir="ltr" value={d.zip} onChange={set('zip')} autoComplete="postal-code" /></label>
+        <label className="field"><span dir="auto">{zipLabel} *</span><input required dir="ltr" value={d.zip} onChange={set('zip')} autoComplete="postal-code" /></label>
         <label className="field wide"><span dir="auto">{t.address}</span><input dir="auto" value={d.address} onChange={set('address')} autoComplete="street-address" /></label>
         {fields.filter(f => f.name).map(f => (
           f.type === 'checkbox'
@@ -382,11 +385,8 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
         onChange={(m, prog) => { setMethod(m); setProgram(prog); setDaf(emptyDaf()); setError(null); }} />
       {method === 'card' && (
         <>
-          <div className="give-logos" aria-hidden="true"><span>VISA</span><span>Mastercard</span><span>AMEX</span><span>Discover</span></div>
           <p className="give-safe" dir="auto"><span aria-hidden="true">🔒</span> {t.safe}</p>
-          <CardFields ifieldsKey={data.payments.ifields_key} onTokens={setTokens} labels={{ card: t.card, cvv: t.cvv, loading: t.loading }} />
-          <label className="field give-exp"><span dir="auto">{t.exp}</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" dir="ltr" value={exp}
-            onChange={e => { const x = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(x.length > 2 ? `${x.slice(0, 2)}/${x.slice(2)}` : x); }} /></label>
+          <CardFields ifieldsKey={data.payments.ifields_key} onTokens={setTokens} exp={exp} onExp={setExp} labels={{ card: t.card, cvv: t.cvv, exp: t.exp, loading: t.loading }} />
         </>
       )}
       {method === 'ach' && <BankFields value={bank} onChange={setBank} L={L} authorization={data.payments.ach_authorization} orgName={data.org.name} />}

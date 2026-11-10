@@ -647,13 +647,15 @@ ul.plain li { padding: 6px 0; }
 }
 
 /* Card fields (Sola iFields) */
-.card-fields { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 10px; margin: 6px 0; }
+/* Card number, expiry, CVV on one line, at every width. */
+.card-fields { display: grid; grid-template-columns: minmax(0, 1fr) 96px 84px; gap: 10px; margin: 6px 0; align-items: start; }
+.card-fields .card-exp input { width: 100%; height: 38px; min-height: 38px; padding: 8px; margin-top: 1px; box-sizing: border-box; }
 .card-fields .ifield { width: 100%; height: 40px; border: 0; display: block; }
 .card-fields .error-text { grid-column: 1 / -1; color: #b91c1c; font-size: 13px; }
 .card-fields .error-text:empty { display: none; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .card-head h3 { margin: 0; }
-@media (max-width: 600px) { .card-fields { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .card-fields { grid-template-columns: minmax(0, 1fr) 76px 66px; gap: 6px; } }
 
 /* Public payment page */
 /* ------------------------------------------------------------------
@@ -703,9 +705,9 @@ ul.plain li { padding: 6px 0; }
 .give .field span { font-size: 13px; font-weight: 600; color: #3a3e48; }
 .give .field input, .give .field select, .give .field textarea { width: 100%; box-sizing: border-box; min-height: 46px; border-radius: 10px; font-size: 16px; }
 .give .field textarea { min-height: 70px; }
-.give-exp { max-width: 180px; margin-top: 10px; }
-.give-logos { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
-.give-logos span { font-size: 11px; font-weight: 800; letter-spacing: .02em; border: 1px solid var(--give-line); border-radius: 6px; padding: 3px 7px; color: #3a3e48; background: #fff; }
+/* First and last name side by side; stacked on a narrow phone. */
+.give-names { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 359px) { .give-names { grid-template-columns: minmax(0, 1fr); } }
 .give-safe { font-size: 12.5px; color: var(--give-muted); margin: 0 0 10px; }
 .give-turnstile { margin: 14px 0 4px; }
 .give-total { font-size: 16px; margin: 14px 0 0; color: var(--give-muted); }

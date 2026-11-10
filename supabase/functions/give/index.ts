@@ -4,7 +4,7 @@
 // keys or not. Requests reach this function through the rate-limiting gate (workers/give-gate); once
 // GIVE_GATE_SECRET is set, anything else is refused. The database then checks the page's rules, the method and
 // the connection's recent attempts, and the organization's own Sola key charges the gift.
-import { botCheckDecision, gateCheck } from '../_shared/giveGuard.ts';
+import { botCheckDecision, donorProblem, gateCheck } from '../_shared/giveGuard.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -131,6 +131,9 @@ Deno.serve(async req => {
   const human = await humanCheck(b.org, b.turnstile, ip);
   if (human === 'not_set_up') return reply({ error: 'This page isn\'t taking online donations yet. Please contact the organization.', not_set_up: true });
   if (human !== 'ok') return reply({ error: 'Please confirm you\'re not a robot and try again.', retry_check: true });
+
+  const missing = donorProblem(b.donor);
+  if (missing) return reply({ error: missing });
 
   // 1. The page's rules, the method and the connection's limits.
   let start: { id: string; token: string; total: number; kind: 'sale' | 'save' };

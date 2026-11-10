@@ -67,8 +67,16 @@ export async function callPayments(body: Row) {
 // Sola's card fields
 // ---------------------------------------------------------------------------
 /** Card number and CVV in Sola's frames. `tokens` asks Sola for single-use tokens for both. */
-export function CardFields({ ifieldsKey, onTokens, labels = { card: 'Card number', cvv: 'CVV', loading: 'Loading Sola\'s secure card fields…' } }: {
-  ifieldsKey: string; onTokens: (get: () => Promise<{ card: string; cvv: string }>) => void; labels?: { card: string; cvv: string; loading: string };
+/** Formats typed digits as MM/YY. */
+export const expInput = (raw: string) => { const d = raw.replace(/\D/g, '').slice(0, 4); return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d; };
+
+/**
+ * Sola's card number and CVV fields, with the expiry between them: card number, expiry, CVV on one line
+ * (Moshe Henig, 2026-11-10).
+ */
+export function CardFields({ ifieldsKey, onTokens, exp, onExp, labels = { card: 'Card number', cvv: 'CVV', exp: 'Expiry', loading: 'Loading Sola\'s secure card fields…' } }: {
+  ifieldsKey: string; onTokens: (get: () => Promise<{ card: string; cvv: string }>) => void; exp: string; onExp: (v: string) => void;
+  labels?: { card: string; cvv: string; exp: string; loading: string };
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
@@ -101,6 +109,8 @@ export function CardFields({ ifieldsKey, onTokens, labels = { card: 'Card number
       <label className="field"><span dir="auto">{labels.card}</span>
         <iframe title={labels.card} className="ifield" data-ifields-id="card-number" data-ifields-placeholder={labels.card} src={`${IFIELDS}/ifield.htm`} /></label>
       <input type="hidden" data-ifields-id="card-number-token" name="xCardNum" />
+      <label className="field card-exp"><span dir="auto">{labels.exp}</span>
+        <input inputMode="numeric" maxLength={5} placeholder="MM/YY" dir="ltr" autoComplete="cc-exp" value={exp} onChange={e => onExp(expInput(e.target.value))} /></label>
       <label className="field ifield-cvv"><span dir="auto">{labels.cvv}</span>
         <iframe title={labels.cvv} className="ifield" data-ifields-id="cvv" data-ifields-placeholder={labels.cvv} src={`${IFIELDS}/ifield.htm`} /></label>
       <input type="hidden" data-ifields-id="cvv-token" name="xCVV" />
@@ -139,7 +149,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Row | null>(null);
   // Recurring: today's charge is the first payment, or nothing now and the first charge on a later date.
-  const [rec, setRec] = useState({ on: false, frequency: 'monthly', when: 'today' as 'today' | 'later', later: '', fixed: false, count: '12' });
+  const [rec, setRec] = useState({ on: false, frequency: 'monthly', when: 'today' as 'today' | 'later', later: '', fixed: true, count: '12' });
   const [schedule, setSchedule] = useState<string | null>(null);
   const tokens = useRef<() => Promise<{ card: string; cvv: string }>>();
   const setTokens = useRef((get: () => Promise<{ card: string; cvv: string }>) => { tokens.current = get; }).current;
@@ -273,10 +283,8 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
                 onChange={(m, p) => { setMethod(m); setProgram(p); setDaf(emptyDaf()); setError(null); if (m === 'ach') setBank(b => ({ ...b, account_name: b.account_name || name })); }} />
               {method === 'card' && (
                 <>
-                  <CardFields ifieldsKey={cfg.ifields_key} onTokens={setTokens} />
+                  <CardFields ifieldsKey={cfg.ifields_key} onTokens={setTokens} exp={exp} onExp={setExp} />
                   <div className="fields">
-                    <label className="field"><span>Expiry (MM/YY)</span><input inputMode="numeric" maxLength={5} placeholder="MM/YY" value={exp}
-                      onChange={e => { const d = e.target.value.replace(/\D/g, '').slice(0, 4); setExp(d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d); }} /></label>
                     <label className="field"><span>Name on card</span><input value={name} onChange={e => setName(e.target.value)} /></label>
                     <label className="field"><span>Billing ZIP</span><input value={zip} onChange={e => setZip(e.target.value)} /></label>
                   </div>
@@ -306,7 +314,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
                     {rec.when === 'later' && <label className="field"><span>First charge on</span><input type="date" min={localToday()} value={rec.later} onChange={e => setRec(r => ({ ...r, later: e.target.value }))} /></label>}
                     <label className="field"><span>Payments</span>
                       <select value={rec.fixed ? 'n' : 'open'} onChange={e => setRec(r => ({ ...r, fixed: e.target.value === 'n' }))}>
-                        <option value="open">No end date (until cancelled)</option><option value="n">A set number</option>
+                        <option value="n">A set number</option><option value="open">No end date (until cancelled)</option>
                       </select></label>
                     {rec.fixed && <label className="field"><span>How many{rec.when === 'today' ? ' (including today)' : ''}</span>
                       <input type="number" min={rec.when === 'today' ? 2 : 1} max={520} value={rec.count} onChange={e => setRec(r => ({ ...r, count: e.target.value }))} /></label>}
