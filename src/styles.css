@@ -123,15 +123,17 @@ input:focus, select:focus, textarea:focus {
 .grid tr.filter-row th { top: 38px; padding: 4px 6px; cursor: default; font-weight: 400; }
 .grid tr.filter-row input { width: 100%; min-width: 70px; height: 28px; font-size: 12px; padding: 0 6px; text-transform: none; letter-spacing: 0; font-weight: 400; }
 .compact .grid td { padding-top: 4px; padding-bottom: 4px; }
-.customize { right: 0; left: auto; width: 320px; max-height: 70vh; overflow: auto; padding: 12px; display: grid; gap: 8px; z-index: 20; }
-.customize h3 { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-.customize ul { list-style: none; margin: 0; padding: 0; max-height: none; }
-.customize li { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 6px; cursor: default; }
-.customize .column-list li[draggable] { cursor: grab; }
-.customize li.sel { background: var(--accent-soft); }
-.customize label { display: flex; align-items: center; gap: 6px; }
-.customize .icon-btn { width: 26px; height: 26px; }
-.customize .default-view svg { color: var(--warn); fill: currentColor; }
+.popover.customize { right: 0; left: auto; width: 320px; max-height: 70vh; overflow: auto; padding: 12px; display: grid; gap: 8px; z-index: 20; }
+.popover.customize h3 { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.popover.customize ul { list-style: none; margin: 0; padding: 0; max-height: none; }
+.popover.customize li { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 6px; cursor: default; }
+.popover.customize .column-list li[draggable] { cursor: grab; }
+.popover.customize li.sel { background: var(--accent-soft); }
+.popover.customize label { display: flex; align-items: center; gap: 6px; }
+.popover.customize .icon-btn { width: 26px; height: 26px; }
+.popover.customize .default-view svg { color: var(--warn); fill: currentColor; }
+.popover.customize input[type="checkbox"] { padding: 0; border: 0; width: auto; }
+.popover.customize .inline-form input { padding: 8px 10px; }
 .layout-opts { display: grid; gap: 6px; }
 .layout-opts label { justify-content: space-between; }
 .ss-create { color: var(--accent-text); font-weight: 550; }
