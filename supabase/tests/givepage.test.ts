@@ -112,6 +112,28 @@ describe('public payment pages', () => {
     expect(await rows(db, MANAGER_1, `select * from public.task_items`)).toEqual([]);
   });
 
+  it('take a receipt request off the Task Sheet once the receipt is sent, from wherever it is sent', async () => {
+    const asked = async (amount: number) => {
+      const r = await give(db, amount, { custom: { 'Table number': '4' } });
+      await answer(db, r.id, OK);
+      await rows(db, 'anon', `select public.request_receipt($1, 'chaim@example.org', null)`, [r.token]);
+      return (await one(db, `select donation_id from public.gateway_transactions where id = $1`, [r.id])).donation_id as string;
+    };
+    const open = async () => (await rows(db, ADMIN, `select record_id from public.admin_task_sheet where task_type = 'receipt_requested' order by record_id`)).map(r => r.record_id);
+    const first = await asked(50);
+    const second = await asked(75);
+    expect((await open()).sort()).toEqual([first, second].sort());
+
+    // Issuing alone doesn't close it: the donor hasn't got it yet.
+    const receipt = (await one(db, `select public.issue_receipt($1) id`, [first])).id;
+    expect((await open()).sort()).toEqual([first, second].sort());
+
+    // Sending it does, whichever screen it was sent from; the other request stays.
+    await one(db, `select public.send_document('receipt', $1, null, 'R-1', '<p>Receipt</p>', 'chaim@example.org', null, 'https://oizer.trubase.org/')`, [receipt]);
+    expect(await open()).toEqual([second]);
+    expect((await one(db, `select resolved_at is not null done from public.task_items where task_key = $1`, [`receipt_requested:${first}`])).done).toBe(true);
+  });
+
   it('let the primary fundraiser edit the page, and nobody else', async () => {
     await sql(db, `select public.save_page_content('1001', true, false, 360, 'Help us build', 'Thank you!', 'https://example.org/b.png')`, [], MANAGER_1);
     const p = await page(db);

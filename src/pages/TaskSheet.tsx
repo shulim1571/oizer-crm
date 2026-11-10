@@ -237,7 +237,8 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       {item.task_type === 'receipt_reissue' && <ReissueReceipt receiptId={item.record_id} onAct={act} />}
       {item.task_type === 'scheduled_payout' && <ProcessScheduled payoutId={item.record_id} onAct={act} />}
       {item.task_type === 'recurring_failed' && <RecurringFailed id={item.record_id} onDone={onDone} />}
-      {item.task_type === 'receipt_requested' && <ReceiptRequest item={item} onDone={() => { void log('receipt_sent').then(onDone); }} />}
+      {item.task_type === 'receipt_requested' && <ReceiptRequest item={item} onDone={() => { void log('receipt_sent').then(onDone); }}
+        onHandled={() => { void log('done', 'Handled another way').then(onDone); }} />}
       {item.task_type === 'delivery_failed' && (
         <>
           <DeliveryFailed messageId={item.record_id} onDone={() => { void log('resent').then(onDone); }} />
@@ -258,7 +259,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
 }
 
 /** A donor asked for a receipt on the thank-you page: issue it (or use the one already issued) and send it where they asked. */
-function ReceiptRequest({ item, onDone }: { item: Row; onDone: () => void }) {
+function ReceiptRequest({ item, onDone, onHandled }: { item: Row; onDone: () => void; onHandled: () => void }) {
   const q = useQuery(async () => {
     const [t, r, d] = await Promise.all([
       supabase.from('task_items').select('detail').eq('task_key', item.task_key).maybeSingle(),
@@ -286,11 +287,18 @@ function ReceiptRequest({ item, onDone }: { item: Row; onDone: () => void }) {
       <p className="muted small">They asked for it by {[info.to.email && `email to ${info.to.email}`, info.to.phone && `text to ${info.to.phone}`].filter(Boolean).join(' and ')}.
         {info.receipt ? ` Receipt ${info.receipt.receipt_number} is already issued.` : ' A receipt is issued first.'}</p>
       {error && <div className="error">{error}</div>}
-      <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={start}>{info.receipt ? 'Send the receipt' : 'Issue and send the receipt'}</button></div>
+      <div className="form-actions">
+        <button type="button" className="btn" title="For a receipt printed or handed over in person"
+          onClick={async () => {
+            if (!confirm('Take this request off the Task Sheet without sending a receipt from here?')) return;
+            const { error: e } = await supabase.rpc('resolve_task_item', { p_key: item.task_key });
+            if (e) return setError(e.message);
+            onHandled();
+          }}>Handled another way</button>
+        <div className="spacer" /><button type="button" className="btn primary" onClick={start}>{info.receipt ? 'Send the receipt' : 'Issue and send the receipt'}</button></div>
       {sending && (
         <SendDocumentDialog kind="receipt" recordId={sending.id} donorId={sending.donor_id ?? info.donation?.donor_id ?? null} campaignId={sending.campaign_id}
           title={sending.receipt_number} build={() => receiptDocument(sending.id)} to={{ email: info.to.email, phone: info.to.phone }}
-          onSent={() => { void supabase.rpc('resolve_task_item', { p_key: item.task_key }); }}
           onClose={() => { setSending(null); onDone(); }} />
       )}
     </div>
