@@ -76,9 +76,9 @@ function WeekSummary({ rows }: { rows: Row[] }) {
   return (
     <div className="kpis">
       <Kpi label="Received" value={money(total)} icon={<TrendingUp size={18} />} tone="green" sub={`${money(fees)} in fees`} />
-      <Kpi label="Gifts" value={live.length.toLocaleString()} icon={<HandCoins size={18} />} tone="violet"
+      <Kpi label={live.length === 1 ? 'Transaction' : 'Transactions'} value={live.length.toLocaleString()} icon={<HandCoins size={18} />} tone="violet"
            sub={`avg ${money(live.length ? total / live.length : 0)}`} />
-      <Kpi label="Campaigns" value={campaigns} icon={<Landmark size={18} />} tone="blue" sub="received gifts" />
+      <Kpi label="Campaigns" value={campaigns} icon={<Landmark size={18} />} tone="blue" sub="received transactions" />
     </div>
   );
 }
@@ -181,7 +181,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     return { rows: (data ?? []) as Row[], count: count ?? (data ?? []).length };
   }, [queryKey, page]);
 
-  // Voided, refunded and failed gifts don't count, unless that's what's being looked at.
+  // Voided, refunded and failed transactions don't count, unless that's what's being looked at.
   const totals = useQuery(async () => {
     if (!query) return null;
     let t = conditions(supabase.from('transaction_list').select('gross:amount.sum(),net:net_donation.sum(),fees:fee.sum()'));
@@ -239,7 +239,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
               <span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>
               <span>Fees <b>{money(totals.data?.fees ?? 0)}</b></span>
               <span>Net <b>{money(totals.data?.net ?? 0)}</b></span>
-              <span className="muted small">For everything filtered, not just this page.{!kindFilter && !query?.filters.type?.trim() && ' Leaves out voided, refunded and failed gifts.'}</span>
+              <span className="muted small">For everything filtered, not just this page.{!kindFilter && !query?.filters.type?.trim() && ' Leaves out voided, refunded and failed transactions.'}</span>
             </div>
             {notice && <div className="notice">{notice}</div>}
             {isAdmin && (
