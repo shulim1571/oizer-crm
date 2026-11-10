@@ -35,4 +35,12 @@ describe('payment page method labels', () => {
     const give = readFileSync('src/pages/Give.tsx', 'utf8');
     expect(give).toMatch(/<div className="give-names wide">\s*<label[^]*?first_name[^]*?last_name[^]*?<\/div>/);
   });
+
+  it('ask donors giving another way to include the campaign ID, in every language', () => {
+    const give = readFileSync('src/pages/Give.tsx', 'utf8');
+    expect([...give.matchAll(/include_id: '([^']+)'/g)].map(m => m[1]))
+      .toEqual(['Make sure to include the campaign ID', 'הקפידו לציין את מספר הקמפיין', 'מאכט זיכער צו שרייבן די קאמפעין נומער']);
+    const other = give.slice(give.indexOf('{t.other_ways}'), give.indexOf('</section>', give.indexOf('{t.other_ways}')));
+    expect(other).toContain('{t.include_id}: <b>{c.id}</b>');
+  });
 });

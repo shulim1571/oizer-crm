@@ -5,7 +5,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Clock, CreditCard, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Share2, Star, StickyNote, TrendingUp,
 } from 'lucide-react';
-import OrgContact from '../components/OrgContact';
 import { ShareDialog, paymentUrl } from './Outreach';
 import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
@@ -35,7 +34,7 @@ type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouch
 export default function CampaignDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
-  const { isAdmin, canWork, permissions, defaultAccountId, org } = useAuth();
+  const { isAdmin, canWork, permissions, defaultAccountId } = useAuth();
   const [tab, setTab] = useState<Tab>('donations');
   const [charging, setCharging] = useState(false);
   const [form, setForm] = useState<{ table: string; title: string; fields: Field[]; record?: Row | null; defaults?: Row } | null>(null);
@@ -211,7 +210,6 @@ export default function CampaignDetail() {
             {c.archived_at && <span>· archived {dateTime(c.archived_at)}</span>}
             {c.closed_at && <span>· closed {dateTime(c.closed_at)}</span>}
           </div>
-          <OrgContact email={org?.email} phone={org?.phone} />
         </div>
         <div className="spacer" />
         {/* Moshe Henig: the payment page sits where Edit was; Edit is in More. */}

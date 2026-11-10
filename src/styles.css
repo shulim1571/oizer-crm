@@ -884,3 +884,5 @@ tr.selected td { background: var(--accent-soft); }
 .org-contact { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; }
 .org-contact a { display: inline-flex; align-items: center; gap: 4px; color: inherit; text-decoration: none; }
 .org-contact a:hover { text-decoration: underline; }
+.give-contact { margin-top: 8px; font-size: 14px; opacity: .92; }
+.give-include-id { margin: 10px 0 0; font-size: 14px; }

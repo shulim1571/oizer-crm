@@ -32,6 +32,13 @@ describe('public payment pages', () => {
   });
   beforeEach(async () => { db = await base.clone(); });
 
+  it('show the organization\'s email and phone from its settings, each only when set', async () => {
+    await db.query(`update public.organizations set email = 'office@oizer.org', phone = '(845) 555-0100' where id = $1`, [OIZER]);
+    expect((await page(db)).org).toMatchObject({ email: 'office@oizer.org', phone: '(845) 555-0100' });
+    await db.query(`update public.organizations set email = '  ', phone = null where id = $1`, [OIZER]);
+    expect((await page(db)).org).toMatchObject({ email: null, phone: null });
+  });
+
   it('show the page to anyone, without anything private', async () => {
     const p = await page(db);
     expect(p.campaign).toMatchObject({ id: '1001', name: 'Building Fund', goal: 10000 });
