@@ -50,7 +50,7 @@ export default function PhoneLookupPage() {
           {s?.voice ? <Pill tone="green">Phone line on</Pill> : <Pill>Phone line off</Pill>}</h2>
         <p className="muted small">
           Fundraisers texting or calling from a registered phone (set on each fundraiser’s page) hear their own campaigns.
-          Anyone else gives the campaign number and its PIN (set on the campaign). Five wrong PINs in an hour lock that phone out for the hour.
+          Anyone else gives the campaign number and its 4-digit PIN (set in the campaign’s settings, kept only scrambled). Five wrong PINs in an hour lock that phone out, and ten wrong tries on one campaign lock its PIN, each for the rest of the hour. Every PIN try is listed below.
         </p>
         <ul className="muted small">
           <li>Text <code>BAL</code> for your campaigns, <code>1001</code> for one of them, or <code>1001 1234</code> with a PIN. <code>MENU</code> explains.</li>
@@ -82,14 +82,15 @@ export default function PhoneLookupPage() {
       <h2>Recent lookups</h2>
       <div className="table-card"><div className="table-wrap">
         <table className="grid">
-          <thead><tr><th>When</th><th>By</th><th>From</th><th>Fundraiser</th><th>Campaign</th><th>Result</th></tr></thead>
+          <thead><tr><th>When</th><th>By</th><th>From</th><th>Fundraiser</th><th>Campaign</th><th>PIN tried</th><th>Result</th></tr></thead>
           <tbody>
-            {(recent.data ?? []).length === 0 && <tr><td colSpan={6} className="muted">None yet.</td></tr>}
+            {(recent.data ?? []).length === 0 && <tr><td colSpan={7} className="muted">None yet.</td></tr>}
             {(recent.data ?? []).map((r, i) => (
               <tr key={i}>
                 <td>{dateTime(r.at)}</td><td>{r.channel === 'sms' ? 'Text' : 'Call'}</td><td>{r.from_phone}</td>
                 <td>{r.fundraiser ?? <span className="muted">—</span>}</td><td>{r.campaign_id ?? ''}</td>
-                <td><Pill tone={OUTCOME[r.outcome]?.tone ?? ''}>{OUTCOME[r.outcome]?.text ?? r.outcome}</Pill></td>
+                <td>{r.pin_attempt ? 'Yes' : <span className="muted">—</span>}</td>
+                <td><Pill tone={OUTCOME[r.outcome]?.tone ?? ''}>{OUTCOME[r.outcome]?.text ?? r.outcome}{r.lock_kind === 'campaign' ? ' (campaign PIN)' : r.lock_kind === 'caller' ? ' (this phone)' : ''}</Pill></td>
               </tr>
             ))}
           </tbody>

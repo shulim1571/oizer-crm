@@ -28,7 +28,7 @@ export const campaignFields: Field[] = [
   { name: 'goal', label: 'Goal', type: 'number' },
   { name: 'account_id', label: 'Bank account', type: 'select', options: accountOptions, help: 'Leave empty to use the payment method\'s account, then the default. Sub-campaigns follow this.' },
   { name: 'payment_link', label: 'Payment Link' },
-  { name: 'pin', label: 'Phone PIN', help: '4 to 8 digits. Lets anyone with it hear this campaign’s balance by text or phone.' },
+  { name: 'pin', label: 'Phone PIN', help: '4 digits. Lets a fundraiser on an unregistered phone hear this campaign by text or phone. It’s stored scrambled and never shown: type a new one to change it, leave empty to keep it. Remove it from More.' },
   { name: 'exchange', label: 'Exchange', type: 'checkbox' },
   { name: 'featured', label: 'Featured', type: 'checkbox' },
   { name: 'notes', label: 'Notes', type: 'textarea' },

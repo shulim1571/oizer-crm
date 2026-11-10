@@ -198,4 +198,67 @@ describe('phone and text lookup', () => {
       await expect(rows(db, MANAGER_1, `select public.save_phone_lookup(true, true, false)`)).rejects.toThrow();
     });
   });
+
+  describe('campaign PINs, hashed', () => {
+    const OTHER = '+12125550123';
+    const THIRD = '+12125550456';
+    const raw = async (q: string, params: unknown[] = []) => (await db.query<Record<string, any>>(q, params)).rows;
+    beforeEach(async () => { await admin(db, `select public.save_phone_lookup(true, true)`); });
+
+    it('keep only a hash: nothing readable in campaigns, nothing reachable from the app', async () => {
+      // 1002's PIN (4321) was set before; the migration and the trigger hashed it.
+      expect(await raw(`select pin from public.campaigns where pin is not null`)).toEqual([]);
+      const [k] = await raw(`select pin_hash from public.campaign_pins where campaign_id = '1002'`);
+      expect(k.pin_hash).toMatch(/^\$2[aby]\$/);
+      expect(k.pin_hash).not.toContain('4321');
+      await expect(admin(db, `select * from public.campaign_pins`)).rejects.toThrow();
+      expect(await admin(db, `select pin_set from public.campaign_pin_status('1002')`)).toEqual([{ pin_set: true }]);
+      expect(await admin(db, `select pin_set from public.campaign_pin_status('1001')`)).toEqual([{ pin_set: false }]);
+      expect(await rows(db, MANAGER_1, `select * from public.campaign_pin_status('1002')`)).toEqual([]);
+    });
+
+    it('let admins set and change a 4-digit PIN in the campaign settings, or remove it', async () => {
+      await admin(db, `update public.campaigns set pin = '2468' where id = '1001'`);   // the Edit campaign form
+      expect(await raw(`select pin from public.campaigns where id = '1001'`)).toEqual([{ pin: null }]);
+      expect((await lookup(db, STRANGER, '1001', '2468')).outcome).toBe('answered');
+      await admin(db, `select public.set_campaign_pin('1001', '1357')`);
+      expect((await lookup(db, STRANGER, '1001', '2468')).outcome).toBe('wrong_pin');
+      expect((await lookup(db, OTHER, '1001', '1357')).outcome).toBe('answered');
+      await expect(admin(db, `select public.set_campaign_pin('1001', '12345')`)).rejects.toThrow(/4 digits/);
+      await expect(admin(db, `update public.campaigns set pin = '12a4' where id = '1001'`)).rejects.toThrow(/4 digits/);
+      await expect(rows(db, MANAGER_1, `select public.set_campaign_pin('1001', '1111')`)).rejects.toThrow();
+      await admin(db, `select public.set_campaign_pin('1001', null)`);
+      expect((await lookup(db, THIRD, '1001', '1357')).outcome).toBe('wrong_pin');
+    });
+
+    it('lock a phone after 5 wrong PINs, and a campaign after 10 from any phones', async () => {
+      for (let i = 0; i < 5; i++) expect((await lookup(db, STRANGER, '1002', '0000')).outcome).toBe('wrong_pin');
+      expect(await lookup(db, STRANGER, '1002', '4321')).toMatchObject({ outcome: 'locked', lock: 'caller' });
+      expect((await lookup(db, OTHER, '1002', '4321')).outcome).toBe('answered');       // only that phone
+      for (let i = 0; i < 5; i++) expect((await lookup(db, OTHER, '1002', '9999')).outcome).toBe('wrong_pin');
+      // 10 wrong on 1002 now: its PIN is locked for everyone, even with the right PIN.
+      expect(await lookup(db, THIRD, '1002', '4321')).toMatchObject({ outcome: 'locked', lock: 'campaign' });
+      expect(await text(db, THIRD, '1002 4321')).toMatch(/Too many wrong PINs/);
+      // A registered phone still reaches its own campaigns without a PIN.
+      await admin(db, `select public.add_fundraiser_phone('m1', '(718) 555-0101')`);
+      expect((await lookup(db, M1_PHONE, '1001', null)).outcome).toBe('answered');
+      // An hour later it's open again.
+      await raw(`update public.phone_lookups set at = at - interval '61 minutes'`);
+      expect((await lookup(db, THIRD, '1002', '4321')).outcome).toBe('answered');
+    });
+
+    it('log every PIN try, right or wrong, with phone, campaign and time, never the PIN, for admins to review', async () => {
+      await lookup(db, STRANGER, '1002', '0000');
+      await lookup(db, OTHER, '1002', '4321');
+      await lookup(db, OTHER, '1002', null);
+      const log = await admin(db, `select from_phone, campaign_id, outcome, pin_attempt from public.recent_phone_lookups() order by at`);
+      expect(log).toEqual([
+        { from_phone: STRANGER, campaign_id: '1002', outcome: 'wrong_pin', pin_attempt: true },
+        { from_phone: OTHER, campaign_id: '1002', outcome: 'answered', pin_attempt: true },
+        { from_phone: OTHER, campaign_id: '1002', outcome: 'needs_pin', pin_attempt: false },
+      ]);
+      expect(JSON.stringify(await raw(`select to_jsonb(l) - 'org_id' - 'id' - 'at' as r from public.phone_lookups l`))).not.toMatch(/0000|4321/);
+      expect(await rows(db, MANAGER_1, `select * from public.recent_phone_lookups()`)).toEqual([]);
+    });
+  });
 });

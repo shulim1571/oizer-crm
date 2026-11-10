@@ -68,6 +68,8 @@ export default function CampaignDetail() {
     supabase.rpc('can_request_payout', { p_campaign: id }).then(({ data }) => setCanRequestPayout(!!data));
   }, [id, isAdmin]);
 
+  // Whether the campaign has a phone PIN (never the PIN itself, which is only kept hashed).
+  const pin = useQuery(async () => (isAdmin ? (((await supabase.rpc('campaign_pin_status', { p_campaign: id })).data ?? []) as Row[])[0] ?? null : null), [id, isAdmin]);
   const summary = useQuery(
     async () => {
       const { data, error } = await supabase.from('campaign_summary').select('*').eq('id', id).maybeSingle();
@@ -217,6 +219,11 @@ export default function CampaignDetail() {
         {canWork && c.status !== 'closed' && <button className="btn primary" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>}
         <RowMenu label="More campaign actions" text="More" items={[
           { label: 'Edit campaign', icon: <Pencil size={14} />, onClick: () => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c }), hidden: !isAdmin },
+          { label: 'Remove phone PIN', onClick: async () => {
+              if (!confirm('Remove this campaign’s phone PIN? Unregistered phones won’t be able to reach it until a new one is set.')) return;
+              const { error: e } = await supabase.rpc('set_campaign_pin', { p_campaign: id, p_pin: null });
+              if (e) alert(e.message); else pin.reload();
+            }, hidden: !(isAdmin && (pin.data as Row | null)?.pin_set) },
           { label: 'Batch entry', onClick: () => nav(`/campaigns/${encodeURIComponent(id)}/batch`), hidden: !(canEnter && c.status !== 'closed') },
           { label: 'Report', onClick: () => setReporting('report'), hidden: !canWork },
           { label: 'Donor list', onClick: () => setReporting('donors'), hidden: !canWork },

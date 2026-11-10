@@ -35,7 +35,6 @@ export const campaignColumns: Column[] = [
   { key: 'expenses', label: 'Expenses', render: r => money(r.expenses), align: 'right' },
   { key: 'balance', label: 'Balance', render: r => (r.balance_mode === 'shared' ? <span className="muted">Shared</span> : <Balance value={r.balance} />), align: 'right' },
   { key: 'pending_balance', label: 'Pending', render: r => money(r.pending_balance), align: 'right' },
-  { key: 'pin', label: 'Pin', optional: true },
   { key: 'parent_campaign_id', label: 'Under', optional: true, render: r => r.parent_campaign_id && <span className="id-tag">{r.parent_campaign_id}</span> },
 ];
 
