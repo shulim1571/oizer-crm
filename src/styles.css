@@ -888,3 +888,7 @@ tr.selected td { background: var(--accent-soft); }
 .org-contact a:hover { text-decoration: underline; }
 .give-contact { margin-top: 8px; font-size: 14px; opacity: .92; }
 .give-include-id { margin: 10px 0 0; font-size: 14px; }
+.pager { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.pager .pager-num { min-width: 36px; padding-left: 8px; padding-right: 8px; justify-content: center; }
+.pager .pager-num.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pager-gap { padding: 0 4px; color: var(--muted); }

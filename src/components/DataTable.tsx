@@ -1,3 +1,4 @@
+import Pager from './Pager';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Columns3, Filter, MoreHorizontal, Printer, X } from 'lucide-react';
@@ -465,10 +466,7 @@ export default function DataTable(p: Props) {
         {!server && !p.loading && pages > 1 && (
           <div className="table-foot">
             <span>Page {currentPage + 1} of {pages} · {visible.length.toLocaleString()} records</span>
-            <div className="pager">
-              <button className="btn" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button>
-              <button className="btn" disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>Next</button>
-            </div>
+            <Pager page={currentPage} pages={pages} onPage={setPage} />
           </div>
         )}
         {p.footer && <div className="table-foot">{p.footer}</div>}

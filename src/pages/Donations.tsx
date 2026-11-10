@@ -4,6 +4,7 @@ import { CreditCard, HandCoins, Landmark, Plus, TrendingUp } from 'lucide-react'
 import Kpi from '../components/Kpi';
 import DataTable, { parseNumberFilter, sumBadge, type Column, type ServerQuery } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
+import Pager from '../components/Pager';
 import { useSearch } from '../components/Layout';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -49,19 +50,28 @@ export function RecentDonations() {
     );
   });
   const { open, editor } = useDonationEditor(row => setData(d => replaceRow(d, row)));
+  const [kind, setKind] = useState(DEFAULT_KIND);
+  const k = DONATION_KINDS[kind];
+  const rows = (data ?? []).filter(r => !k || (r.status === k.status && (!k.type || r.type === k.type)));
 
   return (
     <>
       <DataTable
         title="Last 7 Days"
-        rows={data ?? []}
+        rows={rows}
         loading={loading}
         error={error}
         columns={donationColumns()}
         groupBy={{ label: 'Type', value: donationKind, badge: sumBadge('amount') }}
         onOpen={open ?? undefined}
         summary={data && <WeekSummary rows={data} />}
-        actions={isAdmin && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
+        actions={<>
+          <select value={kind} onChange={e => setKind(e.target.value)} aria-label="Type">
+            <option value="">All types</option>
+            {Object.keys(DONATION_KINDS).map(t => <option key={t}>{t}</option>)}
+          </select>
+          {isAdmin && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
+        </>}
       />
       {editor}
     </>
@@ -83,6 +93,8 @@ function WeekSummary({ rows }: { rows: Row[] }) {
   );
 }
 
+/** Successful (completed) only, until someone picks another type. */
+export const DEFAULT_KIND = 'Successful';
 const UNATTRIBUTED = 'Unattributed';
 const DUPLICATES = 'Possible duplicates';
 
@@ -132,7 +144,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
   const nav = useNavigate();
   const { isAdmin } = useAuth();
   const [page, setPage] = useState(0);
-  const [kindFilter, setKindFilter] = useState('');
+  const [kindFilter, setKindFilter] = useState(DEFAULT_KIND);
   const [debounced, setDebounced] = useState(q);
   const [query, setQuery] = useState<ServerQuery | null>(null);
   const [selected, setSelected] = useState<Map<string, number>>(new Map());
@@ -268,10 +280,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
         footer={
           <>
             <span>Page {page + 1} of {Math.max(pages, 1)}</span>
-            <div className="pager">
-              <button className="btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</button>
-              <button className="btn" disabled={page + 1 >= pages} onClick={() => setPage(p => p + 1)}>Next</button>
-            </div>
+            <Pager page={page} pages={pages} onPage={setPage} />
           </>
         }
       />

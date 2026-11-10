@@ -18,6 +18,8 @@ export const donationKind = (r: Row): string => (r.status === 'completed' ? r.ty
 
 /** The same words as filters. */
 export const DONATION_KINDS: Record<string, { type?: string; status: string }> = {
+  // The transaction lists open on this one (Moshe Henig, 2026-11-10); "All types" shows everything.
+  Successful: { status: 'completed' },
   Payment: { type: 'Payment', status: 'completed' },
   Batch: { type: 'Batch', status: 'completed' },
   ...Object.fromEntries(Object.entries(STATUS_LABELS).map(([status, label]) => [label, { status }])),
