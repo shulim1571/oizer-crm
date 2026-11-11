@@ -19,10 +19,11 @@ describe('filter panel', () => {
     expect(table).toContain('aria-label="Close filters" onClick={() => setShowFilters(false)}');
   });
 
-  it('keeps typed filters as they were: same hints, same matching (amounts, dates, free text)', () => {
+  it('keeps typed filters for dates and text, and From/To boxes for amounts (Moshe Henig, 2026-11-11)', () => {
     const panel = table.slice(table.indexOf('<aside className="filter-panel"'), table.indexOf('</aside>'));
     expect(panel).toContain('{panelColumns.map(c => {');
-    expect(panel).toContain("placeholder={c.filter?.type === 'number' || c.align === 'right' ? '>100' : c.filter?.type === 'date' ? 'YYYY-MM-DD' : 'Contains…'}");
+    expect(panel).toContain("placeholder={c.filter?.type === 'date' ? 'YYYY-MM-DD' : 'Contains…'}");
+    expect(panel).toContain('<RangeFilter label={c.label}');
     expect(panel).toContain('onChange={e => setFilter(c.key, e.target.value)}');
     expect(panel).toContain('setConfig({ ...config, filters: {} })');   // Clear all
   });

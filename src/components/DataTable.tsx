@@ -1,6 +1,7 @@
 import SearchSelect from './SearchSelect';
 import { dayOffset, inRange, rangeBounds, RANGE_PRESETS, type DateRange, type RangePreset } from '../lib/dateRange';
 import Pager from './Pager';
+import { parseNumberFilter, rangeEnds, rangeText } from '../lib/numberFilter';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Columns3, Filter, MoreHorizontal, Printer, X } from 'lucide-react';
@@ -31,6 +32,8 @@ export interface Column {
   /** The values to pick from in the filter panel (lookup or fixed-choice columns), for lists filtered on the server. */
   filterOptions?: () => Promise<string[]>;
 }
+
+export { parseNumberFilter, rangeEnds, rangeText };
 
 /** A filter picked from a dropdown is an exact match, written with a leading "=" (e.g. "=Cash"). */
 export const exactValue = (filter: string | undefined) => {
@@ -101,24 +104,22 @@ const display = (v: unknown) => {
   return typeof v === 'string' && ISO_DATE.test(v) ? dateTime(v) : String(v);
 };
 
-/** ">100", "<=5", "10-20" or a plain number, as bounds. Returns null when it isn't numeric. */
-export function parseNumberFilter(text: string): { min?: number; max?: number; minOpen?: boolean; maxOpen?: boolean } | null {
-  const t = text.trim();
-  const op = t.match(/^(>=|<=|>|<|=)\s*(-?[\d,.]+)$/);
-  const num = (s: string) => Number(s.replace(/,/g, ''));
-  if (op) {
-    const n = num(op[2]);
-    if (isNaN(n)) return null;
-    if (op[1] === '>') return { min: n, minOpen: true };
-    if (op[1] === '>=') return { min: n };
-    if (op[1] === '<') return { max: n, maxOpen: true };
-    if (op[1] === '<=') return { max: n };
-    return { min: n, max: n };
-  }
-  const range = t.match(/^(-?[\d,.]+)\s*-\s*(-?[\d,.]+)$/);
-  if (range) return { min: num(range[1]), max: num(range[2]) };
-  const n = num(t);
-  return t && !isNaN(n) ? { min: n, max: n } : null;
+function RangeFilter({ label, value, onChange }: { label: string; value: string | undefined; onChange: (text: string) => void }) {
+  const saved = rangeEnds(value);
+  const [from, setFrom] = useState(saved.from);
+  const [to, setTo] = useState(saved.to);
+  // Follow outside changes (Clear all, a saved view) without fighting the boxes while typing.
+  useEffect(() => {
+    if (rangeText(from, to) !== (value ?? '')) { const e = rangeEnds(value); setFrom(e.from); setTo(e.to); }
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  const set = (f: string, t: string) => { setFrom(f); setTo(t); onChange(rangeText(f, t)); };
+  return (
+    <span className="range-filter">
+      <input aria-label={`${label} from`} placeholder="From" inputMode="decimal" value={from} onChange={e => set(e.target.value.replace(/[^\d.,-]/g, ""), to)} />
+      <span className="muted">to</span>
+      <input aria-label={`${label} to`} placeholder="To" inputMode="decimal" value={to} onChange={e => set(from, e.target.value.replace(/[^\d.,-]/g, ""))} />
+    </span>
+  );
 }
 
 function matches(filter: string, value: unknown) {
@@ -548,15 +549,17 @@ export default function DataTable(p: Props) {
                     <SearchSelect value={exactValue(filters[c.key]) ?? null} placeholder="Any"
                       options={choices.map(v => ({ value: v, label: v }))}
                       onChange={v => setFilter(c.key, v ? `=${v}` : '')} />
+                  ) : c.filter?.type === 'number' || (!server && c.align === 'right') ? (
+                    <RangeFilter label={c.label} value={filters[c.key]} onChange={text => setFilter(c.key, text)} />
                   ) : (
-                    <input aria-label={`Filter ${c.label}`} placeholder={c.filter?.type === 'number' || c.align === 'right' ? '>100' : c.filter?.type === 'date' ? 'YYYY-MM-DD' : 'Contains…'}
+                    <input aria-label={`Filter ${c.label}`} placeholder={c.filter?.type === 'date' ? 'YYYY-MM-DD' : 'Contains…'}
                            value={filters[c.key] ?? ''} onChange={e => setFilter(c.key, e.target.value)} />
                   )}
                 </label>
               );
             })}
             {panelColumns.length === 0 && <p className="muted small">Nothing to filter on in these columns.</p>}
-            <p className="muted small">Numbers: 100, &gt;100, &lt;50 or 100-500. Dates: 2026, 2026-11 or 2026-11-10.</p>
+            <p className="muted small">Amounts: from, to, or both; leave either blank. Dates: 2026, 2026-11 or 2026-11-10.</p>
           </div>
           <div className="filter-panel-foot"><button type="button" className="btn primary" onClick={() => setShowFilters(false)}>Done</button></div>
         </aside>

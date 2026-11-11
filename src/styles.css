@@ -978,3 +978,7 @@ tr.selected td { background: var(--accent-soft); }
 .give-teams ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .give-teams a { display: block; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; font-weight: 600; }
 .give-teams a:hover { background: #f5f5ff; }
+
+/* Number filters in the filter panel: a From and a To box; either can be blank. */
+.range-filter { display: flex; align-items: center; gap: 6px; }
+.range-filter input { flex: 1; min-width: 0; }
