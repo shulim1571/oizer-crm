@@ -56,7 +56,11 @@ export const receiptDocument = async (id: string) => {
 // ---------------------------------------------------------------------------
 // On a donation
 // ---------------------------------------------------------------------------
-export function ReceiptActions({ donationId }: { donationId: string }) {
+/**
+ * beforeIssue: on an open donation form, saves what's on the form first, so the receipt uses the donor (and anything
+ * else) just picked there (Moshe Henig, 2026-11-11). Returns false when the save failed; the form shows why.
+ */
+export function ReceiptActions({ donationId, beforeIssue }: { donationId: string; beforeIssue?: () => Promise<boolean> }) {
   const [version, setVersion] = useState(0);
   const [issuing, setIssuing] = useState(false);
   const [correcting, setCorrecting] = useState<Row | null>(null);
@@ -76,7 +80,8 @@ export function ReceiptActions({ donationId }: { donationId: string }) {
           <button type="button" className="btn" onClick={() => setCorrecting(live)}>Void & Correct</button>
         </>
       ) : (
-        <button type="button" className="btn" onClick={() => setIssuing(true)}>Issue receipt</button>
+        <button type="button" className="btn" onClick={async () => { if (!beforeIssue || await beforeIssue()) setIssuing(true); }}
+          title={beforeIssue ? 'Saves the form first, then issues the receipt' : undefined}>Issue receipt</button>
       )}
       {list.filter(r => r !== live).map(r => <span key={r.id} className="muted small">{r.receipt_number} voided{r.void_reason ? `: ${r.void_reason}` : ''}</span>)}
       {error && <div className="error">{error}</div>}

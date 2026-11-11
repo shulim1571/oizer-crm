@@ -125,6 +125,12 @@ export default function RecordForm(p: Props) {
       }
       return p.onBulk(patch);
     }
+    const data = await persist();
+    if (data) p.onSaved(data);
+  }
+
+  /** Saves the form and returns the saved row (or null, with the error shown), without closing it. */
+  async function persist(): Promise<Row | null> {
     setSaving(true);
     setError(null);
     const payload: Row = isNew ? { ...p.defaults } : {};
@@ -143,9 +149,9 @@ export default function RecordForm(p: Props) {
       : supabase.from(p.table).update(payload).eq(pk, p.record![pk]).select().single();
     const { data, error } = await q;
     setSaving(false);
-    if (error) return setError(error.message);
+    if (error) { setError(error.message); return null; }
     clearLookups();
-    p.onSaved(data);
+    return data as Row;
   }
 
   async function remove() {
@@ -213,7 +219,7 @@ export default function RecordForm(p: Props) {
       {(error || p.bulkError) && <div className="error">{error ?? p.bulkError}</div>}
       {p.onBulk && <p className="muted small">Only fields you fill in are changed. Everything else stays as it is on each transaction.</p>}
       {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <DonationActions record={p.record!} onDone={p.onSaved} />}
-      {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <ReceiptActions donationId={p.record!.id} />}
+      {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <ReceiptActions donationId={p.record!.id} beforeIssue={async () => !!(await persist())} />}
       {p.table === 'expenses' && !isNew && !p.onBulk && isAdmin && <PayoutCheckActions record={p.record!} onDone={() => {}} />}
       <div className="form-actions">
         {!isNew && p.allowDelete && p.table !== 'donations' && <button type="button" className="btn danger" onClick={remove}>Delete</button>}
