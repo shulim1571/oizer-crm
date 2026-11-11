@@ -133,6 +133,8 @@ export default function DataTable(p: Props) {
   const activeFilters = Object.values(filters).filter(v => v.trim()).length;
 
   const [showFilters, setShowFilters] = useState(false);
+  const [viewNote, setViewNote] = useState<string | null>(null);
+  useEffect(() => { if (!viewNote) return; const t = setTimeout(() => setViewNote(null), 4000); return () => clearTimeout(t); }, [viewNote]);
   const [showCustomize, setShowCustomize] = useState(false);
   const [group, setGroup] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -312,6 +314,7 @@ export default function DataTable(p: Props) {
           <span className="count">
             {p.loading ? 'Loading…' : p.subtitle ?? `${visible.length.toLocaleString()} ${visible.length === 1 ? 'record' : 'records'}`}
           </span>
+          {viewNote && <span className="view-note" role="status">{viewNote}</span>}
         </div>
         <div className="view-actions">
           {p.actions}
@@ -336,7 +339,7 @@ export default function DataTable(p: Props) {
               </div>
             </>
           )}
-          {(!inPlatformSession || (p.more ?? []).some(m => !m.hidden)) && (
+          {(!inPlatformSession || !p.plain || (p.more ?? []).some(m => !m.hidden)) && (
             <div className="export-menu">
               <button className="btn" title="More: export, print and other actions" aria-label="More" onClick={() => setExportMenu(m => !m)} disabled={exporting}>
                 <MoreHorizontal size={16} /> {exporting ? 'Exporting…' : 'More'}
@@ -346,7 +349,12 @@ export default function DataTable(p: Props) {
                   {(p.more ?? []).filter(m => !m.hidden).map(m => (
                     <button key={m.label} className={m.danger ? 'danger' : ''} onClick={() => { setExportMenu(false); m.onClick(); }}>{m.icon}{m.label}</button>
                   ))}
-                  {(p.more ?? []).some(m => !m.hidden) && !inPlatformSession && <hr />}
+                  {(p.more ?? []).some(m => !m.hidden) && <hr />}
+                  {!p.plain && <>
+                    <button onClick={async () => { setExportMenu(false); setViewNote((await saved.saveAsDefault()) ?? 'Saved as your default view.'); }}>Save this view as my default</button>
+                    {saved.hasDefault && <button onClick={async () => { setExportMenu(false); setViewNote((await saved.resetToStandard()) ?? 'Back to the standard view.'); }}>Reset to standard view</button>}
+                    {!inPlatformSession && <hr />}
+                  </>}
                   {!inPlatformSession && <>
                     <button onClick={() => exportAs('xlsx')}>Export to Excel</button>
                     <button onClick={() => exportAs('csv')}>Export to CSV</button>

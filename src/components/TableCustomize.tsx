@@ -25,7 +25,16 @@ export interface SavedViews {
   update: () => Promise<string | null>;
   remove: (view: Row) => Promise<void>;
   setDefault: (view: Row, on: boolean) => Promise<void>;
+  /** Save the current layout, columns, sort and filters as this person's default for this list. */
+  saveAsDefault: () => Promise<string | null>;
+  /** Stop opening a saved default here and show the standard view; saved views are kept. */
+  resetToStandard: () => Promise<string | null>;
+  /** This person has a default view for this list. */
+  hasDefault: boolean;
 }
+
+/** The name of the view "Save as my default" keeps (Moshe Henig, 2026-11-11). */
+export const MY_DEFAULT = 'My default';
 
 /** The current layout, plus this person's saved views for the table. A saved default loads first. */
 export function useSavedViews(tableKey: string, enabled: boolean): SavedViews {
@@ -93,6 +102,28 @@ export function useSavedViews(tableKey: string, enabled: boolean): SavedViews {
       if (on) await supabase.from('saved_views').update({ is_default: true }).eq('id', view.id);
       await load();
     },
+    hasDefault: views.some(v => v.is_default),
+    saveAsDefault: async () => {
+      // Each person's own: saved views belong to the signed-in user (row-level security).
+      const { error: off } = await supabase.from('saved_views').update({ is_default: false }).eq('table_key', tableKey).eq('is_default', true);
+      if (off) return off.message;
+      const mine = views.find(v => v.name === MY_DEFAULT);
+      const { data, error } = mine
+        ? await supabase.from('saved_views').update({ config, is_default: true }).eq('id', mine.id).select().single()
+        : await supabase.from('saved_views').insert({ table_key: tableKey, name: MY_DEFAULT, config, is_default: true }).select().single();
+      if (error) return error.message;
+      setActive(data);
+      await load();
+      return null;
+    },
+    resetToStandard: async () => {
+      const { error } = await supabase.from('saved_views').update({ is_default: false }).eq('table_key', tableKey).eq('is_default', true);
+      if (error) return error.message;
+      setActive(null);
+      setConfig({});
+      await load();
+      return null;
+    },
   };
 }
 
@@ -128,6 +159,12 @@ export default function TableCustomize({ columns, visibleKeys, saved, onClose }:
 
   return (
     <div className="popover customize" ref={ref}>
+      <h3>My default</h3>
+      <p className="muted small">Open this list the way it looks now (columns, order, widths, sort and filters) every time. Only you see your default.</p>
+      <div className="default-view-actions">
+        <button type="button" className="btn primary" onClick={async () => setMsg((await saved.saveAsDefault()) ?? 'Saved. This list will open this way for you.')}>Save as my default</button>
+        {saved.hasDefault && <button type="button" className="btn" onClick={async () => setMsg((await saved.resetToStandard()) ?? 'Back to the standard view.')}>Reset to standard view</button>}
+      </div>
       <h3>Saved views</h3>
       {views.length === 0 && <p className="muted small">None yet. Set up the table, then name and save it here.</p>}
       <ul className="view-list">
@@ -195,7 +232,7 @@ export default function TableCustomize({ columns, visibleKeys, saved, onClose }:
         </label>
         <label><input type="checkbox" checked={!!config.compact} onChange={e => setConfig({ ...config, compact: e.target.checked })} /> Compact rows</label>
       </div>
-      <button className="link" onClick={() => saved.apply(null)}>Reset to default</button>
+      <button className="link" onClick={() => saved.apply(null)}>Show the standard layout (this time only)</button>
     </div>
   );
 }

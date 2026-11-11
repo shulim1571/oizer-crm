@@ -41,6 +41,26 @@ describe('saved views', () => {
     await save(MANAGER_2, 'A', true);
   });
 
+  it('save each person’s own default (columns, order, filters) and reset it without touching anyone else’s', async () => {
+    // What "Save as my default" does: turn off any default for this list, then keep "My default" as the default.
+    const saveDefault = async (user: string, config: object) => {
+      await rows(db, user, `update public.saved_views set is_default = false where table_key = 'All Transactions' and is_default`);
+      const [mine] = await rows<{ id: string }>(db, user, `select id from public.saved_views where table_key = 'All Transactions' and name = 'My default'`);
+      if (mine) await rows(db, user, `update public.saved_views set config = $1, is_default = true where id = $2`, [JSON.stringify(config), mine.id]);
+      else await rows(db, user, `insert into public.saved_views (table_key, name, config, is_default) values ('All Transactions', 'My default', $1, true)`, [JSON.stringify(config)]);
+    };
+    const layout = { columns: ['amount', 'donor', 'campaign'], widths: { donor: 220 }, sort: { key: 'amount', dir: 'desc' }, filters: { amount: '>100' } };
+    await saveDefault(MANAGER_1, layout);
+    await saveDefault(MANAGER_2, { columns: ['donor'], filters: {} });
+    await saveDefault(MANAGER_1, { ...layout, filters: { amount: '>500' } });   // saving again updates it
+    expect(await rows(db, MANAGER_1, `select name, is_default, config from public.saved_views where table_key = 'All Transactions'`))
+      .toEqual([{ name: 'My default', is_default: true, config: { ...layout, filters: { amount: '>500' } } }]);
+    // "Reset to standard view": no default any more; the saved view stays; the other person is untouched.
+    await rows(db, MANAGER_1, `update public.saved_views set is_default = false where table_key = 'All Transactions' and is_default`);
+    expect(await rows(db, MANAGER_1, `select name, is_default from public.saved_views`)).toEqual([{ name: 'My default', is_default: false }]);
+    expect(await rows(db, MANAGER_2, `select is_default, config from public.saved_views`)).toEqual([{ is_default: true, config: { columns: ['donor'], filters: {} } }]);
+  });
+
   it('are closed to anonymous visitors', async () => {
     await expect(rows(db, 'anon', `select 1 from public.saved_views`)).rejects.toThrow(/permission denied/);
   });
