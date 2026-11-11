@@ -15,5 +15,5 @@ umask 077
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 printf 'PLAID_CLIENT_ID=%s\nPLAID_SANDBOX_SECRET=%s\nPLAID_ENV=%s\n' "$PLAID_CLIENT_ID" "$PLAID_SANDBOX_SECRET" "$env_name" > "$tmp"
-npx -y supabase@3.0.0 secrets set --env-file "$tmp" --project-ref "$PROJECT" > /dev/null
+npx -y supabase@3.0.0 secrets set --env-file "$tmp" --remote="$PROJECT" --yes > /dev/null
 echo "Set on Supabase project $PROJECT: PLAID_CLIENT_ID, PLAID_SANDBOX_SECRET, PLAID_ENV=$env_name"
