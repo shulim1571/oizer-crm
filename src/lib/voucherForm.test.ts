@@ -9,14 +9,15 @@ describe('voucher form', () => {
     expect(names).toEqual(expect.arrayContaining(['id', 'issuer_number', 'issuer_reference']));
     const ref = voucherFields.find(f => f.name === 'id')!;
     expect(ref).toMatchObject({ label: 'Voucher ref #', readOnly: true });
-    expect(ref.showIf!({})).toBe(false);
-    expect(ref.showIf!({ id: 'VCH-2026-00003' })).toBe(true);
+    expect(ref.showIf).toBeUndefined();
     expect(voucherFields.find(f => f.name === 'issuer_reference')!.label).toBe("Issuer's ref. #");
   });
 
-  it('shows the new ref # after a voucher is logged', () => {
+  it('opens with the next voucher ref # filled in, and shows the number given after saving', () => {
     const src = readFileSync(join(__dirname, '..', 'pages', 'Vouchers.tsx'), 'utf8');
     expect(src).toContain('onSaved={row => { setAdding(false); onSaved(); setSaved(row); }}');
-    expect(src).toContain('<VoucherSavedNotice voucher={saved}');
+    expect(src).toContain('<VoucherSavedNotice voucher={saved} shownRef={nextRef}');
+    expect(src).toContain("supabase.rpc('next_voucher_ref')");
+    expect(src).toContain('defaults={{ id: nextRef || undefined,');
   });
 });

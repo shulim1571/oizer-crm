@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
@@ -60,16 +60,23 @@ export function NewVoucherButton({ campaignId, onSaved, startOpen, onDone }:
   { campaignId?: string; onSaved: () => void; startOpen?: boolean; onDone?: () => void }) {
   const [adding, setAdding] = useState(!!startOpen);
   const [saved, setSaved] = useState<Row | null>(null);
+  // The voucher ref # the new voucher will get, shown on the form from the start.
+  const [nextRef, setNextRef] = useState<string | null>(null);
+  useEffect(() => {
+    if (!adding) return;
+    setNextRef(null);
+    supabase.rpc('next_voucher_ref').then(({ data }) => setNextRef((data as string) ?? ''));
+  }, [adding]);
   return (
     <>
       <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> Log voucher</button>
-      {saved && <VoucherSavedNotice voucher={saved} onClose={() => { setSaved(null); onDone?.(); }} />}
-      {adding && (
+      {saved && <VoucherSavedNotice voucher={saved} shownRef={nextRef} onClose={() => { setSaved(null); onDone?.(); }} />}
+      {adding && nextRef !== null && (
         <RecordForm
           table="vouchers"
           title="Log voucher"
           fields={voucherFields}
-          defaults={{ campaign_id: campaignId, submission: 'online', date_received: localToday() }}
+          defaults={{ id: nextRef || undefined, campaign_id: campaignId, submission: 'online', date_received: localToday() }}
           onClose={() => { setAdding(false); onDone?.(); }}
           onSaved={row => { setAdding(false); onSaved(); setSaved(row); }}
         />
@@ -79,7 +86,7 @@ export function NewVoucherButton({ campaignId, onSaved, startOpen, onDone }:
 }
 
 /** After a voucher is logged: its ref # to write on the physical voucher (Moshe Henig, 2026-11-11). */
-export function VoucherSavedNotice({ voucher: v, onClose }: { voucher: Row; onClose: () => void }) {
+export function VoucherSavedNotice({ voucher: v, shownRef, onClose }: { voucher: Row; shownRef?: string | null; onClose: () => void }) {
   return (
     <Overlay onClose={onClose}>
       <div className="voucher-saved">
@@ -87,6 +94,7 @@ export function VoucherSavedNotice({ voucher: v, onClose }: { voucher: Row; onCl
         <p>Voucher ref #</p>
         <p className="voucher-ref"><b>{v.id}</b></p>
         <p className="muted small">Write this on the physical voucher so the two can be matched.</p>
+        {shownRef && shownRef !== v.id && <p className="notice">Another voucher was logged while this form was open, so this one got {v.id} instead of {shownRef}.</p>}
         <dl className="record-facts">
           <dt>Issuer</dt><dd>{issuerName(v.issuer)}</dd>
           {v.issuer_number && <><dt>Issuer voucher / batch #</dt><dd>{v.issuer_number}</dd></>}

@@ -152,8 +152,8 @@ export const recurringPledgeEditFields: Field[] = [...pledgeWho, { name: 'date_p
 
 export const voucherFields: Field[] = [
   { name: 'issuer', label: 'Voucher issuer', type: 'select', options: voucherIssuerOptions, required: true },
-  // Our voucher ref # (VCH-...) is given on saving; shown here once it exists, to match the physical voucher.
-  { name: 'id', label: 'Voucher ref #', readOnly: true, showIf: v => !!v.id, help: 'Write this on the physical voucher' },
+  // Oizer's voucher ref # (VCH-...), filled in when the form opens and never typed (Moshe Henig, 2026-11-11).
+  { name: 'id', label: 'Voucher ref #', readOnly: true, help: 'Filled in by Oizer. Write this on the physical voucher' },
   { name: 'issuer_number', label: 'Issuer voucher / batch #' },
   { name: 'issuer_reference', label: "Issuer's ref. #", help: "The issuer's own reference number, separate from our voucher ref #" },
   { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
