@@ -6,7 +6,14 @@ const PAGE_W = 612;
 const PAGE_H = 792;
 const CHECK_BOTTOM = PAGE_H - 252;
 const MICR_PITCH = 9; // 8 characters to the inch, as E-13B requires
-const MICR_BASELINE = CHECK_BOTTOM + 13.5; // 3/16 inch above the bottom edge
+// Moshe Henig, 2026-11-11: larger numbers, moved up slightly (1/4 inch above the bottom edge instead of 3/16, still
+// inside the bottom 5/8 inch band banks read). The pitch stays 1/8 inch.
+export const MICR_SIZE = 14;
+export const MICR_BASELINE_ABOVE_BOTTOM = 18;
+const MICR_BASELINE = CHECK_BOTTOM + MICR_BASELINE_ABOVE_BOTTOM;
+// The signature, trimmed to its writing before it gets here (signatureTrim.ts): a little larger than before (about
+// 1.4 times), its bottom just under the signature line (drawn at y 598) so it sits on the line.
+export const SIGNATURE_BOX = { width: 160, height: 26, bottom: 596 };
 const MM = 72 / 25.4;
 
 const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen',
@@ -47,13 +54,15 @@ export interface MicrChar { position: number; char: string }
 
 /**
  * The MICR line by field position, counted from the check's right edge at 1/8 inch each:
- * on-us (account number) ends at 14, transit (routing) runs 33 to 43, auxiliary on-us (check number) ends at 45.
+ * on-us (account number) sits in its field (14 to 32), transit (routing) runs 33 to 43, auxiliary on-us (check
+ * number) ends at 45. The account number is placed at the left of its field, one space from the routing number
+ * (Moshe Henig, 2026-11-11: closer to the routing number); a very long one still ends no further right than 14.
  * Symbols are the font's characters for the transit and on-us marks.
  */
 export function micrLine(checkNumber: number, routing: string, account: string, transit = 'A', onUs = 'C'): MicrChar[] {
   const place = (text: string, rightmost: number) => [...text].reverse().map((char, i) => ({ position: rightmost + i, char }));
   return [
-    ...place(`${account}${onUs}`, 14),
+    ...place(`${account}${onUs}`, Math.max(14, 32 - `${account}${onUs}`.length)),
     ...place(`${transit}${routing}${transit}`, 33),
     ...place(`${onUs}${checkNumber}${onUs}`, 45),
   ].sort((a, b) => b.position - a.position);
@@ -132,15 +141,15 @@ export async function buildCheckPdf(c: CheckData): Promise<Uint8Array> {
   text(page, 'AUTHORIZED SIGNATURE', X(474), Y(589), regular, 6, 'center');
   if (c.signature && !c.sample) {
     const img = c.signature.mime === 'image/png' ? await doc.embedPng(c.signature.bytes) : await doc.embedJpg(c.signature.bytes);
-    const scale = Math.min(190 / img.width, 42 / img.height);
-    page.drawImage(img, { x: X(474 - (img.width * scale) / 2), y: Y(599), width: img.width * scale, height: img.height * scale });
+    const scale = Math.min(SIGNATURE_BOX.width / img.width, SIGNATURE_BOX.height / img.height);
+    page.drawImage(img, { x: X(474 - (img.width * scale) / 2), y: Y(SIGNATURE_BOX.bottom), width: img.width * scale, height: img.height * scale });
   }
 
   // MICR line, each character at its exact position
   const micrFont = c.micrFont ? await doc.embedFont(c.micrFont.bytes, { subset: false }) : null;
   const chars = micrLine(c.checkNumber, c.routing, c.account, c.micrFont?.transit || 'A', c.micrFont?.onUs || 'C');
   for (const m of chars) {
-    page.drawText(m.char, { x: X(PAGE_W - m.position * MICR_PITCH), y: Y(MICR_BASELINE), size: 12, font: micrFont ?? regular });
+    page.drawText(m.char, { x: X(PAGE_W - m.position * MICR_PITCH), y: Y(MICR_BASELINE), size: MICR_SIZE, font: micrFont ?? regular });
   }
 
   if (c.sample || !micrFont) {

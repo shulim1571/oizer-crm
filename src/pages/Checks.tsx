@@ -11,6 +11,7 @@ import { accountOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import type { CheckData } from '../lib/checkPdf';
+import { trimSignature } from '../lib/signatureTrim';
 import { Overlay } from './Pledges';
 
 // The PDF library is large, so it loads only when a check is printed.
@@ -44,7 +45,8 @@ async function checkData(s: Row, account: string, c: { checkNumber: number; date
     printName: s.print_name ?? '', printAddress: s.print_address, bankName: s.bank_name ?? '',
     routing: s.routing_number ?? '000000000', account: s.account_number ?? '0000',
     offsetX: Number(s.offset_x), offsetY: Number(s.offset_y),
-    signature: sig ? { bytes: fromHex(sig.data_hex, 'signature file'), mime: sig.mime } : null,
+    // Trimmed to the writing, so it sits on the signature line whatever margins the file has.
+    signature: sig ? await trimSignature({ bytes: fromHex(sig.data_hex, 'signature file'), mime: sig.mime }) : null,
     micrFont: font ? { bytes: fromHex(font.data_hex, 'MICR font file'), transit: font.transit_char, onUs: font.onus_char } : null,
     sample,
   };
