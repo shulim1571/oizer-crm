@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js';
 import { logActivity, supabase, type Row } from './supabase';
 import { latestOnly, loadAccessSafely } from './accessLoad';
+import { watchIdle } from './idle';
 import { applyOrg, leavePlatformOrg, platformOrg, resolveOrg, type Org } from './org';
 
 type Role = 'super_admin' | 'admin' | 'manager' | 'guest' | 'pending';
@@ -95,6 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(p);
     setAccess(next);
   }
+
+  // Signed out after 30 minutes without activity (the server also limits idle time and total session length).
+  useEffect(() => {
+    if (!session) return;
+    return watchIdle(() => {
+      try { sessionStorage.setItem('signed-out-idle', '1'); } catch { /* ignore */ }
+      void supabase.auth.signOut({ scope: 'local' });
+    });
+  }, [session]);
 
   useEffect(() => {
     // Nothing may ask about access until the requests carry the organization.

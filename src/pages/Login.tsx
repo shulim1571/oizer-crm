@@ -7,10 +7,12 @@ import { signInWithPassword, supabase } from '../lib/supabase';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
-const passwordProblem = (p: string) =>
-  p.length >= 8 && /\d/.test(p) && /[^A-Za-z0-9]/.test(p)
+/** New passwords: at least 12 characters (Shulim, 2026-11-11). Existing shorter passwords still sign in until changed. */
+export const MIN_PASSWORD = 12;
+export const passwordProblem = (p: string) =>
+  p.length >= MIN_PASSWORD && /\d/.test(p) && /[^A-Za-z0-9]/.test(p)
     ? null
-    : 'Use at least 8 characters, including a number and a special character.';
+    : `Use at least ${MIN_PASSWORD} characters, including a number and a special character.`;
 
 /** Two-panel layout shared by the sign-in, password and waiting screens. */
 export function AuthShell({ children }: { children: ReactNode }) {
@@ -80,6 +82,8 @@ export function ConfirmEmailLink({ tokenHash, type, onDone }: { tokenHash: strin
 }
 
 export default function Login({ linkError }: { linkError?: string | null }) {
+  // Said once, after an automatic sign-out for inactivity.
+  const [idleNote] = useState(() => { try { const v = sessionStorage.getItem('signed-out-idle') === '1'; sessionStorage.removeItem('signed-out-idle'); return v; } catch { return false; } });
   const { org } = useAuth();
   const [mode, setMode] = useState<Mode>(linkError ? 'reset' : 'signin');
   const [email, setEmail] = useState('');
@@ -128,11 +132,12 @@ export default function Login({ linkError }: { linkError?: string | null }) {
         </label>
         {mode !== 'reset' && (
           <label className="field"><span>Password</span>
-            <input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={8} required
-                   value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" />
+            <input type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={mode === 'signup' ? MIN_PASSWORD : undefined} required
+                   value={password} onChange={e => setPassword(e.target.value)} placeholder={mode === 'signup' ? `At least ${MIN_PASSWORD} characters` : ''} />
           </label>
         )}
         {msg && <div className={msg.ok ? 'notice' : 'error'}>{msg.text}</div>}
+        {idleNote && !msg && <div className="notice">You were signed out after 30 minutes without activity.</div>}
         <button className="btn primary wide" disabled={busy}>
           {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create login' : 'Send reset link'}
         </button>
@@ -163,7 +168,7 @@ export function SetNewPassword({ onDone }: { onDone: () => void }) {
         <h1>Choose a new password</h1>
         <p className="lead">You'll use it next time you sign in.</p>
         <label className="field"><span>New password</span>
-          <input type="password" minLength={8} required autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} />
+          <input type="password" minLength={MIN_PASSWORD} required autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} />
         </label>
         {err && <div className="error">{err}</div>}
         <button className="btn primary wide">Save password</button>
