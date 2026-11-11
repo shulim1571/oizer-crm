@@ -1,0 +1,17 @@
+# Dependency scanning (Shulim, 2026-11-11, before the Plaid production application).
+# Dependabot opens pull requests for outdated or vulnerable packages; security updates are also raised as alerts.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
