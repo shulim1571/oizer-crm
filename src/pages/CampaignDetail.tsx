@@ -29,7 +29,7 @@ import { PayoutStatusPill, RequestPayoutDialog, payoutStatus } from './Payouts';
 import { CampaignReportDialog, DonorListDialog } from './Reports';
 import { ContactImportDialog } from './Imports';
 
-type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers' | 'sub-campaigns' | 'settings';
+type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers' | 'teams' | 'sub-campaigns' | 'settings';
 
 export default function CampaignDetail() {
   const { id = '' } = useParams();
@@ -102,6 +102,7 @@ export default function CampaignDetail() {
         return page((a, b) => supabase.from('tasks').select('*, donors(display_name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
       case 'pledges':
         return page((a, b) => supabase.from('pledge_list').select('*').eq('campaign_id', id).order('date_pledged', { ascending: false }).range(a, b));
+      case 'teams':
       case 'sub-campaigns':
       case 'settings':
         return [];
@@ -118,7 +119,7 @@ export default function CampaignDetail() {
   const combines = Number(c.combined_raised) !== Number(c.raised);
   const canAddSub = c.status !== 'closed' && isPrimary;
   // Fundraisers have no view of transfers, and a sub-campaign fundraiser's page stays on their own numbers.
-  const tabs: Tab[] = ['donations', 'expenses', ...(isAdmin ? ['transfers' as Tab] : []), 'tasks', 'pledges', 'vouchers', 'sub-campaigns', ...(isPrimary ? ['settings' as Tab] : [])];
+  const tabs: Tab[] = ['donations', 'expenses', ...(isAdmin ? ['transfers' as Tab] : []), 'tasks', 'pledges', 'vouchers', 'teams', 'sub-campaigns', ...(isPrimary ? ['settings' as Tab] : [])];
   const canEditTasks = canWork;
   const setStatus = async (status: string, question: string) => {
     if (!confirm(question)) return;
@@ -158,6 +159,11 @@ export default function CampaignDetail() {
       ],
       add: false as const,
       edit: isAdmin && { table: 'transfers', title: 'Edit memo', fields: transferEditFields },
+    },
+    teams: {
+      columns: [],
+      add: false as const,
+      edit: false as const,
     },
     'sub-campaigns': {
       columns: [],
@@ -207,7 +213,7 @@ export default function CampaignDetail() {
             {c.parent_campaign_id && <Pill tone={c.balance_mode === 'shared' ? 'blue' : 'violet'}>{modeLabel(c.balance_mode)}</Pill>}
           </h1>
           <div className="sub">
-            {c.parent_campaign_id && <span>Sub-campaign of <Link to={`/campaigns/${encodeURIComponent(c.parent_campaign_id)}`}>#{c.parent_campaign_id}</Link> ·</span>}
+            {c.parent_campaign_id && <span>{modeLabel(c.balance_mode)} of <Link to={`/campaigns/${encodeURIComponent(c.parent_campaign_id)}`}>#{c.parent_campaign_id}</Link> ·</span>}
             {c.external_name && c.external_name !== (c.internal_name || c.campaign_name) && <span>{c.external_name}</span>}
             {c.manager_name && <span>· Primary: <b><AdminLink to={`/managers/${encodeURIComponent(c.manager_id)}`}>{c.manager_name}</AdminLink></b></span>}
             {c.sub_managers.length > 0 && <span>· with {c.sub_managers.map((m: Row) => m.full_name).join(', ')}</span>}
@@ -232,7 +238,7 @@ export default function CampaignDetail() {
           { label: 'Donor list', onClick: () => setReporting('donors'), hidden: !canWork },
           { label: 'Import contacts', onClick: () => setReporting('contacts'), hidden: !(canWork && c.status !== 'closed') },
           { label: 'Request a team member', onClick: () => setRequestingTeam(true), hidden: !(!isAdmin && isPrimary) },
-          { label: 'Change balance mode', onClick: () => setChangingMode(true), hidden: !(isAdmin && c.parent_campaign_id) },
+          { label: c.balance_mode === 'shared' ? 'Change to a sub-campaign' : 'Change to a team', onClick: () => setChangingMode(true), hidden: !(isAdmin && c.parent_campaign_id) },
           { label: 'Publish', onClick: () => setStatus('active', 'Publish this campaign?'), hidden: !(isAdmin && c.status === 'draft') },
           { label: 'Archive', onClick: () => setStatus('archived', 'Archive this campaign? It leaves the active list, but a new donation brings it back.'), hidden: !(isAdmin && c.status === 'active') },
           { label: 'Reactivate', onClick: () => setStatus('active', 'Reactivate this campaign?'), hidden: !(isAdmin && c.status === 'archived') },
@@ -242,13 +248,13 @@ export default function CampaignDetail() {
       </div>
 
       <div className="kpis">
-        <Kpi label={combines ? 'Raised, with shared sub-campaigns' : 'Raised'} value={money(c.combined_raised)} icon={<TrendingUp size={18} />} tone="green"
+        <Kpi label={combines ? 'Raised, with teams' : 'Raised'} value={money(c.combined_raised)} icon={<TrendingUp size={18} />} tone="green"
              sub={[combines && `${money(c.raised)} directly`, `${Number(c.combined_donations).toLocaleString()} donations`, c.goal != null && Number(c.goal) > 0 && `${pct(Number(c.combined_raised) / Number(c.goal))} of ${money(c.goal)} goal`].filter(Boolean).join(' · ')} />
         <Kpi label="Fees" value={money(c.combined_fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(Number(c.combined_raised) ? Number(c.combined_fees) / Number(c.combined_raised) : 0)} of raised`} />
         <Kpi label="Expenses" value={money(c.combined_expenses)} icon={<Receipt size={18} />} tone="amber" />
         {c.balance_mode === 'shared'
           ? <Kpi label="Balance" value={<span className="muted">Shared</span>} icon={<Scale size={18} />} tone="blue" sub="Counted in the parent's balance" />
-          : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} sub={Number(c.sub_count) > 0 ? `${c.sub_count} sub-campaign${Number(c.sub_count) === 1 ? '' : 's'}; independent ones count separately` : undefined} />}
+          : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} sub={Number(c.sub_count) > 0 ? "Includes its teams; sub-campaigns keep their own balance" : undefined} />}
         {Number(c.post_dated_amount) > 0 && <Kpi label="Post-dated checks" value={money(c.post_dated_amount)} icon={<Clock size={18} />} tone="blue" sub="Not in the balance yet" />}
         {Number(c.awaiting_approval) > 0 && <Kpi label="Awaiting approval" value={money(c.awaiting_approval)} icon={<Clock size={18} />} tone="amber" sub="Not in the balance yet" />}
         <Kpi label="Pledged (open)" value={money(c.pledged_open)} icon={<Handshake size={18} />} tone="blue"
@@ -273,7 +279,7 @@ export default function CampaignDetail() {
         ))}
       </div>
 
-      {tab === 'settings' ? <CampaignSettingsTab key={settingsKey} campaignId={id} /> : tab === 'sub-campaigns' ? <SubCampaignsTab parent={c} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
+      {tab === 'settings' ? <CampaignSettingsTab key={settingsKey} campaignId={id} /> : tab === 'teams' || tab === 'sub-campaigns' ? <SubCampaignsTab key={tab} parent={c} kind={tab === 'teams' ? 'team' : 'sub'} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
         title={tab[0].toUpperCase() + tab.slice(1)}
         exportName={`${c.id}-${tab}`}
         rows={(rows.data as Row[]) ?? []}

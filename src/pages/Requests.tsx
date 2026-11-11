@@ -204,10 +204,10 @@ export function RequestDecision({ id, onDone }: { id: string; onDone: (action: s
           </select>
         </label>
         {r.parent_campaign_id && (
-          <label className="field"><span>Balance mode</span>
+          <label className="field"><span>Create as</span>
             <select value={mode} onChange={e => setMode(e.target.value)}>
-              <option value="shared">Shared balance</option>
-              <option value="independent">Independent balance</option>
+              <option value="shared">Team (raises into the parent's balance)</option>
+              <option value="independent">Sub-campaign (its own balance)</option>
             </select>
           </label>
         )}

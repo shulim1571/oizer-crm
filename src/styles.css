@@ -969,3 +969,8 @@ tr.selected td { background: var(--accent-soft); }
 /* New Donation in the header bar, on every page (just before the bell); icon only on narrow screens. */
 .topbar .header-new-donation { white-space: nowrap; flex: none; }
 @media (max-width: 720px) { .topbar .header-new-donation { font-size: 0; gap: 0; padding: 6px 8px; } .topbar .header-new-donation svg { margin: 0; } }
+
+/* Teams listed on a parent campaign's payment page, each a link to its own page. */
+.give-teams ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.give-teams a { display: block; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; font-weight: 600; }
+.give-teams a:hover { background: #f5f5ff; }

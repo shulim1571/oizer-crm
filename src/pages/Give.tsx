@@ -19,7 +19,7 @@ const T: Record<Lang, Record<string, string>> = {
     raised: 'raised of', goal: 'goal', amount: 'Amount', other: 'Other amount', cover: 'I\'d like to cover the processing fee so 100% of my donation goes to the campaign',
     fee: 'fee', total: 'Total charge', first: 'First name', last: 'Last name', phone: 'Phone', email: 'Email (optional)', country: 'Country',
     address: 'Address (optional)', zip: 'ZIP code', postal: 'Postal code', postcode: 'Postcode', notes: 'Message (optional)', card: 'Card number', cvv: 'CVV',
-    exp: 'Exp.', donate: 'Donate', processing: 'Processing…', loading: 'Loading the secure card fields…', other_ways: 'Other ways to give', include_id: 'Make sure to include the campaign ID',
+    exp: 'Exp.', donate: 'Donate', processing: 'Processing…', loading: 'Loading the secure card fields…', other_ways: 'Other ways to give', teams: 'Teams', include_id: 'Make sure to include the campaign ID',
     checks: 'Checks payable to', zelle: 'Zelle', ein: 'EIN', wall: 'Recent donors', anonymous: 'Anonymous', thanks: 'Thank you for your donation to',
     charged: 'Charged', receipt: 'Send me a receipt', receipt_sent: 'Thank you. The office will send your receipt.', another: 'Make another donation',
     confirm: 'You\'re about to donate {amount}. Please confirm this is correct.', min: 'The smallest gift here is {amount}.', choose: 'Choose an amount.',
@@ -32,7 +32,7 @@ const T: Record<Lang, Record<string, string>> = {
     raised: 'נאספו מתוך', goal: 'יעד', amount: 'סכום', other: 'סכום אחר', cover: 'אני מעוניין לכסות את עמלת הסליקה כדי שכל תרומתי תגיע למטרה',
     fee: 'עמלה', total: 'סך החיוב', first: 'שם פרטי', last: 'שם משפחה', phone: 'טלפון', email: 'דוא״ל (רשות)', country: 'מדינה',
     address: 'כתובת (רשות)', zip: 'מיקוד', postal: 'מיקוד', postcode: 'מיקוד', notes: 'הודעה (רשות)', card: 'מספר כרטיס', cvv: 'CVV',
-    exp: 'תוקף', donate: 'לתרומה', processing: 'מעבד…', loading: 'טוען את שדות הכרטיס המאובטחים…', other_ways: 'דרכים נוספות לתרום', include_id: 'הקפידו לציין את מספר הקמפיין',
+    exp: 'תוקף', donate: 'לתרומה', processing: 'מעבד…', loading: 'טוען את שדות הכרטיס המאובטחים…', other_ways: 'דרכים נוספות לתרום', teams: 'צוותים', include_id: 'הקפידו לציין את מספר הקמפיין',
     checks: 'צ׳קים לפקודת', zelle: 'Zelle', ein: 'EIN', wall: 'תורמים אחרונים', anonymous: 'בעילום שם', thanks: 'תודה על תרומתך ל',
     charged: 'חויב', receipt: 'שלחו לי קבלה', receipt_sent: 'תודה. המשרד ישלח לך קבלה.', another: 'תרומה נוספת',
     confirm: 'אתה עומד לתרום {amount}. נא לאשר שהסכום נכון.', min: 'התרומה המינימלית היא {amount}.', choose: 'נא לבחור סכום.',
@@ -45,7 +45,7 @@ const T: Record<Lang, Record<string, string>> = {
     raised: 'געזאמלט פון', goal: 'ציל', amount: 'סכום', other: 'אן אנדער סכום', cover: 'איך וויל צאלן די באארבעטונג אפצאל, כדי מיין גאנצע נדבה זאל אנקומען צום ציל',
     fee: 'אפצאל', total: 'סך הכל', first: 'ערשטער נאמען', last: 'פאמיליע נאמען', phone: 'טעלעפאן', email: 'אימעיל (אויב געוואלט)', country: 'לאנד',
     address: 'אדרעס (אויב געוואלט)', zip: 'זיפ קאוד', postal: 'פאסט קאוד', postcode: 'פאסט קאוד', notes: 'מעסעדזש (אויב געוואלט)', card: 'קארטל נומער', cvv: 'CVV',
-    exp: 'ביז', donate: 'נדבה געבן', processing: 'ארבעט…', loading: 'לאדט די זיכערע קארטל פעלדער…', other_ways: 'אנדערע וועגן צו געבן', include_id: 'מאכט זיכער צו שרייבן די קאמפעין נומער',
+    exp: 'ביז', donate: 'נדבה געבן', processing: 'ארבעט…', loading: 'לאדט די זיכערע קארטל פעלדער…', other_ways: 'אנדערע וועגן צו געבן', teams: 'גרופעס', include_id: 'מאכט זיכער צו שרייבן די קאמפעין נומער',
     checks: 'טשעקס צו', zelle: 'Zelle', ein: 'EIN', wall: 'לעצטע נדבנים', anonymous: 'אנאנים', thanks: 'א דאנק פאר אייער נדבה צו',
     charged: 'באצאלט', receipt: 'שיקט מיר א קבלה', receipt_sent: 'א דאנק. דער אפיס וועט אייך שיקן א קבלה.', another: 'נאך א נדבה',
     confirm: 'איר גייט געבן {amount}. ביטע באשטעטיגט אז דאס איז ריכטיג.', min: 'די קלענסטע נדבה דא איז {amount}.', choose: 'ביטע קלייבט א סכום.',
@@ -167,6 +167,13 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
             <section className="give-card give-wall">
               <h2 dir="auto">{t.wall}</h2>
               <ul>{data.page.donor_wall.map((w: Row, i: number) => <li key={i}><span dir="auto">{w.name || t.anonymous}</span><b>{usd(Number(w.amount))}</b></li>)}</ul>
+            </section>
+          )}
+          {/* The campaign's teams that are turned on for this page, each opening its own page (Moshe Henig, 2026-11-11). */}
+          {Array.isArray(data.teams) && data.teams.length > 0 && (
+            <section className="give-card give-teams">
+              <h2 dir="auto">{t.teams}</h2>
+              <ul>{data.teams.map((tm: Row) => <li key={tm.id}><a href={`/give/${encodeURIComponent(tm.id)}`} dir="auto">{tm.name}</a></li>)}</ul>
             </section>
           )}
           {(data.org.check_payee || data.org.zelle || data.org.ein) && (
