@@ -100,6 +100,18 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 - **Payments**: Card Processing (Sola keys), Methods & Fees, Payout Methods, Bank Accounts.
 - **Campaign Templates** and **Data Import** are under Settings too.
 
+## Account security and two-step verification
+
+- The shield button next to your email (bottom of the menu) opens **Account security**. Click **Set up two-step
+  verification**, scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator,
+  1Password and similar), and enter the 6-digit code to finish.
+- Once it is on, you enter a code after your password when you sign in. **Not now** lets you in without bank and
+  reconciliation data.
+- **Bank Reconciliation and Plaid need a verified session.** Admins without two-step verification see a prompt there
+  to set it up; the rest of Donor Base works as usual.
+- New passwords need at least 12 characters, including a number and a special character.
+- You are signed out after 30 minutes without activity, and after 12 hours in any case.
+
 ## The help assistant
 
 - This assistant answers how-to questions about Oizer. It can't see donors, donations, bank lines or any other
