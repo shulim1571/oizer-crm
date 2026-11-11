@@ -180,7 +180,7 @@ export function ApprovePayout({ requestId, onAct }: { requestId: string; onAct: 
     setMethod(r.method);
     setAmount(r.amount ?? '');
     setAccount(defaultAccountId ?? '');
-    setMemo(r.campaigns?.external_name || r.campaigns?.internal_name || '');
+    setMemo(r.campaign_id ?? '');   // the check memo defaults to the campaign ID (Moshe Henig, 2026-11-11); editable
     campaignBalance(r.campaign_id).then(b => { setBalance(b); if (r.full_balance && b != null) setAmount(b.toFixed(2)); });
   }, [r, defaultAccountId]);
   // Opening a request shows the full payee and bank details to the organization's admins (Moshe Henig, 2026-11-11).

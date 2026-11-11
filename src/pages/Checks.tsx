@@ -117,7 +117,8 @@ function PrintCheckDialog({ payout, onClose, onDone }: { payout: Row; onClose: (
     accountOptions().then(setAccounts);
     asset('micr_font').then(f => setHasFont(!!f));
     supabase.from('campaigns').select('internal_name, external_name').eq('id', payout.campaign_id).maybeSingle()
-      .then(({ data }) => { const n = data?.external_name || data?.internal_name || ''; setCampaign(n); setMemo((m: string) => m || n); });
+      // The memo defaults to the campaign ID (Moshe Henig, 2026-11-11); still editable, and a saved memo is kept.
+      .then(({ data }) => { const n = data?.external_name || data?.internal_name || ''; setCampaign(n); setMemo((m: string) => m || payout.campaign_id || ''); });
   }, [payout.campaign_id]);
   useEffect(() => { setSettings(null); if (account) settingsFor(account).then(setSettings); }, [account]);
   const today = new Date();
