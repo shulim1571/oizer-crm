@@ -2,7 +2,7 @@ import { HelpAssistant } from '../pages/Assistant';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, CreditCard, FileCheck, Globe, Handshake, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Printer, Receipt, RefreshCw, Repeat, Scale, Search, Send, ShieldCheck, Smartphone, Ticket, Upload, UserCircle, Users, Wallet,
+  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, Globe, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Printer, Receipt, RefreshCw, Scale, Search, Send, ShieldCheck, Smartphone, Upload, UserCircle, Users, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
@@ -65,12 +65,12 @@ const NAV: NavSection[] = [
     items: [
       { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true,
         tabs: [{ to: '/donations/new', label: 'One donation' }, { to: '/donations/batch', label: 'Batch Entry' }] },
-      // One list with a date range (Last 7 days, 30, 60, a year or custom) instead of a Last 7 Days tab.
-      { to: '/donations/all', label: 'Transactions', icon: <CircleDollarSign size={I} /> },
-      { to: '/recurring', label: 'Recurring', icon: <Repeat size={I} /> },
-      { to: '/pledges', label: 'Pledges', icon: <Handshake size={I} /> },
-      { to: '/vouchers', label: 'Vouchers', icon: <Ticket size={I} />, admin: true },
-      { to: '/receipts', label: 'Receipts', icon: <FileCheck size={I} />, admin: true },
+      // One list with a date range (Last 7 days, 30, 60, a year or custom) instead of a Last 7 Days tab; Recurring,
+      // Pledges, Vouchers and Receipts are tabs here, like Requests under Campaigns (Moshe Henig, 2026-11-11).
+      { to: '/donations/all', label: 'Transactions', icon: <CircleDollarSign size={I} />,
+        tabs: [{ to: '/donations/all', label: 'Transactions' }, { to: '/donations/recurring', label: 'Recurring' },
+          { to: '/donations/pledges', label: 'Pledges' }, { to: '/donations/vouchers', label: 'Vouchers', admin: true },
+          { to: '/donations/receipts', label: 'Receipts', admin: true }] },
     ],
   },
   {

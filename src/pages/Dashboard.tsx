@@ -160,7 +160,7 @@ export default function DashboardPage() {
         <div className="quick-links">
           <Link className="btn" to="/donors">Look up a donor</Link>
           <Link className="btn" to="/donors">Add a donor</Link>
-          <Link className="btn" to="/pledges">Add a pledge</Link>
+          <Link className="btn" to="/donations/pledges">Add a pledge</Link>
         </div>
       )}
 

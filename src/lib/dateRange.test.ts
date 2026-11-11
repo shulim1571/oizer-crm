@@ -37,7 +37,7 @@ describe('date range', () => {
   it('replaces the Last 7 Days tab with one Transactions list, and old links still land there', () => {
     const layout = readFileSync('src/components/Layout.tsx', 'utf8');
     expect(layout).not.toContain("label: 'Last 7 Days'");
-    expect(layout).toContain("{ to: '/donations/all', label: 'Transactions', icon: <CircleDollarSign size={I} /> },");
+    expect(layout).toContain("{ to: '/donations/all', label: 'Transactions', icon: <CircleDollarSign size={I} />,");
     expect(readFileSync('src/App.tsx', 'utf8')).toContain('<Route path="donations/recent" element={<Navigate to="/donations/all" replace />} />');
     expect(readFileSync('src/pages/Donations.tsx', 'utf8')).not.toContain('function RecentDonations');
   });

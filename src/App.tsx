@@ -204,19 +204,24 @@ export default function App() {
         {/* The Last 7 Days tab became a date range on the list; old links land there. */}
         <Route path="donations/recent" element={<Navigate to="/donations/all" replace />} />
         <Route path="donations/all" element={<AllDonations />} />
-        <Route path="pledges" element={<PledgesPage />} />
-        <Route path="vouchers" element={<AdminOnly><VouchersPage /></AdminOnly>} />
+        <Route path="donations/pledges" element={<PledgesPage />} />
+        <Route path="donations/vouchers" element={<AdminOnly><VouchersPage /></AdminOnly>} />
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="payout-requests" element={<PayoutRequestsPage />} />
         <Route path="payees" element={<PayeesPage />} />
         <Route path="checks" element={<AdminOnly><ChecksPage /></AdminOnly>} />
         <Route path="reconciliation" element={<AdminOnly><ReconciliationPage /></AdminOnly>} />
-        <Route path="receipts" element={<AdminOnly><ReceiptsPage /></AdminOnly>} />
+        <Route path="donations/receipts" element={<AdminOnly><ReceiptsPage /></AdminOnly>} />
         <Route path="source-report" element={<SourceReportPage />} />
         <Route path="fundraiser-directory" element={<AdminOnly><FundraiserDirectoryPage /></AdminOnly>} />
         <Route path="data-import" element={<AdminOnly><DataImportPage /></AdminOnly>} />
         <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="recurring" element={<RecurringPage />} />
+        <Route path="donations/recurring" element={<RecurringPage />} />
+        {/* Recurring, Pledges, Vouchers and Receipts moved under Transactions; old links (and emails) still land there. */}
+        <Route path="recurring" element={<Navigate to="/donations/recurring" replace />} />
+        <Route path="pledges" element={<Navigate to="/donations/pledges" replace />} />
+        <Route path="vouchers" element={<Navigate to="/donations/vouchers" replace />} />
+        <Route path="receipts" element={<Navigate to="/donations/receipts" replace />} />
         <Route path="payments-settings" element={<AdminOnly><PaymentsSettingsPage /></AdminOnly>} />
         <Route path="inbox" element={<InboxPage />} />
         <Route path="inbox/:threadId" element={<InboxPage />} />

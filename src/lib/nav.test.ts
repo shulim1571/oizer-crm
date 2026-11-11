@@ -23,7 +23,7 @@ describe('sidebar', () => {
       if (e[2]) expect(tabs).toContain(e[1]);
       seen.push(...tabs);
     }
-    expect(seen.length).toBeGreaterThan(25);
+    expect(seen.length).toBeGreaterThan(20);   // a sanity check that the menu was read (25 pages after Exchange and Last 7 Days went)
     expect(seen.filter((p, i) => seen.indexOf(p) !== i)).toEqual([]);
   });
 
