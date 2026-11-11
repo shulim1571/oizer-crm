@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { startFreshSession } from './idle';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -41,6 +42,8 @@ export async function signInWithPassword(email: string, password: string): Promi
   const { data, error } = await supabase.functions.invoke('sign-in', { body: { email, password } });
   if (error) return { error: { message: 'Sign-in is unavailable right now. Please try again.' } };
   if (data.error) return { error: { message: data.error } };
+  // Restart the idle clock first, so an old activity time can't sign this new session straight back out.
+  startFreshSession();
   return supabase.auth.setSession(data.session);
 }
 

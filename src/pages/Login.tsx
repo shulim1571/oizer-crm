@@ -1,5 +1,5 @@
 import { PoweredBy } from '../components/PoweredBy';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useRef, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { OrgLogo } from '../components/Layout';
 import { useAuth } from '../lib/auth';
@@ -83,7 +83,10 @@ export function ConfirmEmailLink({ tokenHash, type, onDone }: { tokenHash: strin
 
 export default function Login({ linkError }: { linkError?: string | null }) {
   // Said once, after an automatic sign-out for inactivity.
-  const [idleNote] = useState(() => { try { const v = sessionStorage.getItem('signed-out-idle') === '1'; sessionStorage.removeItem('signed-out-idle'); return v; } catch { return false; } });
+  const [idleNote, setIdleNote] = useState(() => { try { const v = sessionStorage.getItem('signed-out-idle') === '1'; sessionStorage.removeItem('signed-out-idle'); return v; } catch { return false; } });
+  // If a sign-in succeeds but this page is still showing a few seconds later, say so instead of silently resetting.
+  const stuck = useRef<number | null>(null);
+  useEffect(() => () => { if (stuck.current) window.clearTimeout(stuck.current); }, []);
   const { org } = useAuth();
   const [mode, setMode] = useState<Mode>(linkError ? 'reset' : 'signin');
   const [email, setEmail] = useState('');
@@ -98,10 +101,14 @@ export default function Login({ linkError }: { linkError?: string | null }) {
     if (mode === 'signup' && passwordProblem(password)) return setMsg({ ok: false, text: passwordProblem(password)! });
     setBusy(true);
     setMsg(null);
+    setIdleNote(false);
     const redirectTo = window.location.origin + import.meta.env.BASE_URL;
     let error;
     if (mode === 'signin') {
       ({ error } = await signInWithPassword(email, password));
+      if (!error) {
+        stuck.current = window.setTimeout(() => setMsg({ ok: false, text: 'Your password was accepted, but Donor Base couldn’t open your session. Refresh the page and sign in again; if it keeps happening, tell the office.' }), 5000);
+      }
     } else if (mode === 'signup') {
       const res = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo, data: { org_slug: org?.slug } } });
       error = res.error;

@@ -17,6 +17,20 @@ export function markActivity(now = Date.now()) {
   try { localStorage.setItem(KEY, String(now)); } catch { /* private window: the server limit still applies */ }
 }
 
+/** Forget the last activity: after an idle sign-out, so the old time can't count against the next sign-in. */
+export function clearActivity() {
+  try { localStorage.removeItem(KEY); } catch { /* ignore */ }
+}
+
+/**
+ * A fresh sign-in starts the idle clock again (Shulim, 2026-11-11: after an idle sign-out, signing in again was
+ * signed straight back out because the old activity time was still stored).
+ */
+export function startFreshSession(now = Date.now()) {
+  markActivity(now);
+  try { sessionStorage.removeItem('signed-out-idle'); } catch { /* ignore */ }
+}
+
 /** Watches for activity and calls onIdle once 30 minutes pass without any. Returns a function that stops watching. */
 export function watchIdle(onIdle: () => void, limit = IDLE_LIMIT_MS): () => void {
   if (idleTooLong(readLastActivity(), Date.now(), limit)) { onIdle(); return () => {}; }

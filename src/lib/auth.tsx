@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js';
 import { logActivity, supabase, type Row } from './supabase';
 import { latestOnly, loadAccessSafely } from './accessLoad';
-import { watchIdle } from './idle';
+import { clearActivity, startFreshSession, watchIdle } from './idle';
 import { applyOrg, leavePlatformOrg, platformOrg, resolveOrg, type Org } from './org';
 
 type Role = 'super_admin' | 'admin' | 'manager' | 'guest' | 'pending';
@@ -101,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!session) return;
     return watchIdle(() => {
+      clearActivity();
       try { sessionStorage.setItem('signed-out-idle', '1'); } catch { /* ignore */ }
       void supabase.auth.signOut({ scope: 'local' });
     });
@@ -118,7 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await loadAccess(data.session);
       setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      // A fresh sign-in restarts the idle clock before anything checks it.
+      if (event === 'SIGNED_IN') startFreshSession();
       setSession(s);
       // Defer so we don't call Supabase inside the auth callback.
       setTimeout(() => orgReady.then(() => loadAccess(s)), 0);
