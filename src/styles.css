@@ -943,3 +943,5 @@ tr.selected td { background: var(--accent-soft); }
 .mfa-qr { background: #fff; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
 .mfa-secret { word-break: break-all; user-select: all; }
 .mfa-prompt { display: grid; gap: 8px; }
+.mfa-channel { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.mfa-channel label { display: inline-flex; gap: 6px; align-items: center; }

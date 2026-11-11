@@ -24,7 +24,7 @@ import { VouchersPage } from './pages/Vouchers';
 import { TransfersPage } from './pages/Transfers';
 import TaskSheetPage from './pages/TaskSheet';
 import RequestsPage from './pages/Requests';
-import AccountSecurityPage, { CodePrompt } from './pages/Security';
+import AccountSecurityPage, { VerifySession } from './pages/Security';
 import { useMfa } from './lib/mfa';
 import TasksPage from './pages/Tasks';
 import { TemplatesPage } from './pages/Templates';
@@ -105,13 +105,13 @@ export default function App() {
   }
   if (recovering) return <SetNewPassword onDone={() => setRecovering(false)} />;
   if (!session) return <Login linkError={emailLink.error} />;
-  if (!mfa.loading && mfa.enrolled && !mfa.verified && !codeSkipped && mfa.factorId) {
+  if (!mfa.loading && mfa.enrolled && !mfa.verified && !codeSkipped) {
     return (
       <AuthShell>
         <div className="auth-card">
           <h1>Enter your code</h1>
           <p className="lead">Two-step verification is on for <b>{session.user.email}</b>.</p>
-          <CodePrompt factorId={mfa.factorId} onDone={() => void mfa.reload()}
+          <VerifySession mfa={mfa} onDone={() => void mfa.reload()}
             onSkip={() => { try { sessionStorage.setItem('mfa-skip', '1'); } catch { /* private window */ } setCodeSkipped(true); }} />
           <p className="muted small">“Not now” lets you in without bank and reconciliation data.</p>
         </div>
