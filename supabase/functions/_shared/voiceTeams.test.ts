@@ -5,7 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const TOKEN = 'test-twilio-token';
 const BASE = 'https://example.supabase.co';
 let handler: (req: Request) => Promise<Response>;
-let db: { known: boolean; teams: { n: number; id: string; name: string; raised: number }[]; reached: string[] };
+let db: { fail?: boolean; known: boolean; teams: { n: number; id: string; name: string; raised: number }[]; reached: string[] };
 
 function call(params: Record<string, string>, query = '') {
   const form = new URLSearchParams({ To: '+18456134272', From: '+17185550101', CallSid: 'CA123', ...params });
@@ -28,8 +28,10 @@ beforeAll(async () => {
     if (name === 'phone_lookup') return ok(args.p_pin === '4321' || !args.p_pin && db.known
       ? { outcome: 'answered', campaign: { id: '1002', name: 'Oizer second', raised: 100, expenses: 0, balance: 100, pending: 0 } }
       : { outcome: 'needs_pin', campaign_id: '1002' });
-    if (name === 'phone_call_reached') { db.reached.push(args.p_campaign); return ok(null); }
+    // A function returning nothing answers 204 with an empty body, as PostgREST does (the 2026-11-11 outage).
+    if (name === 'phone_call_reached') { db.reached.push(args.p_campaign); return new Response(null, { status: 204 }); }
     // The database gives teams only to a known caller on a call that reached the campaign.
+    if (db.fail && name.startsWith('phone_') && name !== 'phone_org' && name !== 'phone_lookup') return new Response('boom', { status: 500 });
     if (name === 'phone_teams') return ok(db.known && db.reached.includes(args.p_campaign) ? db.teams : []);
     if (name === 'phone_pick_team') return ok(db.known && db.reached.includes(args.p_campaign) ? db.teams.find(t => t.n === args.p_choice) ?? null : null);
     throw new Error(`unexpected rpc ${name}`);
@@ -61,6 +63,19 @@ describe('phone line Teams option', () => {
     expect(xml).toContain('Oizer second');
     expect(xml).not.toContain('teams');
     expect(await call({ Digits: '1' }, '?step=menu&c=1002')).not.toContain('For Table');
+  });
+
+  it('never stops the call: if the Teams part fails, the caller still hears the campaign', async () => {
+    db.fail = true;
+    const xml = await call({ Digits: '1002' }, '?step=campaign');
+    expect(xml).toContain('Campaign 1 0 0 2, Oizer second.');
+    expect(xml).toContain('For another campaign, Enter the campaign number');
+    expect(await call({ Digits: '1' }, '?step=menu&c=1002')).toContain('Enter the campaign number');
+  });
+
+  it('asks a caller without a registered phone for the PIN, as before', async () => {
+    db.known = false;
+    expect(await call({ Digits: '1002' }, '?step=campaign')).toContain('Enter the PIN for campaign 1 0 0 2');
   });
 
   it('is not offered for a campaign without teams', async () => {

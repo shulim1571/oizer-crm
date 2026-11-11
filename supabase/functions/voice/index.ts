@@ -24,7 +24,10 @@ async function rpc(name: string, args: unknown) {
     body: JSON.stringify(args),
   });
   if (!res.ok) throw new Error(`${name}: ${res.status}`);
-  return res.json();
+  // A function that returns nothing answers 204 with an empty body; reading that as JSON broke the phone line
+  // on 2026-11-11 (Twilio error 11200 at step=campaign).
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 const toBase64 = (b: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(b)));
@@ -74,12 +77,20 @@ Deno.serve(async req => {
 
   const call = form.get('CallSid') ?? '';
   type Team = { n: number; id: string; name: string; raised: number };
-  const teamsOf = async (campaign: string) =>
-    (call ? await rpc('phone_teams', { p_org: org.org_id, p_from: from, p_call: call, p_campaign: campaign }) : []) as Team[];
+  const teamsOf = async (campaign: string): Promise<Team[]> => {
+    const list = call ? await rpc('phone_teams', { p_org: org.org_id, p_from: from, p_call: call, p_campaign: campaign }) : [];
+    return Array.isArray(list) ? list : [];
+  };
   // After a campaign's numbers: known callers of a campaign with teams get the Teams option; everyone else, as before.
+  // The Teams option is an extra: if anything about it fails, the caller still hears the campaign as before.
   const reached = async (c: Campaign) => {
-    if (call) await rpc('phone_call_reached', { p_org: org.org_id, p_call: call, p_campaign: c.id });
-    const teams = await teamsOf(c.id);
+    let teams: Team[] = [];
+    try {
+      if (call) await rpc('phone_call_reached', { p_org: org.org_id, p_call: call, p_campaign: c.id });
+      teams = await teamsOf(c.id);
+    } catch (e) {
+      console.error('voice: teams option skipped', String(e));
+    }
     if (!teams.length) return twiml(say(summary(c)) + askCampaign('For another campaign, '));
     return twiml(say(summary(c)) + menu(c.id));
   };
@@ -129,7 +140,7 @@ Deno.serve(async req => {
   // the database), so no one is asked for a team before pressing Teams, and callers not on file never hear it.
   if (step === 'menu' || step === 'team') {
     const campaign = u.searchParams.get('c') ?? '';
-    const teams = await teamsOf(campaign);
+    const teams = await teamsOf(campaign).catch(e => { console.error('voice: teams list failed', String(e)); return [] as Team[]; });
     if (!teams.length) return twiml(askCampaign());
     if (step === 'menu') {
       if (digits === '1') return twiml(askTeam(campaign, teams, `Campaign ${spell(campaign)} has ${teams.length} team${teams.length === 1 ? '' : 's'}. `));
@@ -137,7 +148,8 @@ Deno.serve(async req => {
     }
     const choice = /^\d{1,3}$/.test(digits) ? Number(digits) : NaN;
     const t = Number.isFinite(choice)
-      ? await rpc('phone_pick_team', { p_org: org.org_id, p_from: from, p_call: call, p_campaign: campaign, p_choice: choice }) as Team | null
+      ? await (rpc('phone_pick_team', { p_org: org.org_id, p_from: from, p_call: call, p_campaign: campaign, p_choice: choice }) as Promise<Team | null>)
+          .catch(e => { console.error('voice: team pick failed', String(e)); return null; })
       : null;
     if (!t) return twiml(askTeam(campaign, teams, 'That isn’t one of the team numbers. '));
     return twiml(say(`Team ${spell(t.id)}, ${t.name}. Raised ${money(Number(t.raised))}.`) + menu(campaign, true));
