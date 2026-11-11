@@ -32,9 +32,11 @@ export function buildGuide(root = '.') {
   const schemas = read('src/lib/schemas.ts');
   const forms = [];
   for (const block of schemas.matchAll(/export const (\w+Fields)(?:: Field\[\])? = \[([\s\S]*?)\n\];/g)) {
-    const fields = [...block[2].matchAll(/\{ name: '(\w+)', label: '([^']+)'([^\n]*)/g)].map(f => {
-      const help = f[3].match(/help: ['"]((?:[^'"\\]|\\.)*)['"]/)?.[1];
-      return `  - ${f[2]}${/required: true/.test(f[3]) ? ' (required)' : ''}${help ? `: ${help.replace(/\\'/g, "'")}` : ''}`;
+    // Labels and help in either quote style ("Issuer's ref. #" has an apostrophe).
+    const fields = [...block[2].matchAll(/\{ name: '(\w+)', label: (?:'([^']+)'|"([^"]+)")([^\n]*)/g)].map(f => {
+      const h = f[4].match(/help: (?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/);
+      const help = h?.[1] ?? h?.[2];
+      return `  - ${f[2] ?? f[3]}${/required: true/.test(f[4]) ? ' (required)' : ''}${help ? `: ${help.replace(/\\'/g, "'")}` : ''}`;
     });
     if (fields.length) forms.push(`- ${block[1].replace(/Fields$/, '').replace(/([A-Z])/g, ' $1').toLowerCase().trim()} form\n${fields.join('\n')}`);
   }

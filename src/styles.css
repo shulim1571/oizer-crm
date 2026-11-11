@@ -965,3 +965,7 @@ tr.selected td { background: var(--accent-soft); }
 
 /* The voucher ref # shown after logging a voucher, large enough to copy onto the physical voucher. */
 .voucher-saved .voucher-ref { font-size: 1.6rem; letter-spacing: .03em; margin: 0 0 4px; }
+
+/* New Donation in the header bar, on every page (just before the bell); icon only on narrow screens. */
+.topbar .header-new-donation { white-space: nowrap; flex: none; }
+@media (max-width: 720px) { .topbar .header-new-donation { font-size: 0; gap: 0; padding: 6px 8px; } .topbar .header-new-donation svg { margin: 0; } }

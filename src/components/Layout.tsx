@@ -245,6 +245,8 @@ export default function Layout() {
               <input className="id-jump" aria-label="Go to campaign ID" placeholder="Campaign ID" value={campaignId} onChange={e => setCampaignId(e.target.value)} />
             </form>
           )}
+          {/* New Donation on every page, just before the bell (Moshe Henig, 2026-11-11); it's an admin page. */}
+          {isAdmin && <button className="btn primary small header-new-donation" onClick={() => nav('/donations/new')}><PlusCircle size={15} /> New Donation</button>}
           {canWork && (
             <button className="icon-btn outlined bell" title={`${unread} unread message${unread === 1 ? '' : 's'}${isAdmin ? `, ${taskCount} on the Task Sheet` : ''}`}
               onClick={() => nav(isAdmin && !unread && taskCount ? '/task-sheet' : '/inbox')}>

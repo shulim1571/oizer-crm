@@ -34,9 +34,13 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 
 ## Donations (Transactions)
 
-- **New Donation** (menu New Donation > One donation, or New Donation on a campaign's Donations tab): campaign,
-  type, status, amount, payment method. Check #, post-dated and check date appear only for Check; Delivered only
-  for Cash or Check; Manual fee is always there. Batch rows and vouchers have their own forms (Batch Entry, Vouchers).
+- **New Donation** (the New Donation button in the top bar on every page, the menu, or New Donation on a campaign's
+  Donations tab): campaign, type, status, amount, payment method. Check #, post-dated and check date appear only for
+  Check; Delivered only for Cash or Check. **Manual fee** replaces the payment method's preset fee (net = amount less
+  the manual fee); leave it empty to use the preset. After **Record donation** you go to the Transactions list.
+- **New pledge** and **New vouchers** are tabs on New Donation; they open the pledge or voucher form. After a voucher is
+  logged, its **voucher ref #** (VCH-...) is shown: write it on the physical voucher. The voucher form also has the
+  **Issuer's ref. #** (the issuer's own number). Batch entry is on a campaign's More menu.
 - **Charge a card** (admins): on New Donation or a campaign's Donations tab. Can save the card and set up a
   recurring charge; new recurring charges default to a set number of payments.
 - **Transactions** is one list with a **Date** range above it (All time, Last 7 days, 30 days, 60 days, Last year or a

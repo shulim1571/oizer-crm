@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { CreditCard, Plus } from 'lucide-react';
 import DataTable, { exactValue, parseNumberFilter, type Column, type ServerQuery } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
@@ -101,7 +101,9 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
   const [debounced, setDebounced] = useState(q);
   const [query, setQuery] = useState<ServerQuery | null>(null);
   const [selected, setSelected] = useState<Map<string, number>>(new Map());
-  const [notice, setNotice] = useState<string | null>(null);
+  // A donation just recorded on New Donation lands here with a note saying so (Moshe Henig, 2026-11-11).
+  const arrived = (useLocation().state as { notice?: string } | null)?.notice ?? null;
+  const [notice, setNotice] = useState<string | null>(arrived);
   const [version, setVersion] = useState(0);
   const columns = useMemo(() => donationColumns(), []);
 
@@ -276,7 +278,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
 export function NewDonation() {
   const nav = useNavigate();
   const [last, setLast] = useState<Row | null>(null);
-  const [key, setKey] = useState(0);
+  const [key] = useState(0);
   const [charging, setCharging] = useState(false);
   return (
     <section className="view narrow">
@@ -301,7 +303,8 @@ export function NewDonation() {
         fields={newDonationFields}
         defaults={{ type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() }}
         onClose={() => nav(-1)}
-        onSaved={row => { setLast(row); setKey(k => k + 1); }}
+        // Recorded: go to the Transactions list, which says what was saved (Moshe Henig, 2026-11-11).
+        onSaved={row => nav('/donations/all', { state: { notice: `Recorded ${money(row.amount)} to campaign ${row.campaign_id}${row.id ? ` (transaction ${row.id})` : ''}.` } })}
       />
     </section>
   );
