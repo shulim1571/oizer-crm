@@ -145,12 +145,15 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
       <header className={`give-hero ${data.page.banner_url ? 'has-banner' : ''}`}
         style={data.page.banner_url ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.6)), url("${encodeURI(String(data.page.banner_url))}")` } : undefined}>
         <div className="give-hero-in">
-          <div className="give-org">
-            {data.org.logo_url ? <img src={data.org.logo_url} alt="" /> : <span className="give-org-mark">{String(data.org.name ?? '?')[0]}</span>}
-            <span dir="auto">{data.org.name}</span>
+          {/* The organization (with a bigger logo) on one side and its email and phone on the other (Moshe Henig, 2026-11-11). */}
+          <div className="give-hero-top">
+            <div className="give-org">
+              {data.org.logo_url ? <img src={data.org.logo_url} alt="" /> : <span className="give-org-mark">{String(data.org.name ?? '?')[0]}</span>}
+              <span dir="auto">{data.org.name}</span>
+            </div>
+            <OrgContact email={data.org.email} phone={data.org.phone} className="org-contact give-contact" />
           </div>
           <h1 dir="auto">{c.name}</h1>
-          <OrgContact email={data.org.email} phone={data.org.phone} className="org-contact give-contact" />
         </div>
       </header>
       <main className="give-main">
