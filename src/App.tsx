@@ -72,7 +72,7 @@ function AdminOnly({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const { session, role, memberStatus, org, orgs, isPlatformOwner, isAdmin, loading, signOut, refresh } = useAuth();
+  const { session, role, memberStatus, org, orgs, isPlatformOwner, isAdmin, loading, signOut, refresh, accessError } = useAuth();
   const [recovering, setRecovering] = useState(false);
   const [emailLink, setEmailLink] = useState(arrivedWith);
 
@@ -106,6 +106,21 @@ export default function App() {
           <Route path="*" element={<GuestPage />} />
         </Route>
       </Routes>
+    );
+  }
+  if (accessError) {
+    // The check failed: say so, and offer to try again, rather than claiming this login has no access.
+    return (
+      <AuthShell>
+        <div className="auth-card">
+          <h1>Couldn't check your access</h1>
+          <p className="lead">You're signed in as <b>{session.user.email}</b>, but Oizer couldn't confirm your access just now ({accessError}).</p>
+          <div className="auth-links">
+            <button className="btn primary" onClick={refresh}>Try again</button>
+            <button className="btn" onClick={signOut}>Sign out</button>
+          </div>
+        </div>
+      </AuthShell>
     );
   }
   if (!role || role === 'pending') {

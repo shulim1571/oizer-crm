@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { logActivity, supabase, type Row } from './supabase';
+import { latestOnly, loadAccessSafely } from './accessLoad';
 import { applyOrg, leavePlatformOrg, platformOrg, resolveOrg, type Org } from './org';
 
 type Role = 'super_admin' | 'admin' | 'manager' | 'guest' | 'pending';
@@ -22,6 +23,8 @@ interface AuthState {
   role: Role | null;
   /** Active, suspended or deactivated in this organization. */
   memberStatus: string | null;
+  /** The access check itself failed (not the same as having no access). */
+  accessError: string | null;
   isAdmin: boolean;
   isSuperAdmin: boolean;
   /** Admins and fundraisers: the people who use the portal, as opposed to guests. */
@@ -47,18 +50,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [access, setAccess] = useState<Access | null>(null);
   const [defaultAccountId, setDefaultAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [newest] = useState(latestOnly);
 
   async function loadAccess(s: Session | null) {
+    const current = newest();
     if (!s) {
       setProfile(null);
       setAccess(null);
+      setAccessError(null);
       return;
     }
-    const [{ data: p }, { data: a }] = await Promise.all([
+    const [{ data: p }, result] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', s.user.id).maybeSingle(),
-      supabase.rpc('my_access'),
+      loadAccessSafely<Access>(() => supabase.rpc('my_access'), () => supabase.auth.refreshSession()),
     ]);
-    const next = a as Access | null;
+    if (!current()) return;   // a newer check has started; its answer wins
+    if (result.kind === 'expired') {
+      // The browser still remembers the login, but the session is no longer valid: sign in again.
+      setAccessError(null);
+      await supabase.auth.signOut({ scope: 'local' });
+      return;
+    }
+    if (result.kind === 'error') {
+      setAccessError(result.message);
+      setProfile(p);
+      return;
+    }
+    setAccessError(null);
+    const next = result.access;
     // A Platform Owner's session expired or was closed elsewhere: back to their own view.
     if (platformOrg() && !next?.in_platform_session) return leavePlatformOrg();
     if (next?.org_id) {
@@ -104,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     org,
     role,
     memberStatus: access?.status ?? null,
+    accessError,
     isAdmin: role === 'admin' || role === 'super_admin',
     isSuperAdmin: role === 'super_admin',
     canWork: role === 'admin' || role === 'super_admin' || role === 'manager',
