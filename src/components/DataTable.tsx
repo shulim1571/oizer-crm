@@ -317,7 +317,8 @@ export default function DataTable(p: Props) {
           {p.actions}
           {!p.plain && (
             <>
-              <button className={`btn ${activeFilters ? 'on' : ''}`} onClick={() => setShowFilters(s => !s)} title="Filter on any column">
+              <button className={`btn ${activeFilters ? 'on' : ''}`} onClick={() => setShowFilters(s => !s)} title="Show or hide the filter panel"
+                      aria-expanded={showFilters} aria-controls="list-filter-panel">
                 <Filter size={16} /> Filter{activeFilters ? ` (${activeFilters})` : ''}
               </button>
               <div className="popover-wrap">
@@ -388,6 +389,7 @@ export default function DataTable(p: Props) {
 
       {p.error && <div className="error">{p.error}</div>}
 
+      <div className={`table-area ${showFilters && !p.plain ? 'with-filters' : ''}`}>
       <div className="table-card">
         <div className="table-wrap">
           <table className="grid">
@@ -412,26 +414,6 @@ export default function DataTable(p: Props) {
                 })}
                 {p.onOpen && <th className="chev" />}
               </tr>
-              {showFilters && !p.plain && (
-                <tr className="filter-row">
-                  {selectable && <th className="pick frozen" style={{ position: 'sticky', left: 0 }} />}
-                  {columns.map((c, i) => (
-                    <th key={c.key} className={frozenClass(i)} style={stick(i)}>
-                      {(!server || c.filter) && (
-                        <input aria-label={`Filter ${c.label}`} placeholder={c.filter?.type === 'number' || c.align === 'right' ? '>100' : c.filter?.type === 'date' ? 'YYYY-MM-DD' : 'Contains…'}
-                               value={filters[c.key] ?? ''} onChange={e => setFilter(c.key, e.target.value)} />
-                      )}
-                    </th>
-                  ))}
-                  {p.onOpen && (
-                    <th className="chev">
-                      {activeFilters > 0 && (
-                        <button className="icon-btn" title="Clear filters" onClick={() => setConfig({ ...config, filters: {} })}><X size={14} /></button>
-                      )}
-                    </th>
-                  )}
-                </tr>
-              )}
             </thead>
             <tbody>
               {p.loading && Array.from({ length: 8 }, (_, i) => (
@@ -470,6 +452,31 @@ export default function DataTable(p: Props) {
           </div>
         )}
         {p.footer && <div className="table-foot">{p.footer}</div>}
+      </div>
+      {showFilters && !p.plain && (
+        // The filters, in a panel on the right (Moshe Henig, 2026-11-11): closed until Filter is tapped. Each box
+        // filters its column exactly as the old row under the headings did.
+        <aside className="filter-panel" id="list-filter-panel" aria-label="Filters">
+          <div className="filter-panel-head">
+            <b><Filter size={15} /> Filters</b>
+            {activeFilters > 0 && <span className="muted small">{activeFilters} on</span>}
+            {activeFilters > 0 && <button type="button" className="link small" onClick={() => setConfig({ ...config, filters: {} })}>Clear all</button>}
+            <button type="button" className="icon-btn" title="Close filters" aria-label="Close filters" onClick={() => setShowFilters(false)}><X size={15} /></button>
+          </div>
+          <div className="filter-panel-body">
+            {columns.filter(c => !server || c.filter).map(c => (
+              <label key={c.key} className="field">
+                <span>{c.label}</span>
+                <input aria-label={`Filter ${c.label}`} placeholder={c.filter?.type === 'number' || c.align === 'right' ? '>100' : c.filter?.type === 'date' ? 'YYYY-MM-DD' : 'Contains…'}
+                       value={filters[c.key] ?? ''} onChange={e => setFilter(c.key, e.target.value)} />
+              </label>
+            ))}
+            {columns.every(c => server && !c.filter) && <p className="muted small">Nothing to filter on in these columns.</p>}
+            <p className="muted small">Numbers: 100, &gt;100, &lt;50 or 100-500. Dates: 2026, 2026-11 or 2026-11-10.</p>
+          </div>
+          <div className="filter-panel-foot"><button type="button" className="btn primary" onClick={() => setShowFilters(false)}>Done</button></div>
+        </aside>
+      )}
       </div>
     </section>
   );

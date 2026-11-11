@@ -120,8 +120,23 @@ input:focus, select:focus, textarea:focus {
 .grid .pick { width: 36px; text-align: center; }
 .grid th .resize { position: absolute; top: 0; right: 0; bottom: 0; width: 6px; cursor: col-resize; }
 .grid th .resize:hover { background: var(--accent-soft); }
-.grid tr.filter-row th { top: 38px; padding: 4px 6px; cursor: default; font-weight: 400; }
-.grid tr.filter-row input { width: 100%; min-width: 70px; height: 28px; font-size: 12px; padding: 0 6px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+/* List filters: a panel on the right of the list, opened by the Filter button (Moshe Henig, 2026-11-11). */
+.table-area { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+.table-area.with-filters { grid-template-columns: minmax(0, 1fr) 270px; }
+.filter-panel { position: sticky; top: 12px; display: flex; flex-direction: column; max-height: calc(100vh - 24px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.filter-panel-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.filter-panel-head b { display: inline-flex; align-items: center; gap: 6px; }
+.filter-panel-head .icon-btn { margin-left: auto; }
+.filter-panel-body { overflow: auto; padding: 10px 12px; display: grid; gap: 10px; }
+.filter-panel-body .field input { width: 100%; }
+.filter-panel-foot { display: none; padding: 10px 12px; border-top: 1px solid var(--line); }
+/* On phones and narrow windows the panel slides over the list from the right. */
+@media (max-width: 900px) {
+  .table-area.with-filters { grid-template-columns: minmax(0, 1fr); }
+  .filter-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 50; width: min(340px, 88vw); max-height: none; border-radius: 0; box-shadow: var(--shadow-lg); }
+  .filter-panel-foot { display: flex; justify-content: flex-end; }
+}
 .compact .grid td { padding-top: 4px; padding-bottom: 4px; }
 .popover.customize { right: 0; left: auto; width: 320px; max-height: 70vh; overflow: auto; padding: 12px; display: grid; gap: 8px; z-index: 20; }
 .popover.customize h3 { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
