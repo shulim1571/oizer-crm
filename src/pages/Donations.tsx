@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Plus } from 'lucide-react';
-import DataTable, { parseNumberFilter, type Column, type ServerQuery } from '../components/DataTable';
+import DataTable, { exactValue, parseNumberFilter, type Column, type ServerQuery } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import Pager from '../components/Pager';
 import { useSearch } from '../components/Layout';
@@ -56,8 +56,12 @@ function applyColumnFilters<Q extends { ilike: Function; gte: Function; gt: Func
   for (const c of columns) {
     const text = filters[c.key]?.trim();
     if (!text) continue;
+    const exact = exactValue(text);
     if (c.key === 'type') {
-      const kind = Object.entries(DONATION_KINDS).find(([k]) => k.toLowerCase().startsWith(text.toLowerCase()))?.[1];
+      const wanted = (exact ?? text).toLowerCase();
+      const kind = exact != null
+        ? Object.entries(DONATION_KINDS).find(([k]) => k.toLowerCase() === wanted)?.[1]
+        : Object.entries(DONATION_KINDS).find(([k]) => k.toLowerCase().startsWith(wanted))?.[1];
       if (kind) q = q.eq('status', kind.status);
       if (kind?.type) q = q.eq('type', kind.type);
       continue;
@@ -77,6 +81,9 @@ function applyColumnFilters<Q extends { ilike: Function; gte: Function; gt: Func
       const from = new Date(y, (mo ?? 1) - 1, day ?? 1);
       const to = day ? new Date(y, mo! - 1, day + 1) : mo ? new Date(y, mo, 1) : new Date(y + 1, 0, 1);
       q = q.gte(col, from.toISOString()).lt(col, to.toISOString());
+    } else if (exact != null) {
+      // Picked from the dropdown: that value exactly (case aside), not "contains".
+      q = q.ilike(col, exact.replace(/[%_\\]/g, m => `\\${m}`));
     } else {
       q = q.ilike(col, `%${text.replace(/[%_]/g, '')}%`);
     }

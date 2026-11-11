@@ -1,3 +1,4 @@
+import SearchSelect from './SearchSelect';
 import { dayOffset, inRange, rangeBounds, RANGE_PRESETS, type DateRange, type RangePreset } from '../lib/dateRange';
 import Pager from './Pager';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -27,7 +28,15 @@ export interface Column {
   long?: boolean;
   /** The campaign this cell names: its text becomes a link to the campaign's page. */
   campaignLink?: (row: Row) => string | null | undefined;
+  /** The values to pick from in the filter panel (lookup or fixed-choice columns), for lists filtered on the server. */
+  filterOptions?: () => Promise<string[]>;
 }
+
+/** A filter picked from a dropdown is an exact match, written with a leading "=" (e.g. "=Cash"). */
+export const exactValue = (filter: string | undefined) => {
+  const t = filter?.trim() ?? '';
+  return t.startsWith('=') && parseNumberFilter(t) == null ? t.slice(1) : null;
+};
 
 /** A secondary action for the table's "More" menu. */
 export interface MoreAction { label: string; onClick: () => void; icon?: ReactNode; hidden?: boolean; danger?: boolean }
@@ -113,6 +122,8 @@ export function parseNumberFilter(text: string): { min?: number; max?: number; m
 }
 
 function matches(filter: string, value: unknown) {
+  const exact = exactValue(filter);
+  if (exact != null) return display(value).trim().toLowerCase() === exact.trim().toLowerCase();
   const bounds = parseNumberFilter(filter);
   const n = typeof value === 'number' ? value : Number(value);
   if (bounds && /^[<>=]/.test(filter.trim()) || (bounds && /\d\s*-\s*\d/.test(filter) && !isNaN(n) && value !== '' && value != null)) {
@@ -139,6 +150,33 @@ export default function DataTable(p: Props) {
 
   const [showFilters, setShowFilters] = useState(false);
   const [viewNote, setViewNote] = useState<string | null>(null);
+  // Filter panel: every column of the list (hidden ones too); lookup and fixed-choice columns get a dropdown.
+  const panelColumns = p.columns.filter(c => !server || c.filter || c.filterOptions);
+  const [loadedChoices, setLoadedChoices] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    if (!showFilters) return;
+    for (const c of panelColumns) {
+      if (!c.filterOptions || loadedChoices[c.key]) continue;
+      c.filterOptions().then(list => setLoadedChoices(m => ({ ...m, [c.key]: [...new Set(list.filter(Boolean))] }))).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFilters]);
+  /** The values to pick from, or null for a typed filter (amounts, dates, long text, free-form columns). */
+  const pickList = (c: Column): string[] | null => {
+    if (c.filterOptions) return loadedChoices[c.key] ?? [];
+    if (server || c.long || c.align === 'right' || c.filter?.type === 'number' || c.filter?.type === 'date') return null;
+    const values = new Set<string>();
+    for (const r of p.rows) {
+      const v = display(val(c, r)).trim();
+      if (!v) continue;
+      // Dates and times aren't choices; neither is a column of mostly unique values.
+      if (/^\d{4}-\d{2}-\d{2}/.test(v) || /\d{1,2}:\d{2}/.test(v)) return null;
+      values.add(v);
+      if (values.size > 300) return null;
+    }
+    if (values.size === 0 || (values.size > 30 && values.size > p.rows.length * 0.8)) return null;
+    return [...values].sort((a, b) => a.localeCompare(b));
+  };
   useEffect(() => { if (!viewNote) return; const t = setTimeout(() => setViewNote(null), 4000); return () => clearTimeout(t); }, [viewNote]);
   const [showCustomize, setShowCustomize] = useState(false);
   const [group, setGroup] = useState<string | null>(null);
@@ -498,14 +536,23 @@ export default function DataTable(p: Props) {
             <button type="button" className="icon-btn" title="Close filters" aria-label="Close filters" onClick={() => setShowFilters(false)}><X size={15} /></button>
           </div>
           <div className="filter-panel-body">
-            {columns.filter(c => !server || c.filter).map(c => (
-              <label key={c.key} className="field">
-                <span>{c.label}</span>
-                <input aria-label={`Filter ${c.label}`} placeholder={c.filter?.type === 'number' || c.align === 'right' ? '>100' : c.filter?.type === 'date' ? 'YYYY-MM-DD' : 'Contains…'}
-                       value={filters[c.key] ?? ''} onChange={e => setFilter(c.key, e.target.value)} />
-              </label>
-            ))}
-            {columns.every(c => server && !c.filter) && <p className="muted small">Nothing to filter on in these columns.</p>}
+            {panelColumns.map(c => {
+              const choices = pickList(c);
+              return (
+                <label key={c.key} className="field">
+                  <span>{c.label}{!columns.includes(c) && <small className="muted"> (hidden column)</small>}</span>
+                  {choices ? (
+                    <SearchSelect value={exactValue(filters[c.key]) ?? null} placeholder="Any"
+                      options={choices.map(v => ({ value: v, label: v }))}
+                      onChange={v => setFilter(c.key, v ? `=${v}` : '')} />
+                  ) : (
+                    <input aria-label={`Filter ${c.label}`} placeholder={c.filter?.type === 'number' || c.align === 'right' ? '>100' : c.filter?.type === 'date' ? 'YYYY-MM-DD' : 'Contains…'}
+                           value={filters[c.key] ?? ''} onChange={e => setFilter(c.key, e.target.value)} />
+                  )}
+                </label>
+              );
+            })}
+            {panelColumns.length === 0 && <p className="muted small">Nothing to filter on in these columns.</p>}
             <p className="muted small">Numbers: 100, &gt;100, &lt;50 or 100-500. Dates: 2026, 2026-11 or 2026-11-10.</p>
           </div>
           <div className="filter-panel-foot"><button type="button" className="btn primary" onClick={() => setShowFilters(false)}>Done</button></div>
