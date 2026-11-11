@@ -431,6 +431,9 @@ export default function DataTable(p: Props) {
         </div>
       </div>
 
+      {/* The filter panel starts right under the page head, beside the summary and the list (Moshe Henig, 2026-11-11). */}
+      <div className={`table-area ${showFilters && !p.plain ? 'with-filters' : ''}`}>
+      <div className="table-main">
       {p.summary && (
         <div className={`table-summary ${summaryOpen ? '' : 'shut'}`}>
           <button type="button" className="link summary-toggle" aria-expanded={summaryOpen} onClick={() => toggleSummary()}>
@@ -461,7 +464,6 @@ export default function DataTable(p: Props) {
 
       {p.error && <div className="error">{p.error}</div>}
 
-      <div className={`table-area ${showFilters && !p.plain ? 'with-filters' : ''}`}>
       <div className="table-card">
         <div className="table-wrap">
           <table className="grid">
@@ -524,6 +526,7 @@ export default function DataTable(p: Props) {
           </div>
         )}
         {p.footer && <div className="table-foot">{p.footer}</div>}
+      </div>
       </div>
       {showFilters && !p.plain && (
         // The filters, in a panel on the right (Moshe Henig, 2026-11-11): closed until Filter is tapped. Each box

@@ -37,3 +37,13 @@ describe('filter panel', () => {
     expect(css).toMatch(/@media \(max-width: 900px\) \{[^]*\.filter-panel \{ position: fixed; top: 0; right: 0;/);
   });
 });
+
+describe('filter panel position (Moshe Henig, 2026-11-11: start as high as possible)', () => {
+  it('starts right under the page head, beside the summary and the list, and stays in view while scrolling', () => {
+    const t = readFileSync('src/components/DataTable.tsx', 'utf8');
+    const c = readFileSync('src/styles.css', 'utf8');
+    expect(t.indexOf('<div className="table-main">')).toBeLessThan(t.indexOf('{p.summary && ('));
+    expect(t.indexOf('</aside>')).toBeGreaterThan(t.indexOf('{p.footer && <div className="table-foot">'));
+    expect(c).toMatch(/\.filter-panel \{ position: sticky; top: 12px;[^}]*max-height: calc\(100vh - 84px\)/);
+  });
+});
