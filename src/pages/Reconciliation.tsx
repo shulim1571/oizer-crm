@@ -9,6 +9,7 @@ import { printReport } from '../lib/printReport';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
+import PlaidPanel from './PlaidPanel';
 
 // Phase 11, part 1: matching the bank's statement lines to what the books expect, and signing off each period.
 // Everything here goes through database functions, which check the amounts and the locks themselves.
@@ -318,6 +319,7 @@ function LinesTab({ account, version, onChanged }: { account: string; version: n
 
   return (
     <>
+      <PlaidPanel account={account} onSynced={onChanged} />
       <div className="filters">
         <label className="btn primary"><FileUp size={16} /> Bring in a statement file (CSV or Excel)
           <input type="file" accept=".csv,.xlsx,text/csv" hidden onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void pick(f); }} />
@@ -351,7 +353,7 @@ function LinesTab({ account, version, onChanged }: { account: string; version: n
             <tr key={l.id}>
               <td>{usDate(l.posted_date)}</td><td>{l.description}</td><td>{l.check_number}</td>
               <td className={`right ${l.amount < 0 ? 'neg' : 'pos'}`}>{money(l.amount)}</td>
-              <td>{l.match_id ? <Pill tone="green">Matched</Pill> : <Pill tone="amber">To match</Pill>}{l.source === 'manual' && <> <Pill>Typed</Pill></>}</td>
+              <td>{l.match_id ? <Pill tone="green">Matched</Pill> : <Pill tone="amber">To match</Pill>}{l.source === 'manual' && <> <Pill>Typed</Pill></>}{l.source === 'plaid' && <> <Pill tone="blue">Plaid</Pill></>}</td>
               <td>{!l.match_id && <button type="button" className="link small" onClick={() => act('delete_bank_line', { p_line: l.id }, 'Delete this bank line?')}>Delete</button>}</td>
             </tr>
           ))}
