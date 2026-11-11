@@ -1007,3 +1007,5 @@ tr.selected td { background: var(--accent-soft); }
 .range-filter { display: flex; align-items: center; gap: 6px; }
 .range-filter input { flex: 1; min-width: 0; }
 @media (min-width: 960px) { .give:has(.give-main.has-teams) .give-hero-in { max-width: 1260px; } }
+/* Row menus are drawn over the page (RowMenu.tsx), above dialogs' contents and lists' scrolling boxes. */
+.menu-pop.row-menu-pop { z-index: 1000; min-width: 180px; }
