@@ -28,7 +28,7 @@ describe('teams and sub-campaigns', () => {
 
   it("list teams that are turned on on the parent's payment page, each linking to its own page", () => {
     const g = src('pages', 'Give.tsx');
-    expect(g).toContain('data.teams.map(');
+    expect(g).toContain('teams.map((tm: Row) => (');
     expect(g).toContain('href={`/give/${encodeURIComponent(tm.id)}`}');
   });
 });

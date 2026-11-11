@@ -13,7 +13,7 @@ describe('payment page banner', () => {
     expect(css).toContain('.give-hero-top .give-contact { margin-inline-start: auto;');
   });
   it('shows a bigger logo', () => {
-    expect(css).toContain('.give-org img { height: 56px;');
+    expect(css).toContain('max-height: 56px;');
     expect(css).toContain('.give-org-mark { width: 48px; height: 48px;');
   });
 });

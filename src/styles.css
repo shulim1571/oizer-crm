@@ -694,7 +694,9 @@ ul.plain li { padding: 6px 0; }
 .give-hero-in { max-width: 1040px; margin: 0 auto; }
 .give-org { display: inline-flex; align-items: center; gap: 12px; font-weight: 600; font-size: 16px; background: rgba(255,255,255,.14);
   backdrop-filter: blur(6px); padding: 6px 16px 6px 6px; border-radius: 999px; }
-.give-org img { height: 56px; width: auto; max-width: 220px; border-radius: 6px; background: #fff; padding: 2px; object-fit: contain; }
+/* Sharp logo (Moshe Henig, 2026-11-11): up to 56px tall but never larger than the image itself, and no white box,
+   so transparent logos show cleanly on the banner. */
+.give-org img { height: auto; width: auto; max-height: 56px; max-width: 220px; border-radius: 6px; object-fit: contain; image-rendering: auto; }
 .give-org-mark { width: 48px; height: 48px; font-size: 22px; border-radius: 50%; background: #fff; color: var(--give-accent); display: grid; place-items: center; font-weight: 800; }
 .give-hero h1 { font-size: clamp(26px, 6vw, 40px); line-height: 1.12; letter-spacing: -.02em; margin: 14px 0 0; text-shadow: 0 2px 12px rgba(0,0,0,.18); }
 .give-main { max-width: 1040px; margin: -44px auto 0; padding: 0 12px 32px; display: grid; gap: 14px; position: relative; }
@@ -974,11 +976,34 @@ tr.selected td { background: var(--accent-soft); }
 .topbar .header-new-donation { white-space: nowrap; flex: none; }
 @media (max-width: 720px) { .topbar .header-new-donation { font-size: 0; gap: 0; padding: 6px 8px; } .topbar .header-new-donation svg { margin: 0; } }
 
-/* Teams listed on a parent campaign's payment page, each a link to its own page. */
-.give-teams ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.give-teams a { display: block; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; font-weight: 600; }
-.give-teams a:hover { background: #f5f5ff; }
+/* Teams panel on a parent campaign's payment page (Moshe Henig, 2026-11-11): its own card on the right on wide
+   screens, above the form on a phone. Each team is a row with an initial badge and an arrow to its page. */
+.give-teams { order: 2; padding: 18px; }
+.give-teams-head { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; margin-bottom: 8px; border-bottom: 1px solid var(--give-line, #eceef3); }
+.give-teams-head h2 { margin: 0 !important; font-size: 17px !important; }
+.give-teams-head p { margin: 2px 0 0; color: var(--give-muted, #6b7280); font-size: 13px; }
+.give-teams-head > div { flex: 1; min-width: 0; }
+.give-teams-icon { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none;
+  color: var(--give-accent); background: color-mix(in srgb, var(--give-accent) 12%, #fff); }
+.give-teams-count { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center; font-size: 13px; font-weight: 700;
+  color: var(--give-accent); background: color-mix(in srgb, var(--give-accent) 10%, #fff); }
+.give-teams ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.give-teams a { display: flex; align-items: center; gap: 12px; padding: 10px 10px; border-radius: 12px; text-decoration: none; color: inherit;
+  border: 1px solid transparent; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+.give-teams a:hover, .give-teams a:focus-visible { background: color-mix(in srgb, var(--give-accent) 6%, #fff); border-color: color-mix(in srgb, var(--give-accent) 25%, #fff); outline: none; }
+.give-teams a:hover .give-team-go { transform: translateX(3px); color: var(--give-accent); }
+.give-team-avatar { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 700; font-size: 15px; color: #fff;
+  background: linear-gradient(135deg, var(--give-accent), color-mix(in srgb, var(--give-accent) 60%, #000)); box-shadow: 0 2px 6px color-mix(in srgb, var(--give-accent) 30%, transparent); }
+.give-team-name { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.give-team-go { flex: none; color: var(--give-muted, #9ca3af); transition: transform .15s ease, color .15s ease; }
+.give-rtl .give-team-go { transform: scaleX(-1); }
+.give-rtl .give-teams a:hover .give-team-go { transform: scaleX(-1) translateX(3px); }
+@media (min-width: 960px) {
+  .give-main.has-teams { grid-template-columns: minmax(0, 1fr) 300px; max-width: 1260px; }
+  .give-main.has-teams > .give-teams { grid-column: 2; grid-row: 1 / span 12; order: 0; position: sticky; top: 16px; align-self: start; }
+}
 
 /* Number filters in the filter panel: a From and a To box; either can be blank. */
 .range-filter { display: flex; align-items: center; gap: 6px; }
 .range-filter input { flex: 1; min-width: 0; }
+@media (min-width: 960px) { .give:has(.give-main.has-teams) .give-hero-in { max-width: 1260px; } }
