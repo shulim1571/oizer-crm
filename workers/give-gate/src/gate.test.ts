@@ -87,3 +87,23 @@ describe('give gate', () => {
     expect(allowedOrigin(null, list)).toBeNull();
   });
 });
+
+describe('gifts passed on by the payment page’s own site (Moshe Henig, 2026-11-11)', () => {
+  const ok = (async () => new Response('{"approved":true}')) as unknown as typeof fetch;
+  const viaSite = (secret: string, donorIp: string) => new Request('https://gate.example/', {
+    method: 'POST', body: JSON.stringify(GIFT),
+    headers: { Origin: 'https://oizer.trubase.org', 'cf-connecting-ip': '172.66.0.1', 'Content-Type': 'application/json', 'x-oizer-gate-proxy': secret, 'x-oizer-client-ip': donorIp },
+  });
+
+  it('count each donor by their own address when the site proves itself with the gate secret', async () => {
+    const e = env();
+    await handle(viaSite('gate-secret', '9.9.9.9'), e, ok);
+    expect((e.PER_IP as ReturnType<typeof limiter>).seen).toEqual(['ip:9.9.9.9']);
+  });
+
+  it('ignore a claimed donor address without the right secret', async () => {
+    const e = env();
+    await handle(viaSite('wrong', '9.9.9.9'), e, ok);
+    expect((e.PER_IP as ReturnType<typeof limiter>).seen).toEqual(['ip:172.66.0.1']);
+  });
+});

@@ -13,5 +13,7 @@ describe('payment page attempt key', () => {
     expect(give).toContain('const o = await outcome(key);');
     expect(give).toContain('if (o?.approved) { attemptKey.current = null; return onDone(o); }');
     expect(give).toContain('client_key: key, status_only: true');
+    expect(give).toContain("const GIVE_URL = import.meta.env.DEV ? GATE_URL : '/api/give';");
+    expect(give).toContain('fetch(i % 2 ? GATE_URL : GIVE_URL, {');
   });
 });

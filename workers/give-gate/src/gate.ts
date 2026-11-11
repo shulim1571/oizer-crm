@@ -33,6 +33,14 @@ export function ipKey(ip: string | null): string {
   return full.slice(0, 4).map(h => h.replace(/^0+(?=.)/, '')).join(':') + '::/64';
 }
 
+/** Compares two secrets without stopping at the first difference. */
+export function sameText(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 export function allowedOrigin(origin: string | null, allowed: string): string | null {
   if (!origin) return null;
   let host: string;
@@ -58,7 +66,11 @@ export async function handle(req: Request, env: GateEnv, fetcher: typeof fetch =
   let body: Record<string, unknown>;
   try { body = JSON.parse(raw); } catch { return json({ error: 'Something went wrong. Please try again.' }, 400, cors); }
 
-  const ip = req.headers.get('cf-connecting-ip') ?? 'unknown';
+  // Payment pages now post to their own site (functions/api/give.ts), which passes the request on here with the
+  // donor's address; only trusted with the gate secret, so the per-donor limit still counts each donor
+  // (Moshe Henig, 2026-11-11: replies from this workers.dev address weren't reaching his browser).
+  const viaSite = sameText(req.headers.get('x-oizer-gate-proxy'), env.GIVE_GATE_SECRET);
+  const ip = (viaSite && req.headers.get('x-oizer-client-ip')?.trim()) || req.headers.get('cf-connecting-ip') || 'unknown';
   const campaign = `${String(body.org ?? '')}:${String(body.campaign ?? '')}`;
   const [byIp, byCampaign] = await Promise.all([
     env.PER_IP.limit({ key: `ip:${ipKey(ip)}` }),

@@ -92,7 +92,10 @@ const usd = (n: number) => n.toLocaleString('en-US', { style: 'currency', curren
 // The organization's own Turnstile site key when it has one, otherwise the platform's.
 const PLATFORM_TURNSTILE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 // Payments go through the rate-limiting gate in front of the give function (workers/give-gate).
-const GIVE_URL = (import.meta.env.VITE_GIVE_GATE_URL as string | undefined) || 'https://oizer-give-gate.smueller-cd9.workers.dev/';
+const GATE_URL = (import.meta.env.VITE_GIVE_GATE_URL as string | undefined) || 'https://oizer-give-gate.smueller-cd9.workers.dev/';
+// Gifts go to the page's own site, which passes them on to the gate (functions/api/give.ts): replies from the gate's
+// own address didn't reach some donors' browsers (Moshe Henig, 2026-11-11). The dev server has no site functions.
+const GIVE_URL = import.meta.env.DEV ? GATE_URL : '/api/give';
 
 type TurnstileApi = { render: (el: HTMLElement, o: Record<string, unknown>) => string; reset: (id?: string) => void };
 let turnstileLoad: Promise<void> | null = null;
@@ -305,9 +308,10 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`);
   // The reply was lost or unreadable: ask what happened to this attempt instead of guessing.
   async function outcome(key: string): Promise<Row | null> {
-    for (let i = 0; i < 3; i++) {
-      if (i) await new Promise(r => setTimeout(r, 2500));
-      const res = await fetch(GIVE_URL, {
+    // Asked through the site and straight at the gate in turn, so one blocked path can't hide a gift that went through.
+    for (let i = 0; i < 4; i++) {
+      if (i) await new Promise(r => setTimeout(r, 2000));
+      const res = await fetch(i % 2 ? GATE_URL : GIVE_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ org: orgId, campaign: data.campaign.id, client_key: key, status_only: true, method, program }),
       }).catch(() => null);
