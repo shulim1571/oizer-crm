@@ -17,6 +17,11 @@
   ! X-Frame-Options
   Content-Security-Policy: frame-ancestors *
 
+# A campaign's payment page address: always fetched fresh, so its name and preview never lag behind an edit
+# (Moshe Henig, 2026-11-11). The campaign details themselves are read live by the page.
+/give/*
+  Cache-Control: no-cache
+
 /widget.js
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=300

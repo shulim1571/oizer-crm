@@ -115,6 +115,12 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
     setData((p as Row | null) ?? null);
   }, [campaignId]);
   useEffect(() => { void load(); }, [load]);
+  // Coming back to an open page brings the campaign's current details (name, goal, raised, teams...).
+  useEffect(() => {
+    const fresh = () => { if (document.visibilityState === 'visible') void load(); };
+    document.addEventListener('visibilitychange', fresh);
+    return () => document.removeEventListener('visibilitychange', fresh);
+  }, [load]);
 
   const lang: Lang = (data?.page?.language as Lang) ?? 'en';
   // Inside the donate widget, the page tells the host site how tall it is.

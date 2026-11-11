@@ -75,7 +75,8 @@ export async function onRequestGet({ request, params, env }: Ctx) {
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'public, max-age=300',
+      // Never a stale copy: the campaign's name and details are always current (Moshe Henig, 2026-11-11).
+      'Cache-Control': 'no-cache',
       'X-Robots-Tag': 'noindex, nofollow',
       'X-Frame-Options': 'DENY',
       'X-Content-Type-Options': 'nosniff',
