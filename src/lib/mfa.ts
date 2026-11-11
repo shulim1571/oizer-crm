@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { phoneCodeProblem } from './phoneCodeResult';
 
 /**
  * Two-step verification (TOTP) state for the signed-in person (Shulim, 2026-11-11). `verified` means this session
@@ -70,9 +71,5 @@ export async function verifyPhoneCode(challengeId: string, code: string): Promis
   if (clean.length !== 6) return 'Enter the 6-digit code.';
   const { data, error } = await supabase.rpc('mfa_phone_verify', { p_challenge: challengeId, p_code: clean });
   if (error) return error.message;
-  return ({
-    ok: null, wrong: 'That code isn’t right. Check it and try again.', expired: 'That code has expired. Send a new one.',
-    used: 'That code was already used. Send a new one.', locked: 'Too many wrong tries for that code. Send a new one.',
-    not_found: 'That code isn’t valid for this sign-in. Send a new one.',
-  } as Record<string, string | null>)[String(data)] ?? 'That code didn’t work. Send a new one.';
+  return phoneCodeProblem(data);
 }

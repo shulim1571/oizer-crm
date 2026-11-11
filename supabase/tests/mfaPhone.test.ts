@@ -127,4 +127,19 @@ describe('two-step verification by text or call', () => {
     expect(log.map(l => l.action)).toEqual(['mfa_code_sent', 'mfa_code_failed', 'mfa_phone_added', 'mfa_code_verified']);
     expect(JSON.stringify(log)).not.toContain(sent.code);
   });
+
+  it('end to end: sends and verifies the exact code for enrolling, then for signing in from a new session', async () => {
+    // Enroll: the code the database issued for sending is the one that verifies.
+    const e1 = await start(db, S1, 'enroll', 'sms', '845-555-0177');
+    const sentEnroll = await issue(db, e1.challenge_id);
+    expect(await verify(db, S1, e1.challenge_id, sentEnroll.code)).toBe('ok');
+    // The same code typed with spaces or a dash still works only once.
+    expect(await verify(db, S1, e1.challenge_id, `${sentEnroll.code.slice(0, 3)} ${sentEnroll.code.slice(3)}`)).toBe('used');
+    // Sign in later from a new session, by call this time.
+    const s1 = await start(db, S2, 'signin', 'call', null);
+    const sentSignin = await issue(db, s1.challenge_id);
+    expect(sentSignin).toMatchObject({ phone: NORMAL, channel: 'call', purpose: 'signin' });
+    expect(await verify(db, S2, s1.challenge_id, `${sentSignin.code.slice(0, 3)}-${sentSignin.code.slice(3)}`)).toBe('ok');
+    expect((await asUser(db, S2, `select public.mfa_ok() as ok`))[0].ok).toBe(true);
+  });
 });
