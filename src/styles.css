@@ -930,3 +930,8 @@ tr.selected td { background: var(--accent-soft); }
 .help-ask { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--line); }
 .help-ask input { flex: 1; min-width: 0; }
 @media (max-width: 600px) { .help-panel { right: 16px; left: 16px; bottom: 16px; width: auto; } .help-fab { right: 16px; bottom: 16px; } }
+.help-msg.assistant { white-space: normal; }
+.help-answer p { margin: 0 0 6px; }
+.help-answer p:last-child, .help-answer ul:last-child, .help-answer ol:last-child { margin-bottom: 0; }
+.help-answer ul, .help-answer ol { margin: 0 0 6px; padding-left: 20px; }
+.help-answer code { font-size: 12.5px; background: var(--surface); padding: 0 3px; border-radius: 4px; }

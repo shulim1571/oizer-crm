@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth';
 import { dateTime } from '../lib/format';
 import { requestOrgId, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { parseAnswer, type Inline } from '../lib/answerFormat';
 
 // The AI help assistant (Shulim, 2026-11-11). Staff ask how-to questions; the assistant function answers from the
 // app's guide with Claude. Version 1 sees no records. Each organization's admins set it up here.
@@ -134,7 +135,7 @@ export function HelpAssistant() {
             <button type="button" className="icon-btn" title="Close" onClick={() => setOpen(false)}><X size={16} /></button></div>
           <div className="help-body">
             {turns.length === 0 && <p className="muted small">Ask how to do something in Oizer, like “How do I print a check?” or “Where do I set a campaign’s PIN?”. The assistant can’t see your records. Answers can be wrong; check with the office if unsure.</p>}
-            {turns.map((t, i) => <div key={i} className={`help-msg ${t.role}`}>{t.content}</div>)}
+            {turns.map((t, i) => <div key={i} className={`help-msg ${t.role}`}>{t.role === 'assistant' ? <Answer text={t.content} /> : t.content}</div>)}
             {busy && <div className="help-msg assistant muted">Thinking…</div>}
             {error && <div className="error">{error}</div>}
             <div ref={end} />
@@ -146,5 +147,18 @@ export function HelpAssistant() {
         </div>
       )}
     </>
+  );
+}
+
+/** An answer's simple markdown as React elements (never inserted as HTML). */
+function Answer({ text }: { text: string }) {
+  const inline = (parts: Inline[]) => parts.map((p, i) => p.bold ? <b key={i}>{p.text}</b> : p.italic ? <i key={i}>{p.text}</i> : p.code ? <code key={i}>{p.text}</code> : <span key={i}>{p.text}</span>);
+  return (
+    <div className="help-answer">
+      {parseAnswer(text).map((b, i) => b.kind === 'ul' ? <ul key={i}>{b.items.map((it, j) => <li key={j}>{inline(it)}</li>)}</ul>
+        : b.kind === 'ol' ? <ol key={i} start={b.start}>{b.items.map((it, j) => <li key={j}>{inline(it)}</li>)}</ol>
+        : b.kind === 'h' ? <p key={i}><b>{inline(b.text)}</b></p>
+        : <p key={i}>{b.lines.map((l, j) => <span key={j}>{j > 0 && <br />}{inline(l)}</span>)}</p>)}
+    </div>
   );
 }
