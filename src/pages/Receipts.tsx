@@ -1,3 +1,4 @@
+import { bytesToBase64, fromHex } from '../lib/base64';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Printer, Send, X } from 'lucide-react';
@@ -22,7 +23,8 @@ async function orgDetails(): Promise<OrgDetails> {
 async function directorSignature() {
   const { data } = await supabase.rpc('check_asset', { p_kind: 'director_signature', p_account: '' });
   const s = ((data ?? []) as Row[])[0];
-  return s ? `data:${s.mime};base64,${s.data}` : null;
+  // Comes as hex (a content filter rewrote base64 image text); made into a local image here.
+  return s ? `data:${s.mime};base64,${bytesToBase64(fromHex(s.data_hex, 'director’s signature'))}` : null;
 }
 
 /** Receipt pages by id, in the order given. */

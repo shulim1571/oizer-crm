@@ -1,3 +1,4 @@
+import { bytesToBase64, fromHex } from '../lib/base64';
 import { STALE_MESSAGE, friendlyError, isStaleChunkError } from '../lib/staleChunk';
 import RowMenu from '../components/RowMenu';
 import { useEffect, useState } from 'react';
@@ -37,15 +38,14 @@ const ready = (s: Row | null) => !!(s?.routing_number && s?.account_number && s?
 
 /** Everything printed on a check, from the account's settings and its files. */
 async function checkData(s: Row, account: string, c: { checkNumber: number; date: string; payee: string; amount: number; memo?: string | null; campaign?: string | null }, sample = false): Promise<CheckData> {
-  const { fromBase64 } = await pdf();
   const [sig, font] = await Promise.all([asset('signature', account), asset('micr_font')]);
   return {
     ...c,
     printName: s.print_name ?? '', printAddress: s.print_address, bankName: s.bank_name ?? '',
     routing: s.routing_number ?? '000000000', account: s.account_number ?? '0000',
     offsetX: Number(s.offset_x), offsetY: Number(s.offset_y),
-    signature: sig ? { bytes: fromBase64(sig.data, 'signature file'), mime: sig.mime } : null,
-    micrFont: font ? { bytes: fromBase64(font.data, 'MICR font file'), transit: font.transit_char, onUs: font.onus_char } : null,
+    signature: sig ? { bytes: fromHex(sig.data_hex, 'signature file'), mime: sig.mime } : null,
+    micrFont: font ? { bytes: fromHex(font.data_hex, 'MICR font file'), transit: font.transit_char, onUs: font.onus_char } : null,
     sample,
   };
 }
@@ -270,7 +270,7 @@ function MicrFontCard() {
     const { toBase64 } = await pdf();
     const { error: e } = file
       ? await supabase.rpc('save_check_asset', { p_kind: 'micr_font', p_account: null, p_base64: await toBase64(file), p_mime: file.type || 'font/ttf', p_file_name: file.name, p_transit_char: transit, p_onus_char: onUs })
-      : await supabase.rpc('save_check_asset', { p_kind: 'micr_font', p_account: null, p_base64: (await asset('micr_font'))!.data, p_mime: font!.mime, p_file_name: font!.file_name, p_transit_char: transit, p_onus_char: onUs });
+      : await supabase.rpc('save_check_asset', { p_kind: 'micr_font', p_account: null, p_base64: bytesToBase64(fromHex((await asset('micr_font'))!.data_hex, 'MICR font file')), p_mime: font!.mime, p_file_name: font!.file_name, p_transit_char: transit, p_onus_char: onUs });
     if (e) return setError(e.message);
     setFile(null);
     setVersion(v => v + 1);

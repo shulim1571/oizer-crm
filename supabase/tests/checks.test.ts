@@ -111,12 +111,23 @@ describe('check files', () => {
     const png = Buffer.from('fake png bytes').toString('base64');
     await sql(db, `select public.save_check_asset('signature', 'a1', $1, 'image/png', 'sig.png')`, [png]);
     await sql(db, `select public.save_check_asset('micr_font', null, $1, 'font/ttf', 'micr.ttf', 'A', 'C')`, [png]);
-    expect(await one(db, `select file_name, data, transit_char, onus_char from public.check_asset('micr_font')`))
-      .toEqual({ file_name: 'micr.ttf', data: png, transit_char: 'A', onus_char: 'C' });
-    expect((await one(db, `select data from public.check_asset('signature', 'a1')`)).data).toBe(png);
+    // Returned as hex, which content filters don't mistake for an image (Moshe Henig, 2026-11-11).
+    const hex = Buffer.from('fake png bytes').toString('hex');
+    expect(await one(db, `select file_name, data_hex, transit_char, onus_char from public.check_asset('micr_font')`))
+      .toEqual({ file_name: 'micr.ttf', data_hex: hex, transit_char: 'A', onus_char: 'C' });
+    expect((await one(db, `select data_hex from public.check_asset('signature', 'a1')`)).data_hex).toBe(hex);
     await expect(sql(db, `select public.save_check_asset('signature', 'a1', $1, 'image/gif')`, [png])).rejects.toThrow(/PNG or JPG/);
     await expect(rows(db, MANAGER_1, `select * from public.check_asset('micr_font')`)).rejects.toThrow();
     await expect(rows(db, ADMIN, `select * from public.check_assets`)).rejects.toThrow();
+  });
+
+  it('round-trips a real PNG byte for byte, with nothing that looks like base64 image text', async () => {
+    const bytes = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(9000, 7)]);
+    await sql(db, `select public.save_check_asset('signature', 'a1', $1, 'image/png', 'Signature4.png')`, [bytes.toString('base64')]);
+    const { data_hex } = await one(db, `select data_hex from public.check_asset('signature', 'a1')`);
+    expect(Buffer.from(data_hex, 'hex').equals(bytes)).toBe(true);
+    expect(data_hex.startsWith('89504e47')).toBe(true);
+    expect(data_hex).not.toMatch(/iVBORw0KGgo|[=\n+/]/);
   });
 });
 
