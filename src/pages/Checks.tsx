@@ -131,10 +131,11 @@ export function CheckPrintedQuestion({ check, onDone }: { check: { id: string; n
         </>
       ) : (
         <>
-          <p className="muted small">The check opened in a new tab (or the print window). Print it, check it, then answer here.</p>
+          <p className="muted small">The check opened in a new tab (or the print window). Print it and look it over first: until you
+            say yes, it stays on the Task Sheet as not printed. You can also answer later from the Task Sheet.</p>
           {error && <div className="error">{error}</div>}
           <div className="form-actions">
-            <button type="button" className="btn" onClick={() => setNo(true)}>No, it didn't print right</button>
+            <button type="button" className="btn" onClick={() => setNo(true)}>Not yet / it didn't print right</button>
             <div className="spacer" />
             <button type="button" className="btn primary" onClick={yes}>Yes, it printed</button>
           </div>
@@ -425,6 +426,15 @@ export function ChecksPage() {
   const outstanding = out.reduce((s, r) => s + Number(r.amount), 0);
   const printer = useCheckPrinter(() => setVersion(v => v + 1));
 
+  async function printedTo(r: Row, printed: boolean) {
+    if (!confirm(printed ? `Mark check #${r.check_number} as printed? It leaves the Task Sheet.` : `Mark check #${r.check_number} as not printed? It goes back on the Task Sheet.`)) return;
+    setError(null);
+    const { error: e } = await supabase.rpc(printed ? 'mark_check_printed' : 'mark_check_unprinted', { p_check: r.id });
+    if (e) return setError(e.message);
+    setVersion(v => v + 1);
+    window.dispatchEvent(new Event('task-sheet-changed'));
+  }
+
   async function setTo(r: Row, to: string) {
     const reason = to === 'voided' || to === 'lost' ? prompt(`Mark check #${r.check_number} ${to}? Its number is never used again. Reason:`) : '';
     if (reason === null) return;
@@ -446,11 +456,19 @@ export function ChecksPage() {
     { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => (r.campaign_id ? `${r.campaign_name ?? ''} - ${r.campaign_id}` : '') },
     { key: 'memo', label: 'Memo', long: true, optional: true },
     { key: 'status_reason', label: 'Reason', optional: true },
-    { key: 'issued_by', label: 'Printed by', optional: true },
+    { key: 'issued_by', label: 'Issued by', optional: true },
+    // Whether the check was confirmed printed, and by whom (Moshe Henig, 2026-11-11).
+    {
+      key: 'printed_at', label: 'Printed', value: r => (r.printed_at ? dateTime(r.printed_at) : 'Not printed'),
+      render: r => (r.printed_at ? <span title={r.printed_by ? `Confirmed by ${r.printed_by}` : undefined}>{dateTime(r.printed_at)}</span>
+        : r.status === 'outstanding' ? <Pill tone="amber">Not printed</Pill> : <span className="muted">—</span>),
+    },
     {
       key: 'actions', label: '', render: r => (
         <RowMenu label="Check actions" items={[
           { label: 'Print again', onClick: () => printer.print(r.id) },
+          { label: 'Mark printed', onClick: () => printedTo(r, true), hidden: !!r.printed_at || r.status !== 'outstanding' },
+          { label: 'Mark not printed (back to the Task Sheet)', onClick: () => printedTo(r, false), hidden: !r.printed_at || r.status !== 'outstanding' },
           { label: 'Mark cleared', onClick: () => setTo(r, 'cleared'), hidden: r.status !== 'outstanding' },
           { label: 'Mark not cleared', onClick: () => setTo(r, 'outstanding'), hidden: r.status !== 'cleared' },
           { label: 'Mark lost', onClick: () => setTo(r, 'lost'), hidden: r.status !== 'outstanding' },
