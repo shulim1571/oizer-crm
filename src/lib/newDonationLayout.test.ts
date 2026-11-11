@@ -12,12 +12,14 @@ describe('New Donation layout', () => {
   it('groups the fields into Gift, Payment and Donor, in that order, then Notes and the folded accounting fields', () => {
     const main = newDonationFields.filter(f => !f.advanced);
     expect(main.map(f => `${f.section ?? '-'}:${f.name}`)).toEqual([
-      'Gift:campaign_id', 'Gift:amount', 'Gift:type', 'Gift:status',
+      'Gift:campaign_id', 'Gift:amount',
       'Payment:payment_method', 'Payment:manual_fee', 'Payment:check_number', 'Payment:check_date', 'Payment:post_dated', 'Payment:delivered',
       'Donor:donor_id', 'Donor:name', 'Donor:phone', 'Donor:email', 'Donor:anonymous',
-      '-:notes',
+      '-:notes', '-:status',
     ]);
-    expect(newDonationFields.filter(f => f.advanced).map(f => f.name)).toEqual(['collector_id', 'source', 'account_id', 'fee', 'created_at']);
+    // Moshe Henig, 2026-11-11: no Type, Status at the bottom, only Source, Account and Timestamp under Advanced.
+    expect(newDonationFields.filter(f => f.advanced).map(f => f.name)).toEqual(['source', 'account_id', 'created_at']);
+    expect(newDonationFields.some(f => ['type', 'collector_id', 'fee'].includes(f.name))).toBe(false);
   });
 
   it('keeps every field rule as it was', () => {
@@ -26,7 +28,7 @@ describe('New Donation layout', () => {
     expect(shown('delivered', 'Zelle')).toBe(false);
     expect(newDonationFields.find(f => f.name === 'manual_fee')!.showIf).toBeUndefined();
     expect(newDonationFields.some(f => ['batch_id', 'funded', 'batch_status', 'batch_pending'].includes(f.name))).toBe(false);
-    expect(newDonationFields.filter(f => f.required).map(f => f.name).sort()).toEqual(['amount', 'campaign_id', 'status', 'type']);
+    expect(newDonationFields.filter(f => f.required).map(f => f.name).sort()).toEqual(['amount', 'campaign_id', 'status']);
     // The edit form is untouched by the new sections.
     expect(donationFields.some(f => f.section)).toBe(false);
   });

@@ -86,13 +86,20 @@ const BATCH_ONLY = ['batch_id', 'funded', 'batch_status', 'batch_pending'];
  * Gift, Payment and Donor sections in this order, then Notes; the accounting fields stay folded under Advanced.
  */
 const NEW_DONATION_LAYOUT: [string, string[]][] = [
-  ['Gift', ['campaign_id', 'amount', 'type', 'status']],
+  ['Gift', ['campaign_id', 'amount']],
   ['Payment', ['payment_method', 'manual_fee', 'check_number', 'check_date', 'post_dated', 'delivered']],
   ['Donor', ['donor_id', 'name', 'phone', 'email', 'anonymous']],
 ];
 
+/**
+ * Moshe Henig, 2026-11-11 (by text): no Type field (it's always Payment, sent by the form's defaults), Status at the
+ * bottom, and only Source, Account and Timestamp under Advanced. Editing a donation keeps every field.
+ */
+const NEW_DONATION_HIDDEN = ['type', 'collector_id', 'fee'];
+const NEW_DONATION_LAST = ['status'];
+
 const newDonationRules: Field[] = donationFields
-  .filter(f => !BATCH_ONLY.includes(f.name))
+  .filter(f => !BATCH_ONLY.includes(f.name) && !NEW_DONATION_HIDDEN.includes(f.name))
   .map(f => {
     if (f.name === 'type') return { ...f, options: DONATION_TYPES.filter(o => o.value !== 'Batch') };
     // A searchable dropdown of the organization's payment methods, like Campaign (Moshe Henig, 2026-11-11).
@@ -105,7 +112,9 @@ const newDonationRules: Field[] = donationFields
 
 export const newDonationFields: Field[] = [
   ...NEW_DONATION_LAYOUT.flatMap(([section, names]) => names.map(n => ({ ...newDonationRules.find(f => f.name === n)!, section }))),
-  ...newDonationRules.filter(f => !NEW_DONATION_LAYOUT.some(([, names]) => names.includes(f.name))),
+  ...newDonationRules.filter(f => !f.advanced && !NEW_DONATION_LAST.includes(f.name) && !NEW_DONATION_LAYOUT.some(([, names]) => names.includes(f.name))),
+  ...NEW_DONATION_LAST.map(n => newDonationRules.find(f => f.name === n)!),
+  ...newDonationRules.filter(f => f.advanced),
 ];
 
 /** What a fundraiser with the override fills in. It always waits for an admin. */

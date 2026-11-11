@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { donationFields, newDonationFields } from './schemas';
 
@@ -29,7 +30,9 @@ describe('New Donation form', () => {
 
   it('has no batch fields and no Batch type: vouchers have their own form', () => {
     for (const n of ['batch_id', 'funded', 'batch_status', 'batch_pending']) expect(field(n)).toBeUndefined();
-    expect((field('type')?.options as { value: string }[]).map(o => o.value)).toEqual(['Payment']);
+    // No Type field at all (Moshe Henig, 2026-11-11): the form always records a Payment, from its defaults.
+    expect(field('type')).toBeUndefined();
+    expect(readFileSync('src/pages/Donations.tsx', 'utf8')).toContain("defaults={{ type: 'Payment', status: 'completed'");
   });
 
   it('always shows Manual fee, whatever the method', () => {
