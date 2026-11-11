@@ -11,6 +11,7 @@ import { useQuery } from '../lib/useQuery';
 import { MessagePill } from './Messaging';
 import { Overlay } from './Pledges';
 import { EMAIL_HELP, MERGE_FIELDS, SMS_HELP, smsPlain } from '../lib/outreachFormat';
+import { NEW_TEMPLATE, NEW_TEMPLATE_LABEL } from '../lib/templatePick';
 
 // Sharing a campaign's payment link, and Custom Outreach. Both are marketing sends: emails carry an
 // unsubscribe link and texts say how to opt out, which the database adds.
@@ -209,8 +210,9 @@ export function OutreachPage() {
       campaign_id: r.campaign_id, campaign_name: campaignName,
     })));
   }
-  function applyTemplate(id: string) {
-    const t = (templates.data as Row[] | undefined)?.find(x => x.id === id);
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
+  function applyTemplate(id: string, from?: Row[]) {
+    const t = (from ?? (templates.data as Row[] | undefined))?.find(x => x.id === id);
     if (!t) return;
     setSubject(t.subject ?? '');
     setBody(t.body ?? '');
@@ -270,9 +272,17 @@ export function OutreachPage() {
               <option value="email">Email</option><option value="sms">Text</option><option value="both">Email and text</option>
             </select></label>
           <label className="field"><span>Start from a template</span>
-            <select value="" onChange={e => applyTemplate(e.target.value)}>
+            <select value="" onChange={e => (e.target.value === NEW_TEMPLATE ? setCreatingTemplate(true) : applyTemplate(e.target.value))}>
               <option value="">Choose…</option>{(templates.data as Row[] | undefined)?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <option value={NEW_TEMPLATE}>{NEW_TEMPLATE_LABEL}</option>
             </select></label>
+          {creatingTemplate && <TemplateDialog template={{}} onClose={() => setCreatingTemplate(false)} onSaved={async id => {
+            setCreatingTemplate(false);
+            // The new template is filled in straight away, as if picked from the list.
+            const { data } = await supabase.from('outreach_templates').select('*').order('name');
+            if (id) applyTemplate(id, (data ?? []) as Row[]);
+            templates.reload();
+          }} />}
         </div>
         {channel !== 'sms' && (
           <div className="fields">
@@ -447,16 +457,16 @@ export function OutreachTemplatesPage() {
   );
 }
 
-function TemplateDialog({ template: t, onClose, onSaved }: { template: Row; onClose: () => void; onSaved: () => void }) {
+function TemplateDialog({ template: t, onClose, onSaved }: { template: Row; onClose: () => void; onSaved: (id?: string) => void }) {
   const [name, setName] = useState(t.name ?? '');
   const [subject, setSubject] = useState(t.subject ?? '');
   const [body, setBody] = useState(t.body ?? '');
   const [sms, setSms] = useState(t.sms_body ?? '');
   const [error, setError] = useState<string | null>(null);
   async function save() {
-    const { error: e } = await supabase.rpc('save_outreach_template', { p_id: t.id ?? null, p_name: name, p_subject: subject, p_body: body, p_sms_body: sms });
+    const { data: savedId, error: e } = await supabase.rpc('save_outreach_template', { p_id: t.id ?? null, p_name: name, p_subject: subject, p_body: body, p_sms_body: sms });
     if (e) return setError(e.message);
-    onSaved();
+    onSaved((savedId as string | null) ?? t.id);
   }
   async function remove() {
     if (!confirm(`Delete the template "${t.name}"?`)) return;

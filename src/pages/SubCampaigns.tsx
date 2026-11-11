@@ -10,6 +10,9 @@ import { clearLookups, managerOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { STATUS_LABEL } from './Campaigns';
+import { NEW_TEMPLATE, NEW_TEMPLATE_LABEL } from '../lib/templatePick';
+import { useAuth } from '../lib/auth';
+import { TemplateDialog } from './Templates';
 
 const MODES = [
   { value: 'shared', label: 'Shared balance', help: 'Everything counts in the parent’s balance. This one only tracks what it raised, and has no payouts of its own.' },
@@ -63,6 +66,8 @@ function AddSubDialog({ parent, onClose, onDone }: { parent: Row; onClose: () =>
   const [managers, setManagers] = useState<Option[]>([]);
   const [template, setTemplate] = useState('');
   const [templates, setTemplates] = useState<Row[]>([]);
+  const [creating, setCreating] = useState(false);
+  const { isAdmin } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -94,14 +99,21 @@ function AddSubDialog({ parent, onClose, onDone }: { parent: Row; onClose: () =>
         </label>
         <p className="muted small">{MODES.find(m => m.value === mode)?.help}</p>
         <label className="field"><span>Goal</span><input type="number" step="0.01" min="0" value={goal} onChange={e => setGoal(e.target.value)} /></label>
-        {templates.length > 0 && (
+        {(templates.length > 0 || isAdmin) && (
           <label className="field"><span>Start from</span>
-            <select value={template} onChange={e => setTemplate(e.target.value)}>
+            <select value={template} onChange={e => (e.target.value === NEW_TEMPLATE ? setCreating(true) : setTemplate(e.target.value))}>
               <option value="">Parent's settings</option>
               {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {isAdmin && <option value={NEW_TEMPLATE}>{NEW_TEMPLATE_LABEL}</option>}
             </select>
           </label>
         )}
+        {creating && <TemplateDialog record={null} onClose={() => setCreating(false)} onDone={saved => {
+          setCreating(false);
+          if (!saved) return;
+          setTemplates(list => [...list, saved].sort((a, b) => String(a.name).localeCompare(String(b.name))));
+          setTemplate(saved.id);
+        }} />}
         <label className="field"><span>Fundraiser</span><SearchSelect value={manager} options={managers} onChange={setManager} placeholder="Optional…" /></label>
         <p className="muted small">Fees and the bank account follow the parent unless you set them on the sub-campaign later.</p>
         {error && <div className="error">{error}</div>}

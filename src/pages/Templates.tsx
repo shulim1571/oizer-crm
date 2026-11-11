@@ -7,6 +7,8 @@ import { money } from '../lib/format';
 import { accountOptions, clearLookups, paymentMethodIdOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useAuth } from '../lib/auth';
+import { NEW_TEMPLATE, NEW_TEMPLATE_LABEL } from '../lib/templatePick';
 import { ReceiptTextCard } from './Receipts';
 
 const LANGUAGES = [['en', 'English'], ['he', 'Hebrew'], ['yi', 'Yiddish']];
@@ -111,7 +113,7 @@ export function TemplatesPage() {
   );
 }
 
-function TemplateDialog({ record, onClose, onDone }: { record: Row | null; onClose: () => void; onDone: () => void }) {
+export function TemplateDialog({ record, onClose, onDone }: { record: Row | null; onClose: () => void; onDone: (saved?: Row) => void }) {
   const [name, setName] = useState<string>(record?.name ?? '');
   const [description, setDescription] = useState<string>(record?.description ?? '');
   const [settings, setSettings] = useState<Row>(pickSettings(record));
@@ -130,12 +132,12 @@ function TemplateDialog({ record, onClose, onDone }: { record: Row | null; onClo
   async function save() {
     setError(null);
     const payload = { name, description: description || null, ...settings, account_id: account || null, fee_overrides: fees.filter(f => f.method_id) };
-    const { error: e } = record
-      ? await supabase.from('campaign_templates').update(payload).eq('id', record.id)
-      : await supabase.from('campaign_templates').insert(payload);
+    const { data: saved, error: e } = record
+      ? await supabase.from('campaign_templates').update(payload).eq('id', record.id).select().single()
+      : await supabase.from('campaign_templates').insert(payload).select().single();
     if (e) return setError(/campaign_templates_name/.test(e.message) ? 'There is already a template with that name.' : e.message);
     clearLookups();
-    onDone();
+    onDone((saved ?? undefined) as Row | undefined);
   }
   async function run(call: PromiseLike<{ error: { message: string } | null }>, confirmText?: string) {
     if (confirmText && !confirm(confirmText)) return;
@@ -198,6 +200,8 @@ export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template:
   const [templates, setTemplates] = useState<Row[]>([]);
   const [chosen, setChosen] = useState('');
   const [settings, setSettings] = useState<Row>(blankSettings());
+  const [creating, setCreating] = useState(false);
+  const { isAdmin } = useAuth();
   useEffect(() => {
     supabase.from('campaign_templates').select('*').order('name').then(({ data }) => {
       const list = (data ?? []) as Row[];
@@ -209,6 +213,11 @@ export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template:
       }
     });
   }, []);
+  const pickTemplate = (id: string) => {
+    if (id === NEW_TEMPLATE) return setCreating(true);
+    setChosen(id);
+    setSettings(pickSettings(templates.find(t => t.id === id)));
+  };
   const template = templates.find(t => t.id === chosen) ?? null;
 
   return createPortal(
@@ -216,9 +225,10 @@ export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template:
       <div className="modal modal-wide"><div className="record-form">
         <div className="form-head"><h2>New campaign</h2></div>
         <label className="field"><span>Start from</span>
-          <select value={chosen} onChange={e => { setChosen(e.target.value); setSettings(pickSettings(templates.find(t => t.id === e.target.value))); }}>
+          <select value={chosen} onChange={e => pickTemplate(e.target.value)}>
             <option value="">Scratch</option>
             {templates.map(t => <option key={t.id} value={t.id}>{t.name}{t.is_default ? ' (default)' : ''}</option>)}
+            {isAdmin && <option value={NEW_TEMPLATE}>{NEW_TEMPLATE_LABEL}</option>}
           </select>
         </label>
         {/* The key redraws the fields when a template replaces their values. */}
@@ -229,6 +239,13 @@ export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template:
           <button type="button" className="btn primary" onClick={() => onNext({ template, settings })}>Continue</button>
         </div>
       </div></div>
+      {creating && <TemplateDialog record={null} onClose={() => setCreating(false)} onDone={saved => {
+        setCreating(false);
+        if (!saved) return;
+        setTemplates(list => [...list, saved].sort((a, b) => String(a.name).localeCompare(String(b.name))));
+        setChosen(saved.id);
+        setSettings(pickSettings(saved));
+      }} />}
     </div>,
     document.body,
   );
@@ -324,6 +341,7 @@ export function SwitchTemplateDialog({ campaignId, onClose, onDone }: { campaign
     return { list: (list ?? []) as Row[], current: (cur as Row | null)?.template_id ?? null };
   }, [campaignId]);
   const [pick, setPick] = useState('');
+  const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const data = q.data as { list: Row[]; current: string | null } | null;
@@ -342,9 +360,10 @@ export function SwitchTemplateDialog({ campaignId, onClose, onDone }: { campaign
         <div className="form-head"><h2>Change template</h2></div>
         <p className="muted small">Now on: <b>{currentName ?? 'no template'}</b></p>
         <label className="field"><span>New template</span>
-          <select value={pick} onChange={e => setPick(e.target.value)}>
+          <select value={pick} onChange={e => (e.target.value === NEW_TEMPLATE ? setCreating(true) : setPick(e.target.value))}>
             <option value="">Choose…</option>
             {(data?.list ?? []).filter(t => t.id !== data?.current).map(t => <option key={t.id} value={t.id}>{t.name}{t.is_default ? ' (default)' : ''}</option>)}
+            <option value={NEW_TEMPLATE}>{NEW_TEMPLATE_LABEL}</option>
           </select></label>
         <p className="help">The payment page settings come from the new template: language, amounts, minimum, cover-fee default, receipts, donor wall, logo, color and custom fields.
           Everything else stays: the campaign’s name, fundraisers, goal, bank account and PIN, its donations and payouts, and the page’s description, thank-you note and banner.</p>
@@ -353,6 +372,12 @@ export function SwitchTemplateDialog({ campaignId, onClose, onDone }: { campaign
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
           <button type="button" className="btn primary" disabled={!pick || busy} onClick={save}>{busy ? 'Changing…' : 'Change template'}</button></div>
       </div>
+      {creating && <TemplateDialog record={null} onClose={() => setCreating(false)} onDone={saved => {
+        setCreating(false);
+        if (!saved) return;
+        void q.reload();
+        setPick(saved.id);
+      }} />}
     </div>,
     document.body,
   );
