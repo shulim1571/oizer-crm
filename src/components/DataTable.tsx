@@ -1,3 +1,4 @@
+import { dayOffset, inRange, rangeBounds, RANGE_PRESETS, type DateRange, type RangePreset } from '../lib/dateRange';
 import Pager from './Pager';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -44,6 +45,8 @@ export interface ServerQuery {
   filters: Record<string, string>;
   sort: { key: string; dir: 'asc' | 'desc' } | null;
   pageSize: number;
+  /** The date range picked above the list, as instants (from inclusive, to exclusive); empty for all time. */
+  range: { from?: string; to?: string };
 }
 
 interface Props {
@@ -76,6 +79,8 @@ interface Props {
   /** Row checkboxes. */
   selected?: ReadonlySet<string>;
   onSelect?: (rows: Row[], on: boolean) => void;
+  /** A date range picker above the list (saved with the view). `column` is the row's date, for lists filtered here. */
+  dateRange?: { column: string; defaultPreset?: RangePreset };
 }
 
 const EMPTY = '(none)';
@@ -159,11 +164,17 @@ export default function DataTable(p: Props) {
     return config.columns.flatMap(k => byKey.get(k) ?? []);
   }, [config.columns, p.columns]);
 
+  // The date range: the saved one, else the list's starting preset. Recomputed daily so rolling ranges move on.
+  const range: DateRange | undefined = p.dateRange ? (config.range ?? { preset: p.dateRange.defaultPreset ?? 'all' }) : undefined;
+  const today = new Date().toDateString();
+  const bounds = useMemo(() => rangeBounds(range), [JSON.stringify(range), today]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const setRange = (r: DateRange) => setConfig({ ...config, range: r });
+
   // Tell the page what to fetch, once any saved default has been applied.
   const onServerQuery = p.onServerQuery;
-  const queryKey = JSON.stringify({ filters, sort, pageSize });
+  const queryKey = JSON.stringify({ filters, sort, pageSize, bounds });
   useEffect(() => {
-    if (onServerQuery && saved.ready) onServerQuery({ filters, sort, pageSize });
+    if (onServerQuery && saved.ready) onServerQuery({ filters, sort, pageSize, range: bounds });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryKey, saved.ready]);
 
@@ -177,6 +188,7 @@ export default function DataTable(p: Props) {
       const active = p.columns.filter(c => filters[c.key]?.trim());
       rows = rows.filter(r => active.every(c => matches(filters[c.key], val(c, r))));
     }
+    if (!server && p.dateRange) rows = rows.filter(r => inRange(r[p.dateRange!.column], bounds));
     return rows;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.rows, q, p.columns, p.serverSearch, server, queryKey]);
@@ -318,6 +330,20 @@ export default function DataTable(p: Props) {
         </div>
         <div className="view-actions">
           {p.actions}
+          {range && (
+            <div className="date-range" role="group" aria-label="Date range">
+              <select aria-label="Date" value={range.preset} onChange={e => setRange(e.target.value === 'custom'
+                ? { preset: 'custom', from: range.from ?? dayOffset(-29), to: range.to ?? dayOffset(0) }
+                : { preset: e.target.value as RangePreset })}>
+                {RANGE_PRESETS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              {range.preset === 'custom' && <>
+                <input type="date" aria-label="From" value={range.from ?? ''} max={range.to} onChange={e => setRange({ ...range, from: e.target.value || undefined })} />
+                <span className="muted small">to</span>
+                <input type="date" aria-label="To" value={range.to ?? ''} min={range.from} onChange={e => setRange({ ...range, to: e.target.value || undefined })} />
+              </>}
+            </div>
+          )}
           {!p.plain && (
             <>
               <button className={`btn ${activeFilters ? 'on' : ''}`} onClick={() => setShowFilters(s => !s)} title="Show or hide the filter panel"

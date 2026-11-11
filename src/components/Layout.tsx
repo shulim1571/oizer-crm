@@ -65,8 +65,8 @@ const NAV: NavSection[] = [
     items: [
       { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true,
         tabs: [{ to: '/donations/new', label: 'One donation' }, { to: '/donations/batch', label: 'Batch Entry' }] },
-      { to: '/donations/recent', label: 'Transactions', icon: <CircleDollarSign size={I} />,
-        tabs: [{ to: '/donations/recent', label: 'Last 7 Days' }, { to: '/donations/all', label: 'All' }] },
+      // One list with a date range (Last 7 days, 30, 60, a year or custom) instead of a Last 7 Days tab.
+      { to: '/donations/all', label: 'Transactions', icon: <CircleDollarSign size={I} /> },
       { to: '/recurring', label: 'Recurring', icon: <Repeat size={I} /> },
       { to: '/pledges', label: 'Pledges', icon: <Handshake size={I} /> },
       { to: '/vouchers', label: 'Vouchers', icon: <Ticket size={I} />, admin: true },

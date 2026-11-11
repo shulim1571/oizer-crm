@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, HandCoins, Landmark, Plus, TrendingUp } from 'lucide-react';
-import Kpi from '../components/Kpi';
-import DataTable, { parseNumberFilter, sumBadge, type Column, type ServerQuery } from '../components/DataTable';
+import { CreditCard, Plus } from 'lucide-react';
+import DataTable, { parseNumberFilter, type Column, type ServerQuery } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import Pager from '../components/Pager';
 import { useSearch } from '../components/Layout';
@@ -12,7 +11,7 @@ import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
 import { donationFields, newDonationFields } from '../lib/schemas';
 import TransactionBulk from './TransactionBulk';
-import { DONATION_KINDS, DONATION_SELECT, donationColumns, donationKind, isLive } from './donationColumns';
+import { DONATION_KINDS, DONATION_SELECT, donationColumns } from './donationColumns';
 import { CardChargeDialog } from './Payments';
 
 function useDonationEditor(onChange: (row: Row) => void) {
@@ -39,59 +38,6 @@ function useDonationEditor(onChange: (row: Row) => void) {
 
 const replaceRow = (list: Row[] | null, row: Row) =>
   row._deleted ? (list ?? []).filter(r => r.id !== row.id) : (list ?? []).map(r => (r.id === row.id ? row : r));
-
-export function RecentDonations() {
-  const nav = useNavigate();
-  const { isAdmin } = useAuth();
-  const { data, error, loading, setData } = useQuery(() => {
-    const since = new Date(Date.now() - 7 * 864e5).toISOString();
-    return fetchAll((a, b) =>
-      supabase.from('donations').select(DONATION_SELECT).gte('created_at', since).order('created_at', { ascending: false }).range(a, b),
-    );
-  });
-  const { open, editor } = useDonationEditor(row => setData(d => replaceRow(d, row)));
-  const [kind, setKind] = useState(DEFAULT_KIND);
-  const k = DONATION_KINDS[kind];
-  const rows = (data ?? []).filter(r => !k || (r.status === k.status && (!k.type || r.type === k.type)));
-
-  return (
-    <>
-      <DataTable
-        title="Last 7 Days"
-        rows={rows}
-        loading={loading}
-        error={error}
-        columns={donationColumns()}
-        groupBy={{ label: 'Type', value: donationKind, badge: sumBadge('amount') }}
-        onOpen={open ?? undefined}
-        summary={data && <WeekSummary rows={data} />}
-        actions={<>
-          <select value={kind} onChange={e => setKind(e.target.value)} aria-label="Type">
-            <option value="">All types</option>
-            {Object.keys(DONATION_KINDS).map(t => <option key={t}>{t}</option>)}
-          </select>
-          {isAdmin && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
-        </>}
-      />
-      {editor}
-    </>
-  );
-}
-
-function WeekSummary({ rows }: { rows: Row[] }) {
-  const live = rows.filter(isLive);
-  const total = live.reduce((s, r) => s + Number(r.amount ?? 0), 0);
-  const fees = live.reduce((s, r) => s + Number(r.fee ?? 0), 0);
-  const campaigns = new Set(live.map(r => r.campaign_id)).size;
-  return (
-    <div className="kpis">
-      <Kpi label="Received" value={money(total)} icon={<TrendingUp size={18} />} tone="green" sub={`${money(fees)} in fees`} />
-      <Kpi label={live.length === 1 ? 'Transaction' : 'Transactions'} value={live.length.toLocaleString()} icon={<HandCoins size={18} />} tone="violet"
-           sub={`avg ${money(live.length ? total / live.length : 0)}`} />
-      <Kpi label="Campaigns" value={campaigns} icon={<Landmark size={18} />} tone="blue" sub="received transactions" />
-    </div>
-  );
-}
 
 /** Successful (completed) only, until someone picks another type. */
 export const DEFAULT_KIND = 'Successful';
@@ -166,6 +112,9 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     if (kind) s = s.eq('status', kind.status);
     if (kind?.type) s = s.eq('type', kind.type);
     if (kindFilter === UNATTRIBUTED) s = s.is('campaign_id', null);
+    // The date range picked above the list (replaces the Last 7 Days tab).
+    if (query?.range.from) s = s.gte('created_at', query.range.from);
+    if (query?.range.to) s = s.lt('created_at', query.range.to);
     if (kindFilter === DUPLICATES) s = s.eq('possible_duplicate', true);
     const text = debounced.trim().replace(/[,()*]/g, ' ');
     if (text) {
@@ -245,12 +194,14 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
         onOpen={open ?? undefined}
         selected={isAdmin ? selectedIds : undefined}
         onSelect={isAdmin ? onSelect : undefined}
+        dateRange={{ column: 'created_at', defaultPreset: filter ? 'all' : '7' }}
         summary={
           <>
             <div className="totals-bar">
               <span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>
               <span>Fees <b>{money(totals.data?.fees ?? 0)}</b></span>
               <span>Net <b>{money(totals.data?.net ?? 0)}</b></span>
+              <span>{(data?.count ?? 0).toLocaleString()} transaction{data?.count === 1 ? '' : 's'}{data?.count ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / data.count)}</b></> : null}</span>
               <span className="muted small">For everything filtered, not just this page.{!kindFilter && !query?.filters.type?.trim() && ' Leaves out voided, refunded and failed transactions.'}</span>
             </div>
             {notice && <div className="notice">{notice}</div>}

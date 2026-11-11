@@ -26,7 +26,7 @@ describe('numbered pages', () => {
     const src = readFileSync('src/pages/Donations.tsx', 'utf8');
     expect(src).toContain("export const DEFAULT_KIND = 'Successful';");
     expect(src).toContain('useState(DEFAULT_KIND)');
-    expect(src.match(/<option value="">All types<\/option>/g)?.length).toBe(2);
+    expect(src.match(/<option value="">All types<\/option>/g)?.length).toBe(1);   // one list now (the Last 7 Days tab became a date range)
     expect(readFileSync('src/pages/donationColumns.tsx', 'utf8')).toContain("Successful: { status: 'completed' }");
   });
 });

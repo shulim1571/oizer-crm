@@ -6,7 +6,7 @@ import { supabase } from './lib/supabase';
 import Login, { AuthShell, ConfirmEmailLink, SetNewPassword, readEmailLink } from './pages/Login';
 import Campaigns from './pages/Campaigns';
 import CampaignDetail from './pages/CampaignDetail';
-import { AllDonations, NewDonation, RecentDonations } from './pages/Donations';
+import { AllDonations, NewDonation } from './pages/Donations';
 import { DonorDetail, DonorsPage } from './pages/Donors';
 import UsersPage from './pages/Users';
 import ActivityPage from './pages/Activity';
@@ -201,7 +201,8 @@ export default function App() {
         <Route path="templates" element={<AdminOnly><TemplatesPage /></AdminOnly>} />
         <Route path="fees" element={<AdminOnly><FeesPage /></AdminOnly>} />
         <Route path="donations/new" element={<AdminOnly><NewDonation /></AdminOnly>} />
-        <Route path="donations/recent" element={<RecentDonations />} />
+        {/* The Last 7 Days tab became a date range on the list; old links land there. */}
+        <Route path="donations/recent" element={<Navigate to="/donations/all" replace />} />
         <Route path="donations/all" element={<AllDonations />} />
         <Route path="pledges" element={<PledgesPage />} />
         <Route path="vouchers" element={<AdminOnly><VouchersPage /></AdminOnly>} />

@@ -25,7 +25,7 @@ describe('save this view as my default', () => {
 
   it('opens the saved default next time, before a server list asks for rows', () => {
     expect(views).toMatch(/const def = list\.find\(v => v\.is_default\);\s*if \(def\) \{\s*setConfig\(def\.config as TableConfig\);/);
-    expect(table).toContain('if (onServerQuery && saved.ready) onServerQuery({ filters, sort, pageSize });');
+    expect(table).toContain('if (onServerQuery && saved.ready) onServerQuery({ filters, sort, pageSize, range: bounds });');
   });
 
   it('resets to the standard view by turning the default off, keeping saved views', () => {

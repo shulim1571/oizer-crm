@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, GripVertical, Star, Trash2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { supabase, type Row } from '../lib/supabase';
 import type { Column } from './DataTable';
+import type { DateRange } from '../lib/dateRange';
 
 export interface TableConfig {
   columns?: string[];
@@ -12,6 +13,8 @@ export interface TableConfig {
   pageSize?: number;
   sort?: { key: string; dir: 'asc' | 'desc' } | null;
   filters?: Record<string, string>;
+  /** Date range, for lists that have one (saved with the view, so it can be someone's default). */
+  range?: DateRange;
 }
 
 export interface SavedViews {

@@ -30,7 +30,7 @@ describe('filter panel', () => {
   it('leaves the Type dropdown in the toolbar, outside the panel', () => {
     const panel = table.slice(table.indexOf('<aside className="filter-panel"'), table.indexOf('</aside>'));
     expect(panel).not.toMatch(/aria-label="Type"|All types/);
-    expect(readFileSync('src/pages/Donations.tsx', 'utf8').match(/actions=\{[^]*?<select value=\{(kindFilter|kind)\}/g)?.length).toBe(2);
+    expect(readFileSync('src/pages/Donations.tsx', 'utf8').match(/actions=\{[^]*?<select value=\{kindFilter\}/g)?.length).toBe(1);
   });
 
   it('slides over the list on narrow screens', () => {
