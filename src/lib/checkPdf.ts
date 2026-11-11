@@ -6,9 +6,13 @@ const PAGE_W = 612;
 const PAGE_H = 792;
 const CHECK_BOTTOM = PAGE_H - 252;
 const MICR_PITCH = 9; // 8 characters to the inch, as E-13B requires
-// Moshe Henig, 2026-11-11: larger numbers, moved up slightly (1/4 inch above the bottom edge instead of 3/16, still
-// inside the bottom 5/8 inch band banks read). The pitch stays 1/8 inch.
-export const MICR_SIZE = 14;
+// E-13B characters are 0.117 inch tall (Moshe Henig, 2026-11-11: match standard bank checks). A font's point size
+// isn't its character height, so the size is worked out from the uploaded font's own digits (micrSizeFor); for the
+// usual MICR fonts that's about 18.3 pt, which also gives the standard 1/8 inch character width.
+export const MICR_CHAR_HEIGHT_IN = 0.117;
+export const MICR_SIZE = 18; // only if the font can't be measured
+// Moved up slightly (Moshe Henig, 2026-11-11): 1/4 inch above the bottom edge instead of 3/16, the top of the
+// standard 3/16 ± 1/16 inch range.
 export const MICR_BASELINE_ABOVE_BOTTOM = 18;
 const MICR_BASELINE = CHECK_BOTTOM + MICR_BASELINE_ABOVE_BOTTOM;
 // The signature, trimmed to its writing before it gets here (signatureTrim.ts): a little larger than before (about
@@ -48,6 +52,20 @@ export function amountInWords(amount: number): string {
 export function amountInFigures(amount: number): string {
   const text = amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return `$${text}${'*'.repeat(Math.max(2, 12 - text.length))}`;
+}
+
+/** The point size at which the font's digits are 0.117 inch tall. */
+export function micrSizeFor(fontBytes: Uint8Array | null | undefined): number {
+  if (!fontBytes) return MICR_SIZE;
+  try {
+    const f = (fontkit as unknown as { create(b: Uint8Array): { unitsPerEm: number; glyphForCodePoint(c: number): { bbox: { minY: number; maxY: number } } } }).create(fontBytes);
+    const tallest = Math.max(...[...'0123456789'].map(ch => { const b = f.glyphForCodePoint(ch.charCodeAt(0)).bbox; return b.maxY - b.minY; }));
+    if (!(tallest > 0)) return MICR_SIZE;
+    const size = (MICR_CHAR_HEIGHT_IN * 72 * f.unitsPerEm) / tallest;
+    return size >= 8 && size <= 30 ? Math.round(size * 100) / 100 : MICR_SIZE;
+  } catch {
+    return MICR_SIZE;
+  }
 }
 
 export interface MicrChar { position: number; char: string }
@@ -148,8 +166,9 @@ export async function buildCheckPdf(c: CheckData): Promise<Uint8Array> {
   // MICR line, each character at its exact position
   const micrFont = c.micrFont ? await doc.embedFont(c.micrFont.bytes, { subset: false }) : null;
   const chars = micrLine(c.checkNumber, c.routing, c.account, c.micrFont?.transit || 'A', c.micrFont?.onUs || 'C');
+  const micrSize = micrFont ? micrSizeFor(c.micrFont!.bytes) : 12;
   for (const m of chars) {
-    page.drawText(m.char, { x: X(PAGE_W - m.position * MICR_PITCH), y: Y(MICR_BASELINE), size: MICR_SIZE, font: micrFont ?? regular });
+    page.drawText(m.char, { x: X(PAGE_W - m.position * MICR_PITCH), y: Y(MICR_BASELINE), size: micrSize, font: micrFont ?? regular });
   }
 
   if (c.sample || !micrFont) {

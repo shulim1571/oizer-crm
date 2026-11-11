@@ -52,26 +52,131 @@ async function checkData(s: Row, account: string, c: { checkNumber: number; date
   };
 }
 
-async function openPdf(data: CheckData, fileName: string) {
-  const { buildCheckPdf } = await pdf();
-  const bytes = await buildCheckPdf(data);
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  window.open(url, '_blank');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+/**
+ * Checks open in the browser, never as a download (Moshe Henig, 2026-11-11). A new tab is opened at the click itself
+ * (later, browsers block it) and the PDF shows there in the browser's viewer, to print from. If the browser blocks
+ * the tab anyway, the print preview opens on this page instead.
+ */
+export function pdfTab(): Window | null {
+  const w = window.open('', '_blank');
+  if (w) {
+    try {
+      w.document.title = 'Check';
+      w.document.body.innerHTML = '<p style="font:16px system-ui,sans-serif;padding:24px;color:#555">Preparing the check…</p>';
+    } catch { /* still usable */ }
+  }
+  return w;
 }
 
-/** Prints a check again from the register, with the same number. */
-export async function reprintCheck(checkId: string) {
-  const { data: k } = await supabase.from('check_register').select('*').eq('id', checkId).single();
-  const s = await settingsFor(k.account_id);
-  if (!s) throw new Error('This account has no check settings');
-  await openPdf(await checkData(s, k.account_id, {
-    checkNumber: k.check_number, date: usDate(k.check_date), payee: k.payee, amount: Number(k.amount), memo: k.memo, campaign: k.campaign_name,
-  }), `check-${k.check_number}.pdf`);
+function printInPage(url: string) {
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  frame.src = url;
+  frame.onload = () => { try { frame.contentWindow?.focus(); frame.contentWindow?.print(); } catch { /* nothing else to try */ } };
+  document.body.appendChild(frame);
+  setTimeout(() => frame.remove(), 10 * 60000);
+}
+
+export async function openPdf(data: CheckData, tab: Window | null) {
+  try {
+    const { buildCheckPdf } = await pdf();
+    const bytes = await buildCheckPdf(data);
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
+    if (tab && !tab.closed) tab.location.href = url;
+    else printInPage(url);
+    setTimeout(() => URL.revokeObjectURL(url), 10 * 60000);
+  } catch (e) {
+    tab?.close();
+    throw e;
+  }
+}
+
+/** Prints a check again with the same number. Opens its tab first, so call it straight from a click. */
+export async function reprintCheck(checkId: string): Promise<{ id: string; number: number }> {
+  const tab = pdfTab();
+  try {
+    const { data: k } = await supabase.from('check_register').select('*').eq('id', checkId).single();
+    const s = await settingsFor(k.account_id);
+    if (!s) throw new Error('This account has no check settings');
+    await openPdf(await checkData(s, k.account_id, {
+      checkNumber: k.check_number, date: usDate(k.check_date), payee: k.payee, amount: Number(k.amount), memo: k.memo, campaign: k.campaign_name,
+    }), tab);
+    return { id: checkId, number: k.check_number };
+  } catch (e) {
+    tab?.close();
+    throw e;
+  }
+}
+
+/**
+ * After a check opens to print: did it print? Yes marks it printed and takes it off the Task Sheet; no leaves it
+ * there as not printed (Moshe Henig, 2026-11-11).
+ */
+export function CheckPrintedQuestion({ check, onDone }: { check: { id: string; number: number }; onDone: (printed: boolean) => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const [no, setNo] = useState(false);
+  async function yes() {
+    const { error: e } = await supabase.rpc('mark_check_printed', { p_check: check.id });
+    if (e) return setError(e.message);
+    window.dispatchEvent(new Event('task-sheet-changed'));
+    onDone(true);
+  }
+  return (
+    <Overlay onClose={() => onDone(false)}>
+      <div className="form-head"><h2>Did check #{check.number} print correctly?</h2></div>
+      {no ? (
+        <>
+          <p>Check #{check.number} stays on the Task Sheet as not printed. Print it again from there, or from its payout.</p>
+          <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" autoFocus onClick={() => onDone(false)}>OK</button></div>
+        </>
+      ) : (
+        <>
+          <p className="muted small">The check opened in a new tab (or the print window). Print it, check it, then answer here.</p>
+          {error && <div className="error">{error}</div>}
+          <div className="form-actions">
+            <button type="button" className="btn" onClick={() => setNo(true)}>No, it didn't print right</button>
+            <div className="spacer" />
+            <button type="button" className="btn primary" onClick={yes}>Yes, it printed</button>
+          </div>
+        </>
+      )}
+    </Overlay>
+  );
+}
+
+/** "Print again" anywhere: prints, then asks whether it printed. */
+export function useCheckPrinter(onPrinted?: (printed: boolean) => void) {
+  const [asking, setAsking] = useState<{ id: string; number: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const print = (checkId: string) => { setError(null); reprintCheck(checkId).then(setAsking, e => setError(friendlyError(e))); };
+  const dialog = (
+    <>
+      {error && <div className="error">{error}</div>}
+      {asking && <CheckPrintedQuestion check={asking} onDone={printed => { setAsking(null); onPrinted?.(printed); }} />}
+    </>
+  );
+  return { print, dialog };
+}
+
+/** A check not yet confirmed printed, on the Task Sheet. */
+export function UnprintedCheckTask({ checkId, onDone }: { checkId: string; onDone: () => void }) {
+  const printer = useCheckPrinter(printed => { if (printed) onDone(); });
+  const [error, setError] = useState<string | null>(null);
+  async function markPrinted() {
+    if (!confirm('Mark this check as printed? Only do this if it printed correctly.')) return;
+    const { error: e } = await supabase.rpc('mark_check_printed', { p_check: checkId });
+    if (e) return setError(e.message);
+    onDone();
+  }
+  return (
+    <div className="donation-actions">
+      <button type="button" className="btn primary" onClick={() => printer.print(checkId)}><Printer size={15} /> Print check</button>
+      <button type="button" className="btn" onClick={markPrinted}>It already printed</button>
+      <Link to="/checks" className="btn">Check register</Link>
+      {error && <div className="error">{error}</div>}
+      {printer.dialog}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -85,24 +190,30 @@ export function PayoutCheckActions({ record, onDone }: { record: Row; onDone: (r
     supabase.from('checks').select('*').eq('expense_id', record.id).order('issued_at', { ascending: false }).then(({ data }) => setChecks(data ?? []));
   }, [record.id, version]);
   const live = checks.find(k => k.status === 'outstanding' || k.status === 'cleared');
+  const printer = useCheckPrinter(() => setVersion(v => v + 1));
+  const [asking, setAsking] = useState<{ id: string; number: number } | null>(null);
   return (
     <div className="donation-actions">
       {live ? (
         <>
           <span>Check #{live.check_number} <CheckPill status={live.status} /></span>
-          <button type="button" className="btn" onClick={() => reprintCheck(live.id).catch(e => alert(friendlyError(e)))}><Printer size={15} /> Print again</button>
+          <button type="button" className="btn" onClick={() => printer.print(live.id)}><Printer size={15} /> Print again</button>
+          {!live.printed_at && <span className="muted small">Not confirmed printed</span>}
           <Link to="/checks" className="btn">Check register</Link>
         </>
       ) : (
         <button type="button" className="btn" onClick={() => setPrinting(true)}><Printer size={15} /> Print check</button>
       )}
       {checks.filter(k => k !== live).map(k => <span key={k.id} className="muted small">#{k.check_number} {STATUS[k.status]?.label.toLowerCase()}{k.status_reason ? `: ${k.status_reason}` : ''}</span>)}
-      {printing && <PrintCheckDialog payout={record} onClose={() => setPrinting(false)} onDone={() => { setPrinting(false); setVersion(v => v + 1); onDone(record); }} />}
+      {printer.dialog}
+      {printing && <PrintCheckDialog payout={record} onClose={() => setPrinting(false)}
+        onIssued={check => { setPrinting(false); setAsking(check); setVersion(v => v + 1); onDone(record); }} />}
+      {asking && <CheckPrintedQuestion check={asking} onDone={() => { setAsking(null); setVersion(v => v + 1); }} />}
     </div>
   );
 }
 
-function PrintCheckDialog({ payout, onClose, onDone }: { payout: Row; onClose: () => void; onDone: () => void }) {
+function PrintCheckDialog({ payout, onClose, onIssued }: { payout: Row; onClose: () => void; onIssued: (check: { id: string; number: number }) => void }) {
   const [accounts, setAccounts] = useState<Option[]>([]);
   const [account, setAccount] = useState<string>(payout.account_id ?? '');
   const [settings, setSettings] = useState<Row | null>(null);
@@ -128,29 +239,32 @@ function PrintCheckDialog({ payout, onClose, onDone }: { payout: Row; onClose: (
 
   async function preview() {
     if (!settings) return;
+    const tab = pdfTab();
     setError(null);
     try {
-      await openPdf(await checkData(settings, account, { checkNumber: settings.next_check_number, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }, true), 'check-preview.pdf');
+      await openPdf(await checkData(settings, account, { checkNumber: settings.next_check_number, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }, true), tab);
     } catch (e) {
       setError(friendlyError(e));
     }
   }
   async function issue() {
     if (!settings) return;
+    const tab = pdfTab();
     setBusy(true);
     setError(null);
     const { data, error: e } = await supabase.rpc('issue_check', { p_payout: payout.id, p_account: account, p_memo: memo || null });
-    if (e) { setBusy(false); return setError(e.message); }
-    const n = ((data ?? []) as Row[])[0].check_number;
+    if (e) { tab?.close(); setBusy(false); return setError(e.message); }
+    const issued = ((data ?? []) as Row[])[0];
+    const n = issued.check_number;
     try {
-      await openPdf(await checkData(settings, account, { checkNumber: n, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }), `check-${n}.pdf`);
+      await openPdf(await checkData(settings, account, { checkNumber: n, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }), tab);
     } catch (e) {
-      // The check is recorded; only the PDF failed. Say so, so it's printed again rather than issued twice.
+      // The check is recorded (and on the Task Sheet as not printed); only the PDF failed.
       setBusy(false);
-      return setError(`Check #${n} was recorded, but its PDF couldn't be made: ${friendlyError(e)} Then use "Print again" on this payout.`);
+      return setError(`Check #${n} was recorded, but its PDF couldn't be made: ${friendlyError(e)} It's on the Task Sheet as not printed; use "Print again" on this payout.`);
     }
     setBusy(false);
-    onDone();
+    onIssued({ id: issued.check_id, number: n });
   }
 
   return (
@@ -221,7 +335,9 @@ export function CheckSettingsCard({ accountId }: { accountId: string }) {
     setVersion(v => v + 1);
   }
   async function testPrint() {
-    await openPdf(await checkData(s, accountId, { checkNumber: Number(s.next_check_number || 1001), date: '1/1/2027', payee: 'Sample Payee', amount: 1234.56, memo: 'Alignment test', campaign: 'Sample' }, true), 'check-test.pdf');
+    const tab = pdfTab();
+    await openPdf(await checkData(s, accountId, { checkNumber: Number(s.next_check_number || 1001), date: '1/1/2027', payee: 'Sample Payee', amount: 1234.56, memo: 'Alignment test', campaign: 'Sample' }, true), tab)
+      .catch(e => setError(friendlyError(e)));
   }
 
   return (
@@ -307,6 +423,7 @@ export function ChecksPage() {
   const rows = all.filter(r => !status || r.status === status);
   const out = all.filter(r => r.status === 'outstanding');
   const outstanding = out.reduce((s, r) => s + Number(r.amount), 0);
+  const printer = useCheckPrinter(() => setVersion(v => v + 1));
 
   async function setTo(r: Row, to: string) {
     const reason = to === 'voided' || to === 'lost' ? prompt(`Mark check #${r.check_number} ${to}? Its number is never used again. Reason:`) : '';
@@ -333,7 +450,7 @@ export function ChecksPage() {
     {
       key: 'actions', label: '', render: r => (
         <RowMenu label="Check actions" items={[
-          { label: 'Print again', onClick: () => { reprintCheck(r.id).catch(e => setError(friendlyError(e))); } },
+          { label: 'Print again', onClick: () => printer.print(r.id) },
           { label: 'Mark cleared', onClick: () => setTo(r, 'cleared'), hidden: r.status !== 'outstanding' },
           { label: 'Mark not cleared', onClick: () => setTo(r, 'outstanding'), hidden: r.status !== 'cleared' },
           { label: 'Mark lost', onClick: () => setTo(r, 'lost'), hidden: r.status !== 'outstanding' },
@@ -346,6 +463,7 @@ export function ChecksPage() {
   return (
     <section className="view">
       {error && <div className="error">{error}</div>}
+      {printer.dialog}
       <DataTable
         title="Check register"
         subtitle={<>Outstanding: {money(outstanding)} on {out.length} check{out.length === 1 ? '' : 's'}. Print a check from a payout: open it under <Link to="/expenses">Payouts</Link>.</>}

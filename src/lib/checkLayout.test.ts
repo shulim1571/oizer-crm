@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { MICR_BASELINE_ABOVE_BOTTOM, MICR_SIZE, SIGNATURE_BOX, micrLine } from './checkPdf';
+import { MICR_BASELINE_ABOVE_BOTTOM, MICR_CHAR_HEIGHT_IN, SIGNATURE_BOX, micrLine } from './checkPdf';
 import { inkBox } from './signatureTrim';
 
 // Moshe Henig, 2026-11-11: larger MICR numbers moved up slightly, the account number closer to the routing number,
 // and a slightly larger signature sitting on the signature line.
 describe('check layout', () => {
-  it('prints the MICR line larger and a little higher, at the same 1/8 inch pitch', () => {
-    expect(MICR_SIZE).toBe(14);
+  it('prints the MICR line at the standard 0.117 inch height and a little higher, at the same 1/8 inch pitch', () => {
+    expect(MICR_CHAR_HEIGHT_IN).toBe(0.117);
     expect(MICR_BASELINE_ABOVE_BOTTOM).toBe(18);            // 1/4 inch, was 3/16
     expect(MICR_BASELINE_ABOVE_BOTTOM).toBeLessThan(45);     // inside the bottom 5/8 inch band
   });
