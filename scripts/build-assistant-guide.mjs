@@ -33,6 +33,9 @@ export function buildGuide(root = '.') {
   const schemas = read('src/lib/schemas.ts');
   const forms = [];
   for (const block of schemas.matchAll(/export const (\w+Fields)(?:: Field\[\])? = \[([\s\S]*?)\n\];/g)) {
+    // donationFields is only the base list; the New Donation and Edit Donation forms (described in the guide text)
+    // leave out Type, Fee, Collector and the batch fields, so listing the base list would mislead.
+    if (block[1] === 'donationFields') continue;
     // Labels and help in either quote style ("Issuer's ref. #" has an apostrophe).
     const fields = [...block[2].matchAll(/\{ name: '(\w+)', label: (?:'([^']+)'|"([^"]+)")([^\n]*)/g)].map(f => {
       const h = f[4].match(/help: (?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)")/);

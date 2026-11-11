@@ -2,11 +2,13 @@ import { useState } from 'react';
 import RecordForm from '../components/RecordForm';
 import { money } from '../lib/format';
 import { clearLookups } from '../lib/lookups';
-import { donationFields } from '../lib/schemas';
+import { newDonationFields } from '../lib/schemas';
 import { supabase, type Row } from '../lib/supabase';
 
-const BULK_FIELDS = ['campaign_id', 'type', 'status', 'amount', 'fee', 'payment_method', 'donor_id', 'collector_id', 'source', 'account_id', 'created_at', 'notes'];
-const fields = BULK_FIELDS.map(n => ({ ...donationFields.find(f => f.name === n)!, required: false, help: undefined }));
+// The New Donation form's fields only: no Type, Fee or Collector (Moshe Henig, 2026-11-11). A manual fee set here
+// replaces each transaction's fee, as on the form.
+const BULK_FIELDS = ['campaign_id', 'status', 'amount', 'manual_fee', 'payment_method', 'donor_id', 'source', 'account_id', 'created_at', 'notes'];
+const fields = BULK_FIELDS.map(n => ({ ...newDonationFields.find(f => f.name === n)!, required: false, help: undefined, section: undefined, showIf: undefined }));
 
 const plural = (n: number) => `${n.toLocaleString()} transaction${n === 1 ? '' : 's'}`;
 

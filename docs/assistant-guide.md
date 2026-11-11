@@ -39,6 +39,8 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
   Account and Timestamp. Every gift is a Payment. Check #, post-dated and check date appear only for
   Check; Delivered only for Cash or Check. **Manual fee** replaces the payment method's preset fee (net = amount less
   the manual fee); leave it empty to use the preset. After **Record donation** you go to the Transactions list.
+- **Edit Donation** (click a transaction) has the same fields and rules as New Donation. There are no Type, Fee,
+  Collector or batch fields on any donation form or in bulk edit; older rows keep what they already have.
 - **New pledge** and **New vouchers** are tabs on New Donation; they open the pledge or voucher form. After a voucher is
   logged, its **voucher ref #** (VCH-...) is shown: write it on the physical voucher. The voucher form also has the
   **Issuer's ref. #** (the issuer's own number). Batch entry is on a campaign's More menu.

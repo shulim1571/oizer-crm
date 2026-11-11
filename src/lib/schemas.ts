@@ -117,6 +117,13 @@ export const newDonationFields: Field[] = [
   ...newDonationRules.filter(f => f.advanced),
 ];
 
+/**
+ * Editing a donation uses the same fields and rules as New Donation (Moshe Henig, 2026-11-11: "any other
+ * unnecessary fields that we took out shouldn't be found anywhere else either"). Type, Fee, Collector and the batch
+ * fields are gone from every form; what older rows already have stays stored and unchanged.
+ */
+export const editDonationFields: Field[] = newDonationFields;
+
 /** What a fundraiser with the override fills in. It always waits for an admin. */
 export const fundraiserDonationFields: Field[] = [
   { name: 'amount', label: 'Amount', type: 'number', required: true },

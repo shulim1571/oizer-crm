@@ -9,7 +9,7 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
-import { donationFields, newDonationFields } from '../lib/schemas';
+import { editDonationFields, newDonationFields } from '../lib/schemas';
 import TransactionBulk from './TransactionBulk';
 import { DONATION_KINDS, DONATION_SELECT, donationColumns } from './donationColumns';
 import { CardChargeDialog } from './Payments';
@@ -21,7 +21,7 @@ function useDonationEditor(onChange: (row: Row) => void) {
     <RecordForm
       table="donations"
       title="Edit Donation"
-      fields={donationFields}
+      fields={editDonationFields}
       record={editing}
       allowDelete
       onClose={() => setEditing(null)}
