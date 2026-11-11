@@ -39,8 +39,11 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
   for Cash or Check; Manual fee is always there. Batch rows and vouchers have their own forms (Batch Entry, Vouchers).
 - **Charge a card** (admins): on New Donation or a campaign's Donations tab. Can save the card and set up a
   recurring charge; new recurring charges default to a set number of payments.
-- **Transactions** menu: Last 7 Days and All. Both open on "Successful" (completed) transactions; change the type
-  dropdown to "All types" or another type to see others. Pages show 100 rows with numbered page buttons.
+- **Transactions** is one list with a **Date** range above it (All time, Last 7 days, 30 days, 60 days, Last year or a
+  custom range). It opens on "Successful" (completed) transactions; change the type dropdown to "All types" or
+  another type to see others. Pages show 100 rows with numbered page buttons.
+- **Save this view as my default** (in More) keeps your columns, filters and date range; **Reset to standard view**
+  undoes it.
 - **Filter** shows a box under each filterable column; **Columns** chooses, orders and saves views of columns;
   **More** exports to Excel or CSV and prints.
 - **Editing a donation**: status can only move along allowed steps (for example a failed charge can't become
