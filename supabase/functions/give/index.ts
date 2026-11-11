@@ -105,6 +105,18 @@ function solaFields(method: string, kind: string, p: Pay, token: string | null, 
 const achConsent = (p: Pay, agreed: boolean) =>
   p.method === 'ach' ? { account_type: p.account_type, last4: (p.account ?? '').slice(-4), name: p.account_name, agreed } : null;
 
+/** The page's success reply for an attempt that was already approved (a retry, or a status check). */
+function approvedReply(a: Record<string, any>) {
+  const later = a.kind === 'save';
+  const last4 = String(a.masked_card ?? '').slice(-4);
+  return {
+    approved: true, repeat: true, method: a.method, scheduled: later, recurring: !!a.recurring_plan, recurring_set: !a.recurring_plan || !!a.recurring_id,
+    start: a.recurring_plan?.start ?? null, amount: later ? 0 : Number(a.amount), per: Number(a.amount), ref: a.ref,
+    card: a.method === 'ach' ? `${a.card_type ?? 'Bank'} ••${last4}` : a.method === 'daf' ? `${a.daf_program}${last4 ? ` ••${last4}` : ''}` : `${a.card_type ?? 'Card'} ${last4}`,
+    token: later ? null : a.token,
+  };
+}
+
 const KEEP = ['xResult', 'xStatus', 'xError', 'xErrorCode', 'xRefNum', 'xAuthCode', 'xMaskedCardNumber', 'xMaskedAccountNumber', 'xCardType', 'xExp',
   'xAvsResult', 'xCvvResult', 'xBatch', 'xAuthAmount', 'xToken'];
 const kept = (result: Record<string, string>) => Object.fromEntries(KEEP.filter(k => result[k] !== undefined).map(k => [k, result[k]]));
@@ -119,6 +131,22 @@ Deno.serve(async req => {
   try { b = await req.json(); } catch { return reply({ error: 'Something went wrong. Please try again.' }); }
   b.method ??= 'card';
   if (!b.org || !b.campaign) return reply({ error: 'Something went wrong. Please try again.' });
+
+  // The page's one-time key for this gift, kept across retries (Moshe Henig, 2026-11-11). An attempt with it that was
+  // already approved is answered again, never charged again; one still in progress isn't started twice. With
+  // status_only, the page is asking what happened after its reply was lost.
+  const key = typeof b.client_key === 'string' && /^[A-Za-z0-9-]{16,64}$/.test(b.client_key) ? b.client_key : null;
+  if (key) {
+    let a: Record<string, any> | null = null;
+    try { a = await rpc('public_payment_attempt', { p_org: b.org, p_key: key }); } catch { a = null; }
+    if (a?.status === 'approved') return reply(approvedReply(a));
+    if (a?.status === 'pending') {
+      return reply({ pending: true, error: 'Your gift is still being processed. Please don\'t pay again: the office will confirm whether it went through.' });
+    }
+    if (b.status_only) return reply(a ? { declined: true, error: b.method === 'daf' ? fundCardMessage(b.program, { xError: a.error }) : a.error || 'The payment wasn\'t accepted.' } : { unknown: true });
+  } else if (b.status_only) {
+    return reply({ unknown: true });
+  }
   const problem = payProblem(b);
   if (problem) return reply({ error: problem });
 
@@ -147,6 +175,7 @@ Deno.serve(async req => {
   } catch (e) {
     return reply({ error: e instanceof Error ? e.message : String(e) });
   }
+  if (key) await rpc('tag_payment_attempt', { p_org: b.org, p_id: start.id, p_key: key }).catch(() => null);
 
   // 2. The organization's key.
   let c: Record<string, any>;

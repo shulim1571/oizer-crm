@@ -300,6 +300,23 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   const zipLabel = d.country === 'USA' ? t.zip : d.country === 'England' ? t.postcode : t.postal;
   const expDigits = exp.replace(/\D/g, '');
 
+  // One key per gift, kept across retries, so a retry after a lost reply can't charge twice (Moshe Henig, 2026-11-11).
+  const attemptKey = useRef<string | null>(null);
+  const newKey = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`);
+  // The reply was lost or unreadable: ask what happened to this attempt instead of guessing.
+  async function outcome(key: string): Promise<Row | null> {
+    for (let i = 0; i < 3; i++) {
+      if (i) await new Promise(r => setTimeout(r, 2500));
+      const res = await fetch(GIVE_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org: orgId, campaign: data.campaign.id, client_key: key, status_only: true, method, program }),
+      }).catch(() => null);
+      const r = res ? await res.json().catch(() => null) as Row | null : null;
+      if (r && !r.rate_limited) return r;
+    }
+    return null;
+  }
+
   async function submit(confirmed = false) {
     setError(null);
     if (!(chosen && chosen > 0)) return setError(t.choose);
@@ -313,6 +330,8 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
     if (problem) return setError(problem);
     if (TURNSTILE_KEY && !human) return setError(t.robot);
     setBusy(true);
+    attemptKey.current ??= newKey();
+    const key = attemptKey.current;
     try {
       const pay = method === 'ach' ? { ...bankBody(bank), ach_agreed: bank.agreed }
         : method === 'daf' ? dafBody(program!, daf)
@@ -321,15 +340,24 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
       const res = await fetch(GIVE_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          org: orgId, campaign: data.campaign.id, amount: chosen, cover_fee: cover && !!p.cover_fee, donor: d, custom, ...pay, turnstile: human,
+          org: orgId, campaign: data.campaign.id, amount: chosen, cover_fee: cover && !!p.cover_fee, donor: d, custom, ...pay, turnstile: human, client_key: key,
           // A fund's recurring grant starts today.
           recurring: rec.on ? { frequency: rec.frequency, start: method === 'daf' ? todayIso : rec.start, count, text_me: rec.textMe } : null,
         }),
       }).catch(() => null);
-      if (!res) throw new Error('Something went wrong. Please check your connection and try again.');
-      const r = await res.json().catch(() => null) as Row | null;
-      if (!r) throw new Error('Something went wrong. Please try again.');
-      if (r.approved) return onDone(r);
+      let r = res ? await res.json().catch(() => null) as Row | null : null;
+      if (!r) {
+        // No readable answer: the gift may still have gone through. Find out before saying anything.
+        const o = await outcome(key);
+        if (o?.approved) { attemptKey.current = null; return onDone(o); }
+        if (o?.pending) return setError(o.error);
+        if (!o || o.unknown) throw new Error('We couldn\'t reach the payment processor. Please try again.');
+        r = o;
+      }
+      if (r.approved) { attemptKey.current = null; return onDone(r); }
+      // A definite no (declined, or a problem with the details): the next try is a new attempt. While still
+      // processing, the same key stays, so trying again can't charge twice.
+      if (!r.pending) attemptKey.current = null;
       setError(r.error ?? 'The card was declined.');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
