@@ -7,8 +7,11 @@ export interface Option {
 
 const cache = new Map<string, Promise<Option[]>>();
 
+import { byLabel } from './byLabel';
+export { byLabel };
+
 function cached(key: string, load: () => Promise<Option[]>) {
-  if (!cache.has(key)) cache.set(key, load().catch(e => (cache.delete(key), Promise.reject(e))));
+  if (!cache.has(key)) cache.set(key, load().then(list => [...list].sort(byLabel)).catch(e => (cache.delete(key), Promise.reject(e))));
   return cache.get(key)!;
 }
 
@@ -19,7 +22,8 @@ export const campaignOptions = () =>
     (await fetchAll((a, b) => supabase.from('campaigns').select('id, campaign_name, external_name, internal_name, status, parent_campaign_id').neq('status', 'closed').order('id').range(a, b)))
       .map(c => ({
         value: c.id,
-        label: `${c.id} - ${c.internal_name || c.campaign_name || c.external_name || ''}${c.parent_campaign_id ? ` (under ${c.parent_campaign_id})` : ''}${c.status === 'archived' ? ' (archived)' : c.status === 'draft' ? ' (draft)' : ''}`,
+        // Name first, so the list reads alphabetically; the ID still finds it when typed.
+        label: `${c.internal_name || c.campaign_name || c.external_name || c.id} - ${c.id}${c.parent_campaign_id ? ` (under ${c.parent_campaign_id})` : ''}${c.status === 'archived' ? ' (archived)' : c.status === 'draft' ? ' (draft)' : ''}`,
       })),
   );
 

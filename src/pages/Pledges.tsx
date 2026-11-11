@@ -336,7 +336,7 @@ function MatchPanel({ pledge: p, schedule, onDone, onCancel }: { pledge: Row; sc
   return (
     <div className="panel-box">
       <label className="field"><span>Payment on this campaign *</span>
-        <SearchSelect value={donation} options={options} onChange={setDonation} placeholder="Search payments…" />
+        <SearchSelect value={donation} options={options} onChange={setDonation} placeholder="Search payments…" keepOrder />
       </label>
       {p.is_recurring && (
         <label className="field"><span>Installment</span>
