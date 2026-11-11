@@ -21,9 +21,11 @@ describe('MICR line', () => {
   it('puts each field at its standard position from the right edge', () => {
     const line = micrLine(1001, '021000021', '123456789');
     const at = (p: number) => line.find(c => c.position === p)?.char;
-    expect(at(14)).toBe('C');          // on-us symbol ends the account field
-    expect(at(15)).toBe('9');
-    expect(at(23)).toBe('1');
+    // The account number sits at the left of its field (14 to 32), one space from the routing number (Moshe Henig, 2026-11-11).
+    expect(at(22)).toBe('C');          // on-us symbol ends the account field
+    expect(at(23)).toBe('9');
+    expect(at(31)).toBe('1');
+    expect(at(32)).toBeUndefined();    // the one space before the routing number
     expect(at(33)).toBe('A');          // transit field, 33 to 43
     expect(at(34)).toBe('1');
     expect(at(43)).toBe('A');
