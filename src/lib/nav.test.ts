@@ -38,3 +38,11 @@ describe('sidebar', () => {
     expect(entries.length).toBeLessThanOrEqual(32);
   });
 });
+
+describe('Payouts tabs (Moshe Henig, 2026-11-11)', () => {
+  it('are Payouts, Check Register (admins only) and Requests, in that order, and Check Register is no longer its own entry', () => {
+    expect(navBlock).toContain("tabs: [{ to: '/expenses', label: 'Payouts' }, { to: '/checks', label: 'Check Register', admin: true }, { to: '/payout-requests', label: 'Requests' }] },");
+    expect(navBlock).not.toContain("{ to: '/checks', label: 'Check Register', icon:");
+    expect(app).toContain('<Route path="checks" element={<AdminOnly><ChecksPage /></AdminOnly>} />');
+  });
+});

@@ -2,7 +2,7 @@ import { HelpAssistant } from '../pages/Assistant';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, Globe, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Printer, Receipt, RefreshCw, Scale, Search, Send, ShieldCheck, Smartphone, Upload, UserCircle, Wallet,
+  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, Globe, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Receipt, RefreshCw, Scale, Search, Send, ShieldCheck, Smartphone, Upload, UserCircle, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
@@ -81,8 +81,8 @@ const NAV: NavSection[] = [
     title: 'Payouts',
     items: [
       { to: '/expenses', label: 'Payouts', icon: <Receipt size={I} />,
-        tabs: [{ to: '/expenses', label: 'Payouts' }, { to: '/payout-requests', label: 'Requests' }] },
-      { to: '/checks', label: 'Check Register', icon: <Printer size={I} />, admin: true },
+        // Check Register is a tab between Payouts and Requests, admins only (Moshe Henig, 2026-11-11).
+        tabs: [{ to: '/expenses', label: 'Payouts' }, { to: '/checks', label: 'Check Register', admin: true }, { to: '/payout-requests', label: 'Requests' }] },
       { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} />, admin: true },
       { to: '/reconciliation', label: 'Bank Reconciliation', icon: <Scale size={I} />, admin: true },
     ],
