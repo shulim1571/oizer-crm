@@ -959,3 +959,5 @@ tr.selected td { background: var(--accent-soft); }
 .form-checks { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 4px; }
 .form-checks .field.check { margin: 0; }
 @media (max-width: 640px) { .fields.two { grid-template-columns: minmax(0, 1fr); } }
+.table-foot { flex-wrap: wrap; }
+.filter-totals { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; padding-top: 8px; border-top: 1px dashed var(--line); }

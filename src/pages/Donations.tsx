@@ -119,11 +119,12 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     if (kind) s = s.eq('status', kind.status);
     if (kind?.type) s = s.eq('type', kind.type);
     if (kindFilter === UNATTRIBUTED) s = s.is('campaign_id', null);
-    // The date range picked above the list (replaces the Last 7 Days tab).
-    if (query?.range.from) s = s.gte('created_at', query.range.from);
-    if (query?.range.to) s = s.lt('created_at', query.range.to);
-    if (kindFilter === DUPLICATES) s = s.eq('possible_duplicate', true);
     const text = debounced.trim().replace(/[,()*]/g, ' ');
+    // The date range picked above the list (replaces the Last 7 Days tab). Searching looks through every date
+    // (Moshe Henig, 2026-11-11), so the range is set aside while there is search text.
+    if (!text && query?.range.from) s = s.gte('created_at', query.range.from);
+    if (!text && query?.range.to) s = s.lt('created_at', query.range.to);
+    if (kindFilter === DUPLICATES) s = s.eq('possible_duplicate', true);
     if (text) {
       const like = `%${text}%`;
       s = s.or(
@@ -158,6 +159,19 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     if (error) throw new Error(error.message);
     return (data as Row[])?.[0] ?? null;
   }, [queryKey]);
+
+  // The summary at the top covers all transactions, whatever range, type, filters or search are picked (Moshe
+  // Henig, 2026-11-11); like the totals below, it counts completed and to-collect transactions.
+  const allTotals = useQuery(async () => {
+    const scope = (q: any) => (filter ? q.eq(filter.column, filter.value) : q).in('status', ['completed', 'collect']);   // eslint-disable-line @typescript-eslint/no-explicit-any
+    const [sums, count] = await Promise.all([
+      scope(supabase.from('transaction_list').select('gross:amount.sum(),net:net_donation.sum(),fees:fee.sum()')),
+      scope(supabase.from('transaction_list').select('id', { count: 'exact', head: true })),
+    ]);
+    if (sums.error) throw new Error(sums.error.message);
+    return { ...((sums.data as Row[])?.[0] ?? {}), count: count.count ?? 0 } as Row;
+  }, [filter?.column, filter?.value, version]);
+  const searching = !!debounced.trim();
 
   const { open, editor } = useDonationEditor(row => {
     if (row._deleted) return setVersion(v => v + 1);
@@ -205,12 +219,14 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
         summary={
           <>
             <div className="totals-bar">
-              <span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>
-              <span>Fees <b>{money(totals.data?.fees ?? 0)}</b></span>
-              <span>Net <b>{money(totals.data?.net ?? 0)}</b></span>
-              <span>{(data?.count ?? 0).toLocaleString()} transaction{data?.count === 1 ? '' : 's'}{data?.count ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / data.count)}</b></> : null}</span>
-              <span className="muted small">For everything filtered, not just this page.{!kindFilter && !query?.filters.type?.trim() && ' Leaves out voided, refunded and failed transactions.'}</span>
+              <span className="muted small"><b>All transactions</b></span>
+              <span>Gross <b>{money(allTotals.data?.gross ?? 0)}</b></span>
+              <span>Fees <b>{money(allTotals.data?.fees ?? 0)}</b></span>
+              <span>Net <b>{money(allTotals.data?.net ?? 0)}</b></span>
+              <span>{Number(allTotals.data?.count ?? 0).toLocaleString()} transaction{Number(allTotals.data?.count) === 1 ? '' : 's'}</span>
+              <span className="muted small">All dates. Leaves out voided, refunded and failed transactions. Totals for the list as filtered are below it.</span>
             </div>
+            {searching && <p className="muted small">Searching all dates: the date range is set aside while you search.</p>}
             {notice && <div className="notice">{notice}</div>}
             {isAdmin && (
               <TransactionBulk
@@ -239,6 +255,15 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
           <>
             <span>Page {page + 1} of {Math.max(pages, 1)}</span>
             <Pager page={page} pages={pages} onPage={setPage} />
+            {/* Totals for the list as it's filtered right now (range, type, filters and search), under the pages. */}
+            <div className="filter-totals" aria-label="Totals for this view">
+              <span className="muted small"><b>This view</b>{searching ? ' (all dates, search)' : ''}</span>
+              <span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>
+              <span>Fees <b>{money(totals.data?.fees ?? 0)}</b></span>
+              <span>Net <b>{money(totals.data?.net ?? 0)}</b></span>
+              <span>{(data?.count ?? 0).toLocaleString()} transaction{data?.count === 1 ? '' : 's'}{data?.count ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / data.count)}</b></> : null}</span>
+              {!kindFilter && !query?.filters.type?.trim() && <span className="muted small">Leaves out voided, refunded and failed transactions.</span>}
+            </div>
           </>
         }
       />
