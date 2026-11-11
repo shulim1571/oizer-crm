@@ -45,6 +45,7 @@ async function checkData(s: Row, account: string, c: { checkNumber: number; date
     printName: s.print_name ?? '', printAddress: s.print_address, bankName: s.bank_name ?? '',
     routing: s.routing_number ?? '000000000', account: s.account_number ?? '0000',
     offsetX: Number(s.offset_x), offsetY: Number(s.offset_y),
+    micrOffsetX: Number(s.micr_offset_x ?? 0), micrOffsetY: Number(s.micr_offset_y ?? 0),
     // Trimmed to the writing, so it sits on the signature line whatever margins the file has.
     signature: sig ? await trimSignature({ bytes: fromHex(sig.data_hex, 'signature file'), mime: sig.mime }) : null,
     micrFont: font ? { bytes: fromHex(font.data_hex, 'MICR font file'), transit: font.transit_char, onUs: font.onus_char } : null,
@@ -312,7 +313,7 @@ export function CheckSettingsCard({ accountId }: { accountId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   useEffect(() => {
-    settingsFor(accountId).then(r => setS(r ?? { offset_x: 0, offset_y: 0 }));
+    settingsFor(accountId).then(r => setS(r ?? { offset_x: 0, offset_y: 0, micr_offset_x: 0, micr_offset_y: 0 }));
     asset('signature', accountId).then(setSig);
   }, [accountId, version]);
   const set = (k: string, v: unknown) => { setSaved(false); setS(prev => ({ ...prev, [k]: v })); };
@@ -323,6 +324,7 @@ export function CheckSettingsCard({ accountId }: { accountId: string }) {
       p_account: accountId, p_print_name: s.print_name ?? null, p_print_address: s.print_address ?? null, p_bank_name: s.bank_name ?? null,
       p_routing: s.routing_number ?? null, p_account_number: s.account_number ?? null,
       p_next_number: s.next_check_number ? Number(s.next_check_number) : null, p_offset_x: Number(s.offset_x || 0), p_offset_y: Number(s.offset_y || 0),
+      p_micr_offset_x: Number(s.micr_offset_x || 0), p_micr_offset_y: Number(s.micr_offset_y || 0),
     });
     if (e) return setError(e.message);
     setSaved(true);
@@ -351,10 +353,17 @@ export function CheckSettingsCard({ accountId }: { accountId: string }) {
         <label className="field"><span>Routing number</span><input inputMode="numeric" autoComplete="off" value={s.routing_number ?? ''} onChange={e => set('routing_number', e.target.value)} /></label>
         <label className="field"><span>Account number</span><input inputMode="numeric" autoComplete="off" value={s.account_number ?? ''} onChange={e => set('account_number', e.target.value)} /></label>
         <label className="field"><span>Next check number</span><input type="number" min="1" step="1" value={s.next_check_number ?? ''} onChange={e => set('next_check_number', e.target.value)} /></label>
-        <label className="field"><span>Nudge right / up (mm)</span>
+        <label className="field"><span>Nudge whole check right / up (mm)</span>
           <span className="inline-pair">
             <input type="number" step="0.5" aria-label="Nudge right" value={s.offset_x ?? 0} onChange={e => set('offset_x', e.target.value)} />
             <input type="number" step="0.5" aria-label="Nudge up" value={s.offset_y ?? 0} onChange={e => set('offset_y', e.target.value)} />
+          </span>
+        </label>
+        {/* Only the MICR numbers, on top of the whole-check nudge (Moshe Henig, 2026-11-11). */}
+        <label className="field"><span>Nudge MICR line only right / up (mm)</span>
+          <span className="inline-pair">
+            <input type="number" step="0.5" min="-25" max="25" aria-label="Nudge MICR line right" value={s.micr_offset_x ?? 0} onChange={e => set('micr_offset_x', e.target.value)} />
+            <input type="number" step="0.5" min="-25" max="25" aria-label="Nudge MICR line up" value={s.micr_offset_y ?? 0} onChange={e => set('micr_offset_y', e.target.value)} />
           </span>
         </label>
       </div>

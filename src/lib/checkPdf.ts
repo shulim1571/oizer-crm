@@ -54,6 +54,17 @@ export function amountInFigures(amount: number): string {
   return `$${text}${'*'.repeat(Math.max(2, 12 - text.length))}`;
 }
 
+/**
+ * Where a MICR character goes on the page: its field position from the right edge, moved with the whole check
+ * (offsetX/offsetY) and then by the MICR line's own adjustment (micrOffsetX/micrOffsetY), all in millimetres.
+ */
+export function micrPoint(position: number, c: Pick<CheckData, 'offsetX' | 'offsetY' | 'micrOffsetX' | 'micrOffsetY'>) {
+  return {
+    x: PAGE_W - position * MICR_PITCH + ((c.offsetX ?? 0) + (c.micrOffsetX ?? 0)) * MM,
+    y: MICR_BASELINE + ((c.offsetY ?? 0) + (c.micrOffsetY ?? 0)) * MM,
+  };
+}
+
 /** The point size at which the font's digits are 0.117 inch tall. */
 export function micrSizeFor(fontBytes: Uint8Array | null | undefined): number {
   if (!fontBytes) return MICR_SIZE;
@@ -100,6 +111,9 @@ export interface CheckData {
   account: string;
   offsetX?: number; // millimetres, to line up with the check stock
   offsetY?: number;
+  /** The MICR line's own adjustment in millimetres, on top of offsetX/offsetY (Moshe Henig, 2026-11-11). */
+  micrOffsetX?: number;
+  micrOffsetY?: number;
   signature?: { bytes: Uint8Array; mime: string } | null;
   micrFont?: { bytes: Uint8Array; transit?: string | null; onUs?: string | null } | null;
   /** A test print: marked VOID and never depositable. */
@@ -168,7 +182,7 @@ export async function buildCheckPdf(c: CheckData): Promise<Uint8Array> {
   const chars = micrLine(c.checkNumber, c.routing, c.account, c.micrFont?.transit || 'A', c.micrFont?.onUs || 'C');
   const micrSize = micrFont ? micrSizeFor(c.micrFont!.bytes) : 12;
   for (const m of chars) {
-    page.drawText(m.char, { x: X(PAGE_W - m.position * MICR_PITCH), y: Y(MICR_BASELINE), size: micrSize, font: micrFont ?? regular });
+    page.drawText(m.char, { ...micrPoint(m.position, c), size: micrSize, font: micrFont ?? regular });
   }
 
   if (c.sample || !micrFont) {

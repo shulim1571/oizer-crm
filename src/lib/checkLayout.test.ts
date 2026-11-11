@@ -34,3 +34,22 @@ describe('check layout', () => {
     expect(inkBox(new Uint8ClampedArray(16), 2, 2)).toBeNull();
   });
 });
+
+describe('MICR line adjustment (Moshe Henig, 2026-11-11)', () => {
+  it('moves only the MICR numbers, on top of the whole-check nudge', async () => {
+    const { micrPoint } = await import('./checkPdf');
+    const base = micrPoint(33, {});
+    const mm = 72 / 25.4;
+    expect(micrPoint(33, { micrOffsetX: 2, micrOffsetY: -1 })).toEqual({ x: base.x + 2 * mm, y: base.y - mm });
+    expect(micrPoint(33, { offsetX: 1, micrOffsetX: 2 }).x).toBeCloseTo(base.x + 3 * mm, 6);
+  });
+  it('is saved with the check settings, and the rest of the check ignores it', async () => {
+    const { readFileSync } = await import('node:fs');
+    const pdf = readFileSync('src/lib/checkPdf.ts', 'utf8');
+    expect(pdf.match(/micrOffset[XY]/g)!.length).toBeGreaterThanOrEqual(4);
+    expect(pdf).toContain('const X = (x: number) => x + ox;');   // everything else uses the whole-check nudge only
+    const page = readFileSync('src/pages/Checks.tsx', 'utf8');
+    expect(page).toContain('p_micr_offset_x: Number(s.micr_offset_x || 0), p_micr_offset_y: Number(s.micr_offset_y || 0),');
+    expect(page).toContain('micrOffsetX: Number(s.micr_offset_x ?? 0), micrOffsetY: Number(s.micr_offset_y ?? 0),');
+  });
+});

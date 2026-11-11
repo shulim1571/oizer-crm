@@ -140,3 +140,15 @@ describe('task sheet dates', () => {
     expect(at).toBe('2026-11-02 00:00');
   });
 });
+
+describe('MICR line adjustment (Moshe Henig, 2026-11-11)', () => {
+  it('is saved with the account, kept when an older page saves without it, and kept within 25 mm', async () => {
+    const db = await seededDb();
+    await sql(db, `select public.save_check_settings('a1', 'Cong Oizer', null, 'Chase', '021000021', '123456789', 1001, 1, 0, 1.5, -2)`);
+    const get = () => one(db, `select offset_x::text, micr_offset_x::text, micr_offset_y::text from public.account_check_settings where account_id = 'a1'`);
+    expect(await get()).toEqual({ offset_x: '1.00', micr_offset_x: '1.50', micr_offset_y: '-2.00' });
+    await sql(db, `select public.save_check_settings('a1', 'Cong Oizer', null, 'Chase', '021000021', '123456789', 1001, 2, 0)`);
+    expect(await get()).toEqual({ offset_x: '2.00', micr_offset_x: '1.50', micr_offset_y: '-2.00' });
+    await expect(sql(db, `select public.save_check_settings('a1', 'X', null, 'Y', '021000021', '123456789', 1001, 0, 0, 30, 0)`)).rejects.toThrow();
+  });
+});
