@@ -962,3 +962,6 @@ tr.selected td { background: var(--accent-soft); }
 @media (max-width: 640px) { .fields.two { grid-template-columns: minmax(0, 1fr); } }
 .table-foot { flex-wrap: wrap; }
 .filter-totals { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; padding-top: 8px; border-top: 1px dashed var(--line); }
+
+/* The voucher ref # shown after logging a voucher, large enough to copy onto the physical voucher. */
+.voucher-saved .voucher-ref { font-size: 1.6rem; letter-spacing: .03em; margin: 0 0 4px; }
