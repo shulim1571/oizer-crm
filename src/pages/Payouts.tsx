@@ -183,6 +183,18 @@ export function ApprovePayout({ requestId, onAct }: { requestId: string; onAct: 
     setMemo(r.campaigns?.external_name || r.campaigns?.internal_name || '');
     campaignBalance(r.campaign_id).then(b => { setBalance(b); if (r.full_balance && b != null) setAmount(b.toFixed(2)); });
   }, [r, defaultAccountId]);
+  // Opening a request shows the full payee and bank details to the organization's admins (Moshe Henig, 2026-11-11).
+  // The database decides who may see them and logs every reveal; anyone else keeps the masked view below.
+  useEffect(() => {
+    setDetails(null);
+    if (!r || !(r.method === 'ACH' || r.method === 'Zelle')) return;
+    let live = true;
+    supabase.rpc('payout_request_details', { p_request: requestId }).then(({ data, error: e }) => {
+      if (!live) return;
+      setDetails(e ? { _denied: true } : (((data ?? []) as Row[])[0] ?? {}));
+    });
+    return () => { live = false; };
+  }, [r?.id, r?.method, requestId]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     setFlag(null);
     if (payee) supabase.from('payee_flags').select('*').eq('payee_id', payee).maybeSingle().then(({ data }) => setFlag(data));
@@ -190,26 +202,22 @@ export function ApprovePayout({ requestId, onAct }: { requestId: string; onAct: 
 
   if (!r) return null;
   const n = Number(amount);
+  const full = !!details && !details._denied;
   const later = date > localToday();
-  async function showDetails() {
-    const { data, error: e } = await supabase.rpc('payout_request_details', { p_request: requestId });
-    if (e) return setError(e.message);
-    setDetails(((data ?? []) as Row[])[0] ?? {});
-  }
 
   return (
     <div className="panel-box">
       <dl className="record-facts">
         <dt>Asked for</dt><dd>{amountText(r)}{r.full_balance && balance != null && ` (now ${money(balance)})`}</dd>
-        <dt>Recipient</dt><dd>{r.recipient_name}</dd>
+        <dt>Payee</dt><dd><b>{r.recipient_name}</b>{details?.payee_name && details.payee_name !== r.recipient_name && <span className="muted"> (payee on file: {details.payee_name})</span>}</dd>
         <dt>Method</dt><dd>{r.method}</dd>
-        {r.method === 'ACH' && <><dt>Bank</dt><dd>{r.bank_name} · {r.account_type} · routing ending {r.routing_last4} · account ending {r.account_last4}</dd></>}
-        {r.method === 'Zelle' && <><dt>Zelle</dt><dd>{r.zelle_hint}</dd></>}
-        {(r.method === 'ACH' || r.method === 'Zelle') && (
-          <><dt>Full details</dt><dd>{details
-            ? [details.routing && `Routing ${details.routing}`, details.account && `Account ${details.account}`, details.zelle && `Zelle ${details.zelle}`].filter(Boolean).join(' · ') || 'None stored'
-            : <button type="button" className="link" onClick={showDetails}>Show (logged)</button>}</dd></>
-        )}
+        {r.method === 'ACH' && (full ? <>
+          <dt>Bank</dt><dd>{details!.bank_name ?? r.bank_name}{(details!.account_type ?? r.account_type) && ` · ${details!.account_type ?? r.account_type}`}</dd>
+          <dt>Routing number</dt><dd className="num">{details!.routing ?? '—'}</dd>
+          <dt>Account number</dt><dd className="num">{details!.account ?? '—'}</dd>
+        </> : <><dt>Bank</dt><dd>{r.bank_name} · {r.account_type} · routing ending {r.routing_last4} · account ending {r.account_last4}</dd></>)}
+        {r.method === 'Zelle' && <><dt>Zelle</dt><dd>{full ? (details!.zelle ?? '—') : r.zelle_hint}</dd></>}
+        {full && <><dt /><dd className="muted small">Full details are shown to admins only, and each view is recorded in the activity log.</dd></>}
         {r.notes && <><dt>Notes</dt><dd className="pre-line">{r.notes}</dd></>}
         {balance != null && <><dt>Balance</dt><dd>{money(balance)}</dd></>}
       </dl>

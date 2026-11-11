@@ -137,8 +137,29 @@ describe('payout requests', () => {
     expect(raw.a).not.toContain('123456789');
     await expect(rows(db, MANAGER_1, `select * from public.payout_request_secrets`)).rejects.toThrow();
     await expect(rows(db, MANAGER_1, `select * from public.payout_request_details($1)`, [id])).rejects.toThrow();
-    expect(await one(db, `select * from public.payout_request_details($1)`, [id])).toEqual({ routing: '021000021', account: '123456789', zelle: null });
+    expect(await one(db, `select routing, account, zelle from public.payout_request_details($1)`, [id])).toEqual({ routing: '021000021', account: '123456789', zelle: null });
     expect((await rows(db, ADMIN, `select 1 from public.activity_log where action = 'view_payout_details'`)).length).toBe(1);
+  });
+
+  it('show an admin the full payee and bank details on opening, log each reveal, and keep everyone else on the masked view', async () => {
+    const id = await ach(db);
+    expect(await one(db, `select * from public.payout_request_details($1)`, [id])).toEqual({
+      method: 'ACH', recipient_name: 'Yeshiva Building Fund', payee_name: null, bank_name: 'Chase', account_type: 'checking',
+      routing: '021000021', account: '123456789', zelle: null,
+    });
+    // Each reveal is its own audit entry, with which fields were shown and never the numbers.
+    await one(db, `select * from public.payout_request_details($1)`, [id]);
+    const log = await rows(db, ADMIN, `select record_id, changes, user_email from public.activity_log where action = 'view_payout_details' order by created_at`);
+    expect(log).toHaveLength(2);
+    expect(log[0]).toMatchObject({ record_id: id, changes: { method: 'ACH', fields: ['routing', 'account'] } });
+    expect(log[0].user_email).toBeTruthy();
+    expect(JSON.stringify(log)).not.toMatch(/021000021|123456789/);
+    // The fundraiser who asked sees the masked request, never the full numbers.
+    await expect(rows(db, MANAGER_1, `select * from public.payout_request_details($1)`, [id])).rejects.toThrow();
+    expect(await one(db, `select bank_name, routing_last4, account_last4 from public.payout_requests where id = $1`, [id], MANAGER_1))
+      .toEqual({ bank_name: 'Chase', routing_last4: '0021', account_last4: '6789' });
+    // A request that isn't the organization's is refused.
+    await expect(one(db, `select * from public.payout_request_details('nope')`)).rejects.toThrow(/not found/);
   });
 
   it('check the details for the method chosen', async () => {
