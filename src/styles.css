@@ -478,6 +478,9 @@ table.grid { border-collapse: separate; border-spacing: 0; width: 100%; }
   background: var(--surface); border: 1px solid var(--line); color: var(--text-2);
 }
 .tabs { display: inline-flex; gap: 2px; padding: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; align-self: flex-start; max-width: 100%; overflow-x: auto; }
+/* Never squeezed by a column layout (Moshe Henig, 2026-11-11: the Task Sheet's Waiting / History switch had shrunk to an
+   empty 10px bar that did nothing). */
+.tabs { flex-shrink: 0; }
 .tabs button {
   border: 0; background: none; padding: 6px 14px; font: inherit; font-weight: 500; color: var(--text-2); cursor: pointer; border-radius: 7px; white-space: nowrap;
 }

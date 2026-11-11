@@ -46,3 +46,9 @@ describe('Payouts tabs (Moshe Henig, 2026-11-11)', () => {
     expect(app).toContain('<Route path="checks" element={<AdminOnly><ChecksPage /></AdminOnly>} />');
   });
 });
+
+describe('page switches (Moshe Henig, 2026-11-11)', () => {
+  it('never shrink to an empty bar inside a column layout', () => {
+    expect(readFileSync(join(__dirname, '..', 'styles.css'), 'utf8')).toContain('.tabs { flex-shrink: 0; }');
+  });
+});
