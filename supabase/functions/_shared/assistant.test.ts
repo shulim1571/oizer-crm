@@ -9,7 +9,8 @@ describe('help assistant prompt', () => {
   it('is grounded in the guide built from the app, and the committed guide is current', () => {
     expect(readFileSync('supabase/functions/_shared/assistantGuide.ts', 'utf8')).toBe(buildGuide());
     expect(SYSTEM_PROMPT).toContain('<guide>');
-    expect(SYSTEM_PROMPT).toMatch(/Campaigns: tabs Active, All, Archived, Closed, Requests/);   // the live menu
+    expect(SYSTEM_PROMPT).toMatch(/Campaigns: tabs Active \(\/campaigns\/active\), All/);   // the live menu
+    expect(SYSTEM_PROMPT).toContain('Payouts (/expenses)');                                      // screen addresses
     expect(SYSTEM_PROMPT).toMatch(/Process on/);                                               // a form field's label
     expect(SYSTEM_PROMPT).toMatch(/can't see or change any records/);
     expect(SYSTEM_PROMPT).not.toMatch(/sk-ant-|ANTHROPIC_API_KEY/);
