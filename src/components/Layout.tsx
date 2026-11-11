@@ -64,7 +64,9 @@ const NAV: NavSection[] = [
     title: 'Donations',
     items: [
       { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true,
-        tabs: [{ to: '/donations/new', label: 'One donation' }, { to: '/donations/batch', label: 'Batch Entry' }] },
+        // Batch Entry gave way to new pledges and vouchers (Moshe Henig, 2026-11-11); it stays on a campaign's page.
+        tabs: [{ to: '/donations/new', label: 'One donation' }, { to: '/donations/pledges/new', label: 'New pledge' },
+          { to: '/donations/vouchers/new', label: 'New vouchers' }] },
       // One list with a date range (Last 7 days, 30, 60, a year or custom) instead of a Last 7 Days tab; Recurring,
       // Pledges, Vouchers and Receipts are tabs here, like Requests under Campaigns (Moshe Henig, 2026-11-11).
       { to: '/donations/all', label: 'Transactions', icon: <CircleDollarSign size={I} />,

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import DateNote from '../components/DateNote';
@@ -37,8 +37,9 @@ export const pledgeColumns = (hideCampaign = false): Column[] => [
 ];
 
 /** Add buttons for a one-time or recurring pledge, and the form that goes with them. */
-export function NewPledgeButtons({ campaignId, donorId, onSaved }: { campaignId?: string; donorId?: string; onSaved: () => void }) {
-  const [form, setForm] = useState<'one' | 'recurring' | null>(null);
+export function NewPledgeButtons({ campaignId, donorId, onSaved, startOpen, onDone }:
+  { campaignId?: string; donorId?: string; onSaved: () => void; startOpen?: boolean; onDone?: () => void }) {
+  const [form, setForm] = useState<'one' | 'recurring' | null>(startOpen ? 'one' : null);
   const defaults = { campaign_id: campaignId, donor_id: donorId, date_pledged: localToday() };
   return (
     <>
@@ -50,16 +51,18 @@ export function NewPledgeButtons({ campaignId, donorId, onSaved }: { campaignId?
           title={form === 'one' ? 'New pledge' : 'New recurring pledge'}
           fields={form === 'one' ? pledgeFields : recurringPledgeFields}
           defaults={form === 'one' ? defaults : { ...defaults, is_recurring: true, frequency: 'monthly', start_date: defaults.date_pledged }}
-          onClose={() => setForm(null)}
-          onSaved={() => { setForm(null); onSaved(); }}
+          onClose={() => { setForm(null); onDone?.(); }}
+          onSaved={() => { setForm(null); onSaved(); onDone?.(); }}
         />
       )}
     </>
   );
 }
 
-export function PledgesPage() {
+/** The Pledges list. With startNew (New Donation · New pledge) the new-pledge form opens right away. */
+export function PledgesPage({ startNew = false }: { startNew?: boolean }) {
   const { canWork } = useAuth();
+  const nav = useNavigate();
   const [status, setStatus] = useState('');
   const [open, setOpen] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
@@ -84,7 +87,7 @@ export function PledgesPage() {
               <option value="">All statuses</option>
               {Object.entries(PLEDGE_STATUS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
-            {canWork && <NewPledgeButtons onSaved={() => setVersion(v => v + 1)} />}
+            {canWork && <NewPledgeButtons key={String(startNew)} startOpen={startNew} onDone={startNew ? () => nav('/donations/pledges') : undefined} onSaved={() => setVersion(v => v + 1)} />}
           </>
         }
       />

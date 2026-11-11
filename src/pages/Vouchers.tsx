@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
@@ -55,8 +55,9 @@ export const voucherColumns = (hideCampaign = false): Column[] => [
   { key: 'expected_date', label: 'Expected' },
 ];
 
-export function NewVoucherButton({ campaignId, onSaved }: { campaignId?: string; onSaved: () => void }) {
-  const [adding, setAdding] = useState(false);
+export function NewVoucherButton({ campaignId, onSaved, startOpen, onDone }:
+  { campaignId?: string; onSaved: () => void; startOpen?: boolean; onDone?: () => void }) {
+  const [adding, setAdding] = useState(!!startOpen);
   return (
     <>
       <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> Log voucher</button>
@@ -66,15 +67,17 @@ export function NewVoucherButton({ campaignId, onSaved }: { campaignId?: string;
           title="Log voucher"
           fields={voucherFields}
           defaults={{ campaign_id: campaignId, submission: 'online', date_received: localToday() }}
-          onClose={() => setAdding(false)}
-          onSaved={() => { setAdding(false); onSaved(); }}
+          onClose={() => { setAdding(false); onDone?.(); }}
+          onSaved={() => { setAdding(false); onSaved(); onDone?.(); }}
         />
       )}
     </>
   );
 }
 
-export function VouchersPage() {
+/** The Vouchers list. With startNew (New Donation · New vouchers) the voucher form opens right away. */
+export function VouchersPage({ startNew = false }: { startNew?: boolean }) {
+  const nav = useNavigate();
   const [status, setStatus] = useState('');
   const [overdue, setOverdue] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -101,7 +104,7 @@ export function VouchersPage() {
               {Object.entries(VOUCHER_STATUS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
             <label className="inline-check"><input type="checkbox" checked={overdue} onChange={e => setOverdue(e.target.checked)} /> Overdue only</label>
-            <NewVoucherButton onSaved={() => setVersion(v => v + 1)} />
+            <NewVoucherButton key={String(startNew)} startOpen={startNew} onDone={startNew ? () => nav('/donations/vouchers') : undefined} onSaved={() => setVersion(v => v + 1)} />
           </>
         }
       />

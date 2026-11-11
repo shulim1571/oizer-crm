@@ -205,7 +205,9 @@ export default function App() {
         <Route path="donations/recent" element={<Navigate to="/donations/all" replace />} />
         <Route path="donations/all" element={<AllDonations />} />
         <Route path="donations/pledges" element={<PledgesPage />} />
+        <Route path="donations/pledges/new" element={<AdminOnly><PledgesPage startNew /></AdminOnly>} />
         <Route path="donations/vouchers" element={<AdminOnly><VouchersPage /></AdminOnly>} />
+        <Route path="donations/vouchers/new" element={<AdminOnly><VouchersPage startNew /></AdminOnly>} />
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="payout-requests" element={<PayoutRequestsPage />} />
         <Route path="payees" element={<PayeesPage />} />
