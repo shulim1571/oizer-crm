@@ -105,6 +105,9 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 - The shield button next to your email (bottom of the menu) opens **Account security**. Click **Set up two-step
   verification**, scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator,
   1Password and similar), and enter the 6-digit code to finish.
+- **No app? Use text or call codes:** on Account security, under **Text or call codes**, click **Add a phone**, enter
+  your number, choose **Text me** or **Call me**, and enter the 6-digit code. At sign-in you can choose text or call
+  each time, and **Send a new code** if it doesn't arrive. Codes expire after 10 minutes; up to 5 codes an hour.
 - Once it is on, you enter a code after your password when you sign in. **Not now** lets you in without bank and
   reconciliation data.
 - **Bank Reconciliation and Plaid need a verified session.** Admins without two-step verification see a prompt there
