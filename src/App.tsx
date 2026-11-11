@@ -26,6 +26,7 @@ import TaskSheetPage from './pages/TaskSheet';
 import RequestsPage from './pages/Requests';
 import AccountSecurityPage, { VerifySession } from './pages/Security';
 import { useMfa } from './lib/mfa';
+import { TRUST_DAYS, trustThisDevice, checkTrustedSignIn } from './lib/trustedDevice';
 import TasksPage from './pages/Tasks';
 import { TemplatesPage } from './pages/Templates';
 import DashboardPage, { BalanceSummaryPage } from './pages/Dashboard';
@@ -80,6 +81,15 @@ export default function App() {
   const mfa = useMfa();
   const [codeSkipped, setCodeSkipped] = useState(() => { try { return sessionStorage.getItem('mfa-skip') === '1'; } catch { return false; } });
   const [recovering, setRecovering] = useState(false);
+  // A trusted device or recognized address skips the code (Moshe Henig, 2026-11-11); checked once per session.
+  const [trust, setTrust] = useState<'checking' | 'checked' | null>(null);
+  const [trustMe, setTrustMe] = useState(true);
+  const needsCode = !mfa.loading && mfa.enrolled && !mfa.verified && !codeSkipped;
+  useEffect(() => {
+    if (!needsCode || trust) return;
+    setTrust('checking');
+    void checkTrustedSignIn().then(how => { setTrust('checked'); if (how) void mfa.reload(); });
+  }, [needsCode, trust]); // eslint-disable-line react-hooks/exhaustive-deps
   const [emailLink, setEmailLink] = useState(arrivedWith);
 
   useEffect(() => {
@@ -105,13 +115,16 @@ export default function App() {
   }
   if (recovering) return <SetNewPassword onDone={() => setRecovering(false)} />;
   if (!session) return <Login linkError={emailLink.error} />;
-  if (!mfa.loading && mfa.enrolled && !mfa.verified && !codeSkipped) {
+  if (needsCode && trust !== 'checked') return <div className="splash"><div className="logo">O</div></div>;
+  if (needsCode) {
     return (
       <AuthShell>
         <div className="auth-card">
           <h1>Enter your code</h1>
           <p className="lead">Two-step verification is on for <b>{session.user.email}</b>.</p>
-          <VerifySession mfa={mfa} onDone={() => void mfa.reload()}
+          <label className="inline-check trust-device"><input type="checkbox" checked={trustMe} onChange={e => setTrustMe(e.target.checked)} />
+            Trust this device for {TRUST_DAYS} days (no code needed here, or from this network, after this)</label>
+          <VerifySession mfa={mfa} onDone={() => { void (trustMe ? trustThisDevice() : Promise.resolve()).finally(() => void mfa.reload()); }}
             onSkip={() => { try { sessionStorage.setItem('mfa-skip', '1'); } catch { /* private window */ } setCodeSkipped(true); }} />
           <p className="muted small">“Not now” lets you in without bank and reconciliation data.</p>
         </div>

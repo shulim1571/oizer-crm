@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { TRUST_DAYS } from '../lib/trustedDevice';
 import { ShieldCheck } from 'lucide-react';
 import { Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
@@ -213,6 +214,31 @@ export default function AccountSecurityPage() {
           <VerifySession mfa={mfa} intro="This session hasn’t been verified yet. Verify it to see bank and reconciliation data, or to change your second step." onDone={() => void mfa.reload()} />
         </div>
       )}
+      {mfa.enrolled && <TrustedDevices onChanged={setMessage} />}
     </section>
+  );
+}
+
+/** Devices and addresses that skip the code (Moshe Henig, 2026-11-11), and forgetting them. */
+function TrustedDevices({ onChanged }: { onChanged: (msg: string) => void }) {
+  const [count, setCount] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const load = () => { void supabase.rpc('mfa_trusted_count').then(({ data }) => setCount(Number(data ?? 0))); };
+  useEffect(load, []);
+  async function forget() {
+    if (!confirm('Forget all trusted devices? Every device, including this one, will ask for a code at the next sign-in.')) return;
+    const { error: e } = await supabase.rpc('mfa_forget_devices');
+    if (e) return setError(e.message);
+    onChanged('Trusted devices forgotten. The next sign-in on any device asks for a code.');
+    load();
+  }
+  return (
+    <div className="panel-box">
+      <h2>Trusted devices {count ? <Pill tone="green">{count}</Pill> : <Pill>None</Pill>}</h2>
+      <p className="muted small">When you enter a code, you can trust that device for {TRUST_DAYS} days: signing in there again, or from the same
+        network within 7 days, needs only your password. A new device or network still asks for a code.</p>
+      {error && <div className="error">{error}</div>}
+      {!!count && <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={forget}>Forget trusted devices</button></div>}
+    </div>
   );
 }

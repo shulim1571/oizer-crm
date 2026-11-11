@@ -124,7 +124,9 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 - **No app? Use text or call codes:** on Account security, under **Text or call codes**, click **Add a phone**, enter
   your number, choose **Text me** or **Call me**, and enter the 6-digit code. At sign-in you can choose text or call
   each time, and **Send a new code** if it doesn't arrive. Codes expire after 10 minutes; up to 5 codes an hour.
-- Once it is on, you enter a code after your password when you sign in. **Not now** lets you in without bank and
+- Once it is on, you enter a code after your password when you sign in. Tick **Trust this device** to skip the code on
+  that device for 30 days, and from the same network for 7 days; a new device or network still asks. **Forget trusted
+  devices** is under Settings > Account Security. **Not now** lets you in without bank and
   reconciliation data.
 - **Bank Reconciliation and Plaid need a verified session.** Admins without two-step verification see a prompt there
   to set it up; the rest of Donor Base works as usual.
