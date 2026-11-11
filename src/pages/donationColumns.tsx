@@ -7,7 +7,7 @@ import { dateTime, money, yn } from '../lib/format';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 
 export const DONATION_SELECT =
-  '*, campaigns(id, internal_name, campaign_name, external_name), donors(id, display_name), collectors(full_name), sources(name), accounts(name)';
+  '*, campaigns(id, internal_name, campaign_name, external_name), donors(id, display_name), sources(name), accounts(name)';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending', post_dated: 'Post-dated', collect: 'Collect', voided: 'Voided', refunded: 'Refunded', returned: 'Returned', failed: 'Failed', rejected: 'Rejected',
@@ -62,7 +62,6 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
   // A failed charge took no money, so it shows no fee and no net (the database stores both as zero).
   { key: 'fee', label: 'Fee', render: r => (r.status === 'failed' ? '' : money(r.fee ?? r.manual_fee)), value: r => (r.status === 'failed' ? null : r.fee ?? r.manual_fee), align: 'right', filter: { column: 'fee', type: 'number' } },
   { key: 'net_donation', label: 'Net', render: r => (r.status === 'failed' ? '' : money(r.net_donation)), value: r => (r.status === 'failed' ? null : r.net_donation), align: 'right', filter: { column: 'net_donation', type: 'number' } },
-  { key: 'collector', label: 'Collector', optional: true, value: r => r.collectors?.full_name ?? r.collector_label, filter: { column: 'collector_name', type: 'text' }, filterOptions: names('collectors', 'full_name') },
   {
     key: 'source', label: 'Source', optional: true, value: r => r.sources?.name ?? r.source, filter: { column: 'source_name', type: 'text' }, filterOptions: names('sources', 'name'),
     render: r => r.source && <AdminLink to={`/sources/${encodeURIComponent(r.source)}`}>{r.sources?.name ?? r.source}</AdminLink>,

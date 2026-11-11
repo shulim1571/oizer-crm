@@ -29,11 +29,6 @@ export const managerOptions = () =>
       .map(m => ({ value: m.id, label: `${m.full_name || m.id}${m.status === 'suspended' ? ' (suspended)' : ''}` })),
   );
 
-export const collectorOptions = () =>
-  cached('collectors', async () =>
-    (await fetchAll((a, b) => supabase.from('collectors').select('id, full_name').order('full_name').range(a, b)))
-      .map(m => ({ value: m.id, label: m.full_name || m.id })),
-  );
 
 export const donorOptions = () =>
   cached('donors', async () =>

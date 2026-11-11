@@ -155,7 +155,4 @@ export function ManagersPage() {
   );
 }
 
-export function CollectorsPage() {
-  return <CrudPage title="Collectors" noun="Collector" table="collectors" order={{ column: 'full_name' }} columns={personColumns} fields={personFields} />;
-}
 

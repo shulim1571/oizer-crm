@@ -2,7 +2,7 @@ import { HelpAssistant } from '../pages/Assistant';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, Globe, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Printer, Receipt, RefreshCw, Scale, Search, Send, ShieldCheck, Smartphone, Upload, UserCircle, Users, Wallet,
+  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, Globe, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Printer, Receipt, RefreshCw, Scale, Search, Send, ShieldCheck, Smartphone, Upload, UserCircle, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
@@ -93,7 +93,6 @@ const NAV: NavSection[] = [
       { to: '/donors', label: 'Donors', icon: <Contact size={I} /> },
       { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true,
         tabs: [{ to: '/managers', label: 'Fundraisers' }, { to: '/fundraiser-directory', label: 'Directory' }] },
-      { to: '/collectors', label: 'Collectors', icon: <Users size={I} />, admin: true },
       { to: '/payees', label: 'Payees', icon: <BookUser size={I} /> },
     ],
   },

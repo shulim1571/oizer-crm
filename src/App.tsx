@@ -47,7 +47,7 @@ import { DataImportPage } from './pages/Imports';
 import { MachineRegistryPage, MachineReportPage, MachinesPage } from './pages/Machines';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
-  AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage,
+  AccountsPage, ExpensesPage, ManagersPage, SourcesPage,
 } from './pages/SimplePages';
 
 // The Hebrew calendar is large, so it loads only for the people who open this page.
@@ -241,7 +241,8 @@ export default function App() {
         <Route path="accounts/:id" element={<AdminOnly><AccountDetail /></AdminOnly>} />
         <Route path="managers" element={<AdminOnly><ManagersPage /></AdminOnly>} />
         <Route path="managers/:id" element={<AdminOnly><ManagerDetail /></AdminOnly>} />
-        <Route path="collectors" element={<AdminOnly><CollectorsPage /></AdminOnly>} />
+        {/* Collectors were removed from the app (Moshe Henig, 2026-11-11); their data stays in the database. */}
+        <Route path="collectors" element={<Navigate to="/dashboard" replace />} />
         <Route path="donors" element={<DonorsPage />} />
         <Route path="donors/:id" element={<DonorDetail />} />
         <Route path="tasks" element={<TasksPage />} />

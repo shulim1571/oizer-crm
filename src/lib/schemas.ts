@@ -3,7 +3,7 @@ import type { Row } from './supabase';
 import { localToday } from './format';
 import {
   CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, payeeOptions, payoutMethodOptions, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
-  collectorOptions, donorOptions, managerOptions, sourceOptions,
+  donorOptions, managerOptions, sourceOptions,
 } from './lookups';
 
 const create = {
@@ -11,7 +11,6 @@ const create = {
   fundraiser: () => ({ noun: 'fundraiser', table: 'managers', fields: personFields }),
   // Opened through NewDonorDialog, which gives fundraisers their own short donor form.
   donor: () => ({ noun: 'donor', table: 'donors', fields: donorFields, defaults: { country: 'US' } }),
-  collector: () => ({ noun: 'collector', table: 'collectors', fields: personFields }),
   source: () => ({ noun: 'source', table: 'sources', fields: sourceFields }),
   account: () => ({ noun: 'account', table: 'accounts', fields: accountFields }),
   payee: () => ({ noun: 'payee', table: 'payees', fields: payeeFields }),
@@ -59,7 +58,6 @@ export const donationFields: Field[] = [
   { name: 'name', label: 'Name on payment' },
   { name: 'phone', label: 'Phone' },
   { name: 'email', label: 'Email', type: 'email' },
-  { name: 'collector_id', label: 'Collector', advanced: true, type: 'search', options: collectorOptions, create: create.collector },
   { name: 'source', label: 'Source', advanced: true, type: 'select', options: sourceOptions, create: create.source },
   { name: 'account_id', label: 'Account', advanced: true, type: 'select', options: accountOptions, create: create.account, help: 'Leave empty to route it automatically' },
   { name: 'fee', label: 'Fee', advanced: true, type: 'number', help: "Leave empty to use the method's fee. Enter 0 to waive it." },
@@ -95,7 +93,7 @@ const NEW_DONATION_LAYOUT: [string, string[]][] = [
  * Moshe Henig, 2026-11-11 (by text): no Type field (it's always Payment, sent by the form's defaults), Status at the
  * bottom, and only Source, Account and Timestamp under Advanced. Editing a donation keeps every field.
  */
-const NEW_DONATION_HIDDEN = ['type', 'collector_id', 'fee'];
+const NEW_DONATION_HIDDEN = ['type', 'fee'];
 const NEW_DONATION_LAST = ['status'];
 
 const newDonationRules: Field[] = donationFields

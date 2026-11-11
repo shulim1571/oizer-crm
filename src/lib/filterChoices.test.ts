@@ -21,7 +21,7 @@ describe('filter panel choices', () => {
 
   it('loads every value from the organization for the Transactions list’s lookup columns', () => {
     for (const [col, src] of [['donor', "names('donors', 'display_name')"], ['campaign', "names('campaigns', 'internal_name')"],
-      ['payment_method', "names('payment_methods', 'name')"], ['collector', "names('collectors', 'full_name')"],
+      ['payment_method', "names('payment_methods', 'name')"],
       ['source', "names('sources', 'name')"], ['account', "names('accounts', 'name')"]]) {
       expect(cols, col).toContain(`filterOptions: ${src}`);
     }

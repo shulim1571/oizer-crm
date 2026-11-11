@@ -9,7 +9,7 @@ import { useQuery } from '../lib/useQuery';
 // The Donary Enterprise connection: lists out to Donary's devices, payments, pledges and schedules back in.
 
 const EVENT_NAME: Record<string, string> = { charge: 'Payment', void: 'Void', pledge: 'Pledge', schedule: 'Schedule' };
-const KIND_NAME: Record<string, string> = { donor: 'Donor', collector: 'Collector', campaign: 'Campaign', reason: 'Sub-campaign' };
+const KIND_NAME: Record<string, string> = { donor: 'Donor', campaign: 'Campaign', reason: 'Sub-campaign' };
 const WEBHOOKS = [
   { setting: 'PaymentWebhookEndpoint', event: 'charge' },
   { setting: 'PaymentStatusUpdateWebhookEndpoint', event: 'void' },
@@ -47,7 +47,7 @@ export default function DonaryPage() {
 
       <div className="panel-box">
         <h2><Link2 size={16} /> Connection {s?.enabled ? <Pill tone="green">On</Pill> : <Pill>Off</Pill>}</h2>
-        <p className="muted small">Donors, collectors and campaigns are sent to Donary when they’re added or changed (sub-campaigns go as Donary “reasons”).
+        <p className="muted small">Donors and campaigns are sent to Donary when they’re added or changed (sub-campaigns go as Donary “reasons”).
           Donary has no way to delete, so deleted records simply stop being sent.</p>
         {isSuperAdmin ? (
           <>
@@ -60,7 +60,7 @@ export default function DonaryPage() {
             </div>
             <label className="check"><input type="checkbox" checked={form.enabled} onChange={e => setForm({ ...form, enabled: e.target.checked })} /> Connected</label>
             <div className="form-actions">
-              {s?.enabled && <button className="btn" onClick={() => confirm('Send every campaign, collector and donor to Donary now?') &&
+              {s?.enabled && <button className="btn" onClick={() => confirm('Send every campaign and donor to Donary now?') &&
                 run(() => supabase.rpc('donary_queue_all'), n => `${n} records are waiting to go to Donary.`)}>Send everything</button>}
               <div className="spacer" />
               <button className="btn primary" onClick={() => run(() => supabase.rpc('save_donary_settings', { p_enabled: form.enabled, p_org_guid: form.guid || null, p_api_key: form.key || null }),
