@@ -40,8 +40,8 @@ export const campaignColumns: Column[] = [
 
 export const STATUS_LABEL: Record<string, string> = { draft: 'Draft', active: 'Active', archived: 'Archived', closed: 'Closed' };
 
-type Mode = 'active' | 'all' | 'archived' | 'closed' | 'exchange';
-const TITLES: Record<Mode, string> = { active: 'Active Campaigns', all: 'All Campaigns', archived: 'Archived Campaigns', closed: 'Closed Campaigns', exchange: 'Exchange' };
+type Mode = 'active' | 'all' | 'archived' | 'closed';
+const TITLES: Record<Mode, string> = { active: 'Active Campaigns', all: 'All Campaigns', archived: 'Archived Campaigns', closed: 'Closed Campaigns' };
 
 export default function Campaigns({ mode }: { mode: Mode }) {
   const { isAdmin } = useAuth();
@@ -53,7 +53,6 @@ export default function Campaigns({ mode }: { mode: Mode }) {
     () => fetchAll((a, b) => {
       let q = supabase.from('campaign_summary').select('*').order('featured', { ascending: false }).order('internal_name');
       if (mode === 'active' || mode === 'archived' || mode === 'closed') q = q.eq('status', mode);
-      if (mode === 'exchange') q = q.eq('exchange', true);
       return q.range(a, b);
     }),
     [mode],

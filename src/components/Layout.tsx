@@ -52,7 +52,7 @@ const NAV: NavSection[] = [
     items: [
       { to: '/campaigns/active', label: 'Campaigns', icon: <Landmark size={I} />,
         tabs: [{ to: '/campaigns/active', label: 'Active' }, { to: '/campaigns/all', label: 'All' }, { to: '/campaigns/archived', label: 'Archived' },
-          { to: '/campaigns/closed', label: 'Closed' }, { to: '/campaigns/exchange', label: 'Exchange', admin: true },
+          { to: '/campaigns/closed', label: 'Closed' },
           { to: '/campaigns/requests', label: 'Requests' }] },
       // Admins open the calendar, where bookings show on their day; fundraisers go straight to their bookings.
       { to: '/machines', label: 'Machine Bookings', icon: <CalendarDays size={I} />,

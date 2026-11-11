@@ -160,7 +160,6 @@ export default function App() {
         <Route path="campaigns/all" element={<Campaigns mode="all" />} />
         <Route path="campaigns/archived" element={<Campaigns mode="archived" />} />
         <Route path="campaigns/closed" element={<Campaigns mode="closed" />} />
-        <Route path="campaigns/exchange" element={<AdminOnly><Campaigns mode="exchange" /></AdminOnly>} />
         <Route path="campaigns/requests" element={<RequestsPage />} />
         <Route path="campaigns/:id" element={<CampaignDetail />} />
         <Route path="campaigns/:id/batch" element={<BatchEntry />} />
