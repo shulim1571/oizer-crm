@@ -1,0 +1,40 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { donationFields, newDonationFields } from './schemas';
+
+// Moshe Henig, 2026-11-11: the New Donation form "looks messy". Same fields and rules, grouped into sections.
+const shown = (name: string, payment_method: string) => {
+  const f = newDonationFields.find(x => x.name === name)!;
+  return !f.showIf || f.showIf({ payment_method });
+};
+
+describe('New Donation layout', () => {
+  it('groups the fields into Gift, Payment and Donor, in that order, then Notes and the folded accounting fields', () => {
+    const main = newDonationFields.filter(f => !f.advanced);
+    expect(main.map(f => `${f.section ?? '-'}:${f.name}`)).toEqual([
+      'Gift:campaign_id', 'Gift:amount', 'Gift:type', 'Gift:status',
+      'Payment:payment_method', 'Payment:manual_fee', 'Payment:check_number', 'Payment:check_date', 'Payment:post_dated', 'Payment:delivered',
+      'Donor:donor_id', 'Donor:name', 'Donor:phone', 'Donor:email', 'Donor:anonymous',
+      '-:notes',
+    ]);
+    expect(newDonationFields.filter(f => f.advanced).map(f => f.name)).toEqual(['collector_id', 'source', 'account_id', 'fee', 'created_at']);
+  });
+
+  it('keeps every field rule as it was', () => {
+    for (const n of ['check_number', 'check_date', 'post_dated']) { expect(shown(n, 'Check')).toBe(true); expect(shown(n, 'Cash')).toBe(false); }
+    expect(shown('delivered', 'Cash')).toBe(true);
+    expect(shown('delivered', 'Zelle')).toBe(false);
+    expect(newDonationFields.find(f => f.name === 'manual_fee')!.showIf).toBeUndefined();
+    expect(newDonationFields.some(f => ['batch_id', 'funded', 'batch_status', 'batch_pending'].includes(f.name))).toBe(false);
+    expect(newDonationFields.filter(f => f.required).map(f => f.name).sort()).toEqual(['amount', 'campaign_id', 'status', 'type']);
+    // The edit form is untouched by the new sections.
+    expect(donationFields.some(f => f.section)).toBe(false);
+  });
+
+  it('draws sections as titled groups on two columns, with each section’s checkboxes on one line', () => {
+    const form = readFileSync('src/components/RecordForm.tsx', 'utf8');
+    expect(form).toMatch(/<fieldset key=\{t\} className="form-section">\s*<legend>\{t\}<\/legend>\s*<div className="fields two">/);
+    expect(form).toContain('<div className="form-checks">{boxes.map(fieldBox)}</div>');
+    expect(form).toContain("if (!main.some(f => f.section)) return <div className=\"fields\">{main.map(fieldBox)}</div>;");   // other forms unchanged
+  });
+});

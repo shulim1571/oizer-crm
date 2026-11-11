@@ -28,6 +28,8 @@ export interface Field {
   readOnly?: boolean;
   /** Shown (and saved) only while this is true of what's typed in the form. */
   showIf?: (values: Row) => boolean;
+  /** Groups the form into titled sections, in the order they first appear (layout only). */
+  section?: string;
   /** How to make a new one from right here, without leaving this form. */
   create?: () => { noun: string; table: string; fields: Field[]; defaults?: Row; pk?: string };
 }
@@ -178,9 +180,29 @@ export default function RecordForm(p: Props) {
       </div>
       {p.description && <p className="muted small form-desc">{p.description}</p>}
       {donationEdit && processed && <p className="muted small">This payment went through the card processor, so its status, amount, method, fee and time can't be edited here. Use Refund or Void at Sola, or Retry for a failed charge.</p>}
-      <div className="fields">
-        {shownFields.filter(f => !f.advanced).map(fieldBox)}
-      </div>
+      {(() => {
+        const main = shownFields.filter(f => !f.advanced);
+        if (!main.some(f => f.section)) return <div className="fields">{main.map(fieldBox)}</div>;
+        // Sectioned layout: each section's inputs on a two-column grid, its checkboxes together on one line.
+        const titles = [...new Set(main.filter(f => f.section).map(f => f.section!))];
+        const loose = main.filter(f => !f.section);
+        return (
+          <>
+            {titles.map(t => {
+              const fs = main.filter(f => f.section === t);
+              const boxes = fs.filter(f => f.type === 'checkbox');
+              return (
+                <fieldset key={t} className="form-section">
+                  <legend>{t}</legend>
+                  <div className="fields two">{fs.filter(f => f.type !== 'checkbox').map(fieldBox)}</div>
+                  {boxes.length > 0 && <div className="form-checks">{boxes.map(fieldBox)}</div>}
+                </fieldset>
+              );
+            })}
+            {loose.length > 0 && <div className="fields">{loose.map(fieldBox)}</div>}
+          </>
+        );
+      })()}
       {shownFields.some(f => f.advanced) && (
         <details className="help advanced-fields" open={shownFields.some(f => f.advanced && !isNew && values[f.name] != null && values[f.name] !== '' && values[f.name] !== false)}>
           <summary>Advanced / accounting</summary>

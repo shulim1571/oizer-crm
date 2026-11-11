@@ -81,7 +81,17 @@ const BATCH_ONLY = ['batch_id', 'funded', 'batch_status', 'batch_pending'];
  * check, no batch fields or Batch type (vouchers have their own form), and Manual fee always in view.
  * Editing a donation keeps the full form, so batch rows can still be corrected.
  */
-export const newDonationFields: Field[] = donationFields
+/**
+ * Layout of the New Donation form (Moshe Henig, 2026-11-11: "looks messy"): the same fields and rules, grouped into
+ * Gift, Payment and Donor sections in this order, then Notes; the accounting fields stay folded under Advanced.
+ */
+const NEW_DONATION_LAYOUT: [string, string[]][] = [
+  ['Gift', ['campaign_id', 'amount', 'type', 'status']],
+  ['Payment', ['payment_method', 'manual_fee', 'check_number', 'check_date', 'post_dated', 'delivered']],
+  ['Donor', ['donor_id', 'name', 'phone', 'email', 'anonymous']],
+];
+
+const newDonationRules: Field[] = donationFields
   .filter(f => !BATCH_ONLY.includes(f.name))
   .map(f => {
     if (f.name === 'type') return { ...f, options: DONATION_TYPES.filter(o => o.value !== 'Batch') };
@@ -90,6 +100,11 @@ export const newDonationFields: Field[] = donationFields
     if (f.name === 'manual_fee') return { ...f, advanced: false };
     return f;
   });
+
+export const newDonationFields: Field[] = [
+  ...NEW_DONATION_LAYOUT.flatMap(([section, names]) => names.map(n => ({ ...newDonationRules.find(f => f.name === n)!, section }))),
+  ...newDonationRules.filter(f => !NEW_DONATION_LAYOUT.some(([, names]) => names.includes(f.name))),
+];
 
 /** What a fundraiser with the override fills in. It always waits for an admin. */
 export const fundraiserDonationFields: Field[] = [
