@@ -257,7 +257,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
             : result.status === 'approved'
             ? <div className="notice">Approved: {money(result.amount)} · {savedLabel({ method: result.method, card_type: result.card_type, masked: result.masked_card, daf_program: result.daf_program })} · Sola ref {result.ref_num}
                 {result.card_id ? ' · saved for next time' : ''}{result.method === 'ach' ? '. The bank debit settles in 1–3 business days; a return from the bank will show up on the Task Sheet.' : ''}</div>
-            : <div className="error">{result.status === 'declined' ? 'Declined' : 'Error'}: {result.error ?? 'no reason given'}. It's kept as a failed transaction; nothing was charged.</div>}
+            : <div className="error">{result.status === 'declined' ? 'Declined' : 'Error'}: {result.error ?? 'no reason given'}.{/invalid account setup/i.test(result.error ?? '') && ' The Sola account isn\'t set up for this fund yet: Sola support has to turn it on.'} It's kept as a failed transaction; nothing was charged.</div>}
           {schedule && <div className="notice">Recurring: {schedule}</div>}
           {error && <div className="error">{error}</div>}
           <div className="form-actions"><div className="spacer" />

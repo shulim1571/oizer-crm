@@ -4,6 +4,7 @@
 // keys or not. Requests reach this function through the rate-limiting gate (workers/give-gate); once
 // GIVE_GATE_SECRET is set, anything else is refused. The database then checks the page's rules, the method and
 // the connection's recent attempts, and the organization's own Sola key charges the gift.
+import { fundCardMessage, fundCvvOk, fundCvvProblem } from '../_shared/fundCards.ts';
 import { botCheckDecision, donorProblem, gateCheck } from '../_shared/giveGuard.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
@@ -79,7 +80,7 @@ function payProblem(p: Pay): string | null {
   }
   if (!/^\d{8,19}$/.test(p.daf_card ?? '')) return `Check the ${p.program} card number.`;
   if (need.exp && !/^\d{4}$/.test(p.daf_exp ?? '')) return 'Enter the expiry as MM/YY.';
-  if (need.cvv && !/^\d{3,4}$/.test(p.daf_cvv ?? '')) return 'Enter the CVV.';
+  if (need.cvv && !fundCvvOk(p.program, p.daf_cvv)) return fundCvvProblem(p.program);
   return null;
 }
 
@@ -179,7 +180,7 @@ Deno.serve(async req => {
   try {
     const g = await rpc('record_gateway_result', { p_org: b.org, p_id: start.id, p_result: kept(result) });
     if (g.status !== 'approved') {
-      return reply({ declined: true, error: result.xError || (b.method === 'card' ? 'The card was declined. Please check the details or try another card.' : 'The payment wasn\'t accepted. Please check the details.') });
+      return reply({ declined: true, error: b.method === 'daf' ? fundCardMessage(b.program, result) : result.xError || (b.method === 'card' ? 'The card was declined. Please check the details or try another card.' : 'The payment wasn\'t accepted. Please check the details.') });
     }
     const last4 = String(g.masked_card ?? '').slice(-4);
     return reply({

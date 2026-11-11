@@ -50,7 +50,8 @@ export function dafProblem(program: string, v: DafValue, L: PayLabels): string |
   if (program === 'Donors Fund' && v.mode === 'email') return /^\S+@\S+\.\S+$/.test(v.email.trim()) && /^\d{4}$/.test(v.pin) ? null : L.email_pin_bad;
   if (!/^\d{8,19}$/.test(digits(v.card))) return L.daf_bad.replace('{fund}', program);
   if (need?.exp && digits(v.exp).length !== 4) return L.exp_bad;
-  if (need?.cvv && !/^\d{3,4}$/.test(v.cvv)) return L.cvv_bad;
+  // Donors Fund takes a 3-digit CVV; Sola refuses 4 (Moshe Henig, 2026-11-11).
+  if (need?.cvv && !(program === 'Donors Fund' ? /^\d{3}$/ : /^\d{3,4}$/).test(v.cvv)) return L.cvv_bad;
   return null;
 }
 export const dafBody = (program: string, v: DafValue) => (program === 'Donors Fund' && v.mode === 'email'
@@ -138,7 +139,7 @@ export function DafFields({ program, value, onChange, L }: { program: string; va
               onChange={e => onChange({ ...value, card: digits(e.target.value).slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 ') })} />
             {need.exp && <input dir="ltr" inputMode="numeric" autoComplete="off" aria-label="MM/YY" placeholder="MM/YY" maxLength={5} value={value.exp}
               onChange={e => onChange({ ...value, exp: formatExp(e.target.value) })} />}
-            {need.cvv && <input dir="ltr" inputMode="numeric" autoComplete="off" aria-label={L.cvv} placeholder={L.cvv} maxLength={4} value={value.cvv}
+            {need.cvv && <input dir="ltr" inputMode="numeric" autoComplete="off" aria-label={L.cvv} placeholder={L.cvv} maxLength={program === 'Donors Fund' ? 3 : 4} value={value.cvv}
               onChange={e => onChange({ ...value, cvv: digits(e.target.value).slice(0, 4) })} />}
           </>
         )}

@@ -4,6 +4,7 @@
 // read the key, talks to Sola and records the answer. Card numbers arrive only as iFields single-use tokens;
 // bank and DAF numbers pass through to Sola and are never stored.
 
+import { fundCvvOk, fundCvvProblem } from '../_shared/fundCards.ts';
 const url = Deno.env.get('SUPABASE_URL')!;
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -67,7 +68,7 @@ function payProblem(p: Pay): string | null {
   }
   if (!/^\d{8,19}$/.test(p.daf_card ?? '')) return `Check the ${p.program} card number.`;
   if (need.exp && !/^\d{4}$/.test(p.daf_exp ?? '')) return 'Enter the expiry as MM/YY.';
-  if (need.cvv && !/^\d{3,4}$/.test(p.daf_cvv ?? '')) return 'Enter the CVV.';
+  if (need.cvv && !fundCvvOk(p.program, p.daf_cvv)) return fundCvvProblem(p.program);
   return null;
 }
 

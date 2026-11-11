@@ -3,6 +3,7 @@
 // with a token only it knows. Deployed with JWT verification off. Each charge's answer is recorded in one step:
 // the donation, and the schedule moved on or its retry set.
 
+import { fundCvvOk, fundCvvProblem } from '../_shared/fundCards.ts';
 const url = Deno.env.get('SUPABASE_URL')!;
 const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const GATEWAY = 'https://x1.cardknox.com/gatewayjson';
@@ -53,7 +54,7 @@ function payProblem(p: Pay): string | null {
   }
   if (!/^\d{8,19}$/.test(p.daf_card ?? '')) return `Check the ${p.program} card number.`;
   if (need.exp && !/^\d{4}$/.test(p.daf_exp ?? '')) return 'Enter the expiry as MM/YY.';
-  if (need.cvv && !/^\d{3,4}$/.test(p.daf_cvv ?? '')) return 'Enter the CVV.';
+  if (need.cvv && !fundCvvOk(p.program, p.daf_cvv)) return fundCvvProblem(p.program);
   return null;
 }
 
