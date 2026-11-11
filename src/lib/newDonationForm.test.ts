@@ -40,6 +40,7 @@ describe('New Donation form', () => {
 
   it('leaves the Edit Donation form whole, so batch rows can still be corrected', () => {
     expect(donationFields.map(f => f.name)).toEqual(expect.arrayContaining(['batch_id', 'funded', 'batch_status', 'batch_pending', 'check_date']));
-    expect(donationFields.some(f => f.showIf)).toBe(false);
+    // Only the check fields depend on the method there.
+    expect(donationFields.filter(f => f.showIf).map(f => f.name)).toEqual(['check_number', 'post_dated', 'check_date']);
   });
 });

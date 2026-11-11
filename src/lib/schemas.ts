@@ -38,15 +38,22 @@ export const newCampaignFields: Field[] = [
   { name: 'status', label: 'Status', type: 'select', options: CAMPAIGN_STATUSES, required: true },
 ];
 
+/** The payment method, for showing fields that only apply to some methods. */
+const method = (v: Row) => String(v.payment_method ?? '').trim().toLowerCase();
+const isCheck = (v: Row) => method(v).startsWith('check');
+const isCashOrCheck = (v: Row) => isCheck(v) || method(v).startsWith('cash');
+const CHECK_ONLY = ['check_number', 'post_dated', 'check_date'];
+
 export const donationFields: Field[] = [
   { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true, create: create.campaign },
   { name: 'type', label: 'Type', type: 'select', options: DONATION_TYPES, required: true },
   { name: 'status', label: 'Status', type: 'select', options: DONATION_STATUSES, required: true },
   { name: 'amount', label: 'Amount', type: 'number', required: true },
   { name: 'payment_method', label: 'Payment Method', type: 'select', options: paymentMethodOptions, freeText: true },
-  { name: 'check_number', label: 'Check #' },
-  { name: 'post_dated', label: 'Post-dated check', type: 'checkbox' },
-  { name: 'check_date', label: 'Check date', type: 'date', help: 'A later date keeps it out of the balance until then' },
+  // Check fields show only for a check, here and in every donation form (Moshe Henig, 2026-11-11).
+  { name: 'check_number', label: 'Check #', showIf: isCheck },
+  { name: 'post_dated', label: 'Post-dated check', type: 'checkbox', showIf: isCheck },
+  { name: 'check_date', label: 'Check date', type: 'date', help: 'A later date keeps it out of the balance until then', showIf: isCheck },
   { name: 'anonymous', label: 'Anonymous', type: 'checkbox' },
   { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, create: create.donor },
   { name: 'name', label: 'Name on payment' },
@@ -66,11 +73,6 @@ export const donationFields: Field[] = [
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 
-/** The payment method, for showing fields that only apply to some methods. */
-const method = (v: Row) => String(v.payment_method ?? '').trim().toLowerCase();
-const isCheck = (v: Row) => method(v).startsWith('check');
-const isCashOrCheck = (v: Row) => isCheck(v) || method(v).startsWith('cash');
-const CHECK_ONLY = ['check_number', 'post_dated', 'check_date'];
 /** Batch rows come in through vouchers and batch entry, which have their own forms. */
 const BATCH_ONLY = ['batch_id', 'funded', 'batch_status', 'batch_pending'];
 
@@ -95,7 +97,7 @@ export const fundraiserDonationFields: Field[] = [
   { name: 'payment_method', label: 'Payment Method', type: 'select', options: paymentMethodOptions, freeText: true, required: true },
   { name: 'name', label: 'Donor name' },
   { name: 'phone', label: 'Phone' },
-  { name: 'check_number', label: 'Check #' },
+  { name: 'check_number', label: 'Check #', showIf: isCheck },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 

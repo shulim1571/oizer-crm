@@ -53,6 +53,7 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
   ) },
   ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, width: 180, value: (r: Row) => campLabel(r.campaigns), filter: { column: 'campaign_internal', type: 'text' as const } }]),
   { key: 'payment_method', label: 'Method', filter: { column: 'payment_method', type: 'text' } },
+  { key: 'check_number', label: 'Check #', optional: true, filter: { column: 'check_number', type: 'text' } },
   { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170, filter: { column: 'created_at', type: 'date' } },
   // A failed charge took no money, so it shows no fee and no net (the database stores both as zero).
   { key: 'fee', label: 'Fee', render: r => (r.status === 'failed' ? '' : money(r.fee ?? r.manual_fee)), value: r => (r.status === 'failed' ? null : r.fee ?? r.manual_fee), align: 'right', filter: { column: 'fee', type: 'number' } },
