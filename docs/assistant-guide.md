@@ -34,7 +34,7 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 
 ## Donations (Transactions)
 
-- **New Donation** (the New Donation button in the top bar on every page, the menu, or New Donation on a campaign's
+- **New Donation** (the New Donation button in the top bar on every page, or New Donation on a campaign's
   Donations tab): campaign, type, status, amount, payment method. Check #, post-dated and check date appear only for
   Check; Delivered only for Cash or Check. **Manual fee** replaces the payment method's preset fee (net = amount less
   the manual fee); leave it empty to use the preset. After **Record donation** you go to the Transactions list.

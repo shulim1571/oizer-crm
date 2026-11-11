@@ -20,3 +20,13 @@ describe('New Donation (Moshe Henig, 2026-11-11)', () => {
     expect(header).toContain("{isAdmin && <button className=\"btn primary small header-new-donation\"");
   });
 });
+
+describe('sidebar (Moshe Henig, 2026-11-11)', () => {
+  it('leaves New Donation off the menu, while its page keeps its tabs', () => {
+    const l = src('components', 'Layout.tsx');
+    expect(l).toContain("{ to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true, offMenu: true,");
+    expect(l).toContain('section.items.filter(n => visible(n) && !n.offMenu)');
+    // Page tabs and breadcrumbs still come from every visible entry, including off-menu ones.
+    expect(l).toContain('NAV.flatMap(s => s.items.filter(visible)');
+  });
+});

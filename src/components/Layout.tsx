@@ -26,7 +26,8 @@ const SearchContext = createContext<{ q: string; setQ: (v: string) => void }>({ 
 export const useSearch = () => useContext(SearchContext);
 
 interface Tab { to: string; label: string; admin?: boolean }
-interface NavItem { to: string; label: string; icon: ReactNode; admin?: boolean; platform?: boolean; tabs?: Tab[]; badge?: 'tasks' | 'inbox' }
+// offMenu: not listed in the sidebar, but its pages still get their tabs and breadcrumb.
+interface NavItem { to: string; label: string; icon: ReactNode; admin?: boolean; platform?: boolean; offMenu?: boolean; tabs?: Tab[]; badge?: 'tasks' | 'inbox' }
 interface NavSection { title: string; items: NavItem[] }
 
 // One entry per kind of work. Views of the same list (active/archived campaigns, last 7 days/all transactions…)
@@ -63,7 +64,8 @@ const NAV: NavSection[] = [
   {
     title: 'Donations',
     items: [
-      { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true,
+      // Opened from the New Donation button in the header bar, so it's off the sidebar (Moshe Henig, 2026-11-11).
+      { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true, offMenu: true,
         // Batch Entry gave way to new pledges and vouchers (Moshe Henig, 2026-11-11); it stays on a campaign's page.
         tabs: [{ to: '/donations/new', label: 'One donation' }, { to: '/donations/pledges/new', label: 'New pledge' },
           { to: '/donations/vouchers/new', label: 'New vouchers' }] },
@@ -191,7 +193,7 @@ export default function Layout() {
             <div className="logo-text">{org?.name ?? 'Campaign CRM'}{org && <small>Campaign CRM</small>}</div>
           </div>
           {NAV.map(section => {
-            const items = section.items.filter(visible);
+            const items = section.items.filter(n => visible(n) && !n.offMenu);
             if (!items.length) return null;
             const here = current?.section === section.title;
             const shut = folded.includes(section.title) && !here;

@@ -25,7 +25,8 @@ export function buildGuide(root = '.') {
       const tabsText = e.indexOf('tabs:') > -1 ? e.slice(e.indexOf('tabs:'), e.indexOf(']', e.indexOf('tabs:'))) : '';
       const tabs = [...tabsText.matchAll(/to: '([^']+)', label: '([^']+)'(, admin: true)?/g)].map(t => `${t[2]} (${t[1]})${t[3] ? ' (admins)' : ''}`);
       const who = /admin: true/.test(head) ? ' (admins)' : /platform: true/.test(head) ? ' (platform owner)' : '';
-      menu.push(`  - ${label}${tabs.length ? '' : ` (${path})`}${who}${tabs.length ? `: tabs ${tabs.join(', ')}` : ''}`);
+      const where = /offMenu: true/.test(head) ? ' [not in the menu: the button in the top bar]' : '';
+      menu.push(`  - ${label}${tabs.length ? '' : ` (${path})`}${who}${where}${tabs.length ? `: tabs ${tabs.join(', ')}` : ''}`);
     }
   }
 
