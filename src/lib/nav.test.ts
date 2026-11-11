@@ -52,3 +52,13 @@ describe('page switches (Moshe Henig, 2026-11-11)', () => {
     expect(readFileSync(join(__dirname, '..', 'styles.css'), 'utf8')).toContain('.tabs { flex-shrink: 0; }');
   });
 });
+
+describe('your own settings (Moshe Henig, 2026-11-11)', () => {
+  it('are in Settings in the menu, not buttons beside Log out', () => {
+    expect(navBlock).toContain("{ to: '/notifications', label: 'My Notifications', icon: <Bell size={I} /> },");
+    expect(navBlock).toContain("{ to: '/security', label: 'Account Security', icon: <Lock size={I} /> },");
+    const foot = layout.slice(layout.indexOf('<div className="sidebar-foot">'), layout.indexOf('</nav>'));
+    expect(foot).not.toContain('to="/notifications"');
+    expect(foot).not.toContain('to="/security"');
+  });
+});

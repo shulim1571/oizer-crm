@@ -118,7 +118,7 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 
 ## Account security and two-step verification
 
-- The shield button next to your email (bottom of the menu) opens **Account security**. Click **Set up two-step
+- **Settings > Account Security** in the menu opens **Account security** (and **Settings > My Notifications** your own notifications). Click **Set up two-step
   verification**, scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator,
   1Password and similar), and enter the 6-digit code to finish.
 - **No app? Use text or call codes:** on Account security, under **Text or call codes**, click **Add a phone**, enter

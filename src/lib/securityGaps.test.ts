@@ -30,7 +30,7 @@ describe('two-step verification screens', () => {
     expect(page).toContain("supabase.auth.mfa.enroll({ factorType: 'totp'");
     expect(page).toContain('<CodePrompt factorId={enrolling.id}');
     expect(readFileSync('src/App.tsx', 'utf8')).toContain('<Route path="security" element={<AccountSecurityPage />} />');
-    expect(readFileSync('src/components/Layout.tsx', 'utf8')).toContain('to="/security"');
+    expect(readFileSync('src/components/Layout.tsx', 'utf8')).toContain("{ to: '/security', label: 'Account Security'");
   });
 
   it('asks for the code at sign-in, with Not now so nobody is locked out', () => {

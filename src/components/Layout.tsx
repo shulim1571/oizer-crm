@@ -2,7 +2,7 @@ import { HelpAssistant } from '../pages/Assistant';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, Globe, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Receipt, RefreshCw, Scale, Search, Send, ShieldCheck, Smartphone, Upload, UserCircle, Wallet,
+  ArrowLeftRight, Bell, BookUser, Building, CalendarDays, ChevronDown, CircleDollarSign, Contact, Globe, Landmark, LayoutDashboard, LayoutTemplate, ListChecks, Lock, LogOut, Menu, MessageSquare, MessagesSquare, PieChart, PlusCircle, Receipt, RefreshCw, Scale, Search, Send, ShieldCheck, Smartphone, Upload, UserCircle, Wallet,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
@@ -99,6 +99,9 @@ const NAV: NavSection[] = [
   {
     title: 'Settings',
     items: [
+      // Your own settings, for everyone; they were small buttons next to Log out (Moshe Henig, 2026-11-11).
+      { to: '/notifications', label: 'My Notifications', icon: <Bell size={I} /> },
+      { to: '/security', label: 'Account Security', icon: <Lock size={I} /> },
       { to: '/organization', label: 'Organization', icon: <Building size={I} />, admin: true,
         tabs: [{ to: '/organization', label: 'Details' }, { to: '/web-addresses', label: 'Web Addresses' }, { to: '/api-keys', label: 'API Keys' }] },
       { to: '/users', label: 'Users & Access', icon: <ShieldCheck size={I} />, admin: true,
@@ -122,7 +125,7 @@ const NAV: NavSection[] = [
   },
 ];
 // Pages reached from elsewhere (the sidebar footer), named here for the top bar.
-const OTHER: NavItem[] = [{ to: '/notifications', label: 'My Notifications', icon: null }];
+const OTHER: NavItem[] = [];
 
 const onPath = (path: string, to: string) => path === to || path.startsWith(`${to}/`);
 
@@ -221,8 +224,6 @@ export default function Layout() {
                 <div className="me-email" title={email}>{email}</div>
                 <div className="me-role">{inPlatformSession ? 'Platform Owner' : ROLE_LABEL[role ?? ''] ?? (isPlatformOwner ? 'Platform Owner' : '')}</div>
               </div>
-              {canWork && <NavLink className="icon-btn" title="My notifications" aria-label="My notifications" to="/notifications"><Bell size={17} /></NavLink>}
-              <NavLink className="icon-btn" title="Account security" aria-label="Account security" to="/security"><ShieldCheck size={17} /></NavLink>
               <button className="icon-btn" title="Sign out" onClick={signOut}><LogOut size={17} /></button>
             </div>
           </div>
