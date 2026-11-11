@@ -24,7 +24,7 @@ import { NewVoucherButton, VoucherDialog, voucherColumns } from './Vouchers';
 import { ChangeModeDialog, SubCampaignsTab, modeLabel } from './SubCampaigns';
 import { TRANSFER_SELECT, TransferDialog, transferColumns } from './Transfers';
 import { RequestTeamDialog } from './Requests';
-import { CampaignSettingsTab } from './Templates';
+import { CampaignSettingsTab, SwitchTemplateDialog } from './Templates';
 import { PayoutStatusPill, RequestPayoutDialog, payoutStatus } from './Payouts';
 import { CampaignReportDialog, DonorListDialog } from './Reports';
 import { ContactImportDialog } from './Imports';
@@ -49,6 +49,8 @@ export default function CampaignDetail() {
   const [sharing, setSharing] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [reporting, setReporting] = useState<'report' | 'donors' | 'contacts' | null>(null);
+  const [switchingTemplate, setSwitchingTemplate] = useState(false);
+  const [settingsKey, setSettingsKey] = useState(0);
   const [canRequestPayout, setCanRequestPayout] = useState(false);
 
   // A fundraiser with the override can enter payments here, held for approval.
@@ -219,6 +221,7 @@ export default function CampaignDetail() {
         {canWork && c.status !== 'closed' && <button className="btn primary" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>}
         <RowMenu label="More campaign actions" text="More" items={[
           { label: 'Edit campaign', icon: <Pencil size={14} />, onClick: () => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c }), hidden: !isAdmin },
+          { label: 'Change template', onClick: () => setSwitchingTemplate(true), hidden: !isAdmin },
           { label: 'Remove phone PIN', onClick: async () => {
               if (!confirm('Remove this campaign’s phone PIN? Unregistered phones won’t be able to reach it until a new one is set.')) return;
               const { error: e } = await supabase.rpc('set_campaign_pin', { p_campaign: id, p_pin: null });
@@ -270,7 +273,7 @@ export default function CampaignDetail() {
         ))}
       </div>
 
-      {tab === 'settings' ? <CampaignSettingsTab campaignId={id} /> : tab === 'sub-campaigns' ? <SubCampaignsTab parent={c} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
+      {tab === 'settings' ? <CampaignSettingsTab key={settingsKey} campaignId={id} /> : tab === 'sub-campaigns' ? <SubCampaignsTab parent={c} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
         title={tab[0].toUpperCase() + tab.slice(1)}
         exportName={`${c.id}-${tab}`}
         rows={(rows.data as Row[]) ?? []}
@@ -322,6 +325,7 @@ export default function CampaignDetail() {
       {openPledge && <PledgeDialog id={openPledge} onClose={() => setOpenPledge(null)} onChanged={() => setVersion(v => v + 1)} />}
       {openVoucher && <VoucherDialog id={openVoucher} onClose={() => setOpenVoucher(null)} onChanged={() => setVersion(v => v + 1)} />}
 
+      {switchingTemplate && <SwitchTemplateDialog campaignId={id} onClose={() => setSwitchingTemplate(false)} onDone={() => { setSwitchingTemplate(false); setSettingsKey(k => k + 1); }} />}
       {form && (
         <RecordForm
           table={form.table}

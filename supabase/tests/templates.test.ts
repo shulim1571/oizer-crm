@@ -198,3 +198,46 @@ describe('call lists', () => {
     await sql(db, `select public.set_call_item($1, true)`, [i.id]);
   });
 });
+
+describe('changing a campaign to another template', () => {
+  let db: PGlite;
+  beforeEach(async () => { db = await seededDb(); });
+
+  it('takes the new template’s page settings and keeps everything else about the campaign', async () => {
+    const dinner = await template(db, 'Annual Dinner', `'he', '{18,36,180}', true, 25`);
+    const gala = await template(db, 'Gala', `'yi', '{100,250,500}', false, 50`);
+    await sql(db, `update public.campaign_templates set donor_wall = true, custom_fields = '[{"name":"Table","type":"text"}]' where id = $1`, [gala]);
+    await sql(db, `select public.save_campaign_settings('1001', null, $1)`, [dinner]);
+    // The campaign's own page text and a donation, which must survive the switch.
+    await db.query(`update public.campaign_page_settings set description = 'Our story', thank_you = 'Thanks!', banner_url = 'https://example.org/b.jpg', suggested_amount = 36 where campaign_id = '1001'`);
+    const before = await one(db, `select internal_name, manager_id, goal, account_id, status, (select count(*) from public.donations d where d.campaign_id = '1001' and d.deleted_at is null) as gifts,
+                                         (select sum(amount) from public.donations d where d.campaign_id = '1001' and d.deleted_at is null) as total
+                                  from public.campaigns where id = '1001'`);
+
+    await sql(db, `select public.switch_campaign_template('1001', $1)`, [gala]);
+
+    const s = await one(db, `select template_id, language, preset_amounts, cover_fee_default, min_donation, donor_wall, custom_fields,
+                                    description, thank_you, banner_url, suggested_amount from public.campaign_page_settings where campaign_id = '1001'`);
+    expect(s).toMatchObject({ template_id: gala, language: 'yi', cover_fee_default: false, donor_wall: true,
+      description: 'Our story', thank_you: 'Thanks!', banner_url: 'https://example.org/b.jpg' });
+    expect(s.preset_amounts.map(Number)).toEqual([100, 250, 500]);
+    expect(Number(s.min_donation)).toBe(50);
+    expect(Number(s.suggested_amount)).toBe(36);
+    expect(s.custom_fields).toEqual([{ name: 'Table', type: 'text' }]);
+    expect(await one(db, `select internal_name, manager_id, goal, account_id, status, (select count(*) from public.donations d where d.campaign_id = '1001' and d.deleted_at is null) as gifts,
+                                 (select sum(amount) from public.donations d where d.campaign_id = '1001' and d.deleted_at is null) as total
+                          from public.campaigns where id = '1001'`)).toEqual(before);
+    expect((await db.query<Record<string, any>>(`select changes from public.activity_log where action = 'campaign_template_changed' order by id desc limit 1`)).rows[0])
+      .toMatchObject({ changes: { from: dinner, to: gala, to_name: 'Gala' } });
+  });
+
+  it('works for a campaign that never had a template, and only for admins and live templates', async () => {
+    const gala = await template(db, 'Gala');
+    await sql(db, `select public.switch_campaign_template('1002', $1)`, [gala]);
+    expect((await one(db, `select template_id from public.campaign_page_settings where campaign_id = '1002'`)).template_id).toBe(gala);
+    await expect(sql(db, `select public.switch_campaign_template('1002', $1)`, [gala], MANAGER_1)).rejects.toThrow();
+    await sql(db, `delete from public.campaign_templates where id = $1`, [gala]);
+    await expect(sql(db, `select public.switch_campaign_template('1002', $1)`, [gala])).rejects.toThrow(/Template not found/);
+    await expect(sql(db, `select public.switch_campaign_template('nope', $1)`, [gala])).rejects.toThrow(/Campaign not found/);
+  });
+});

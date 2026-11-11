@@ -310,3 +310,50 @@ export function CampaignSettingsTab({ campaignId }: { campaignId: string }) {
     </div>
   );
 }
+
+/**
+ * Change an existing campaign to another template (Moshe Henig, 2026-11-10). Only the template's page settings
+ * are copied over; the campaign, its money and its own page text stay as they are.
+ */
+export function SwitchTemplateDialog({ campaignId, onClose, onDone }: { campaignId: string; onClose: () => void; onDone: () => void }) {
+  const q = useQuery(async () => {
+    const [{ data: list }, { data: cur }] = await Promise.all([
+      supabase.from('campaign_templates').select('id, name, is_default').is('deleted_at', null).order('name'),
+      supabase.from('campaign_page_settings').select('template_id').eq('campaign_id', campaignId).maybeSingle(),
+    ]);
+    return { list: (list ?? []) as Row[], current: (cur as Row | null)?.template_id ?? null };
+  }, [campaignId]);
+  const [pick, setPick] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const data = q.data as { list: Row[]; current: string | null } | null;
+  const currentName = data?.list.find(t => t.id === data.current)?.name;
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const { error: e } = await supabase.rpc('switch_campaign_template', { p_campaign: campaignId, p_template: pick });
+    setBusy(false);
+    if (e) return setError(e.message);
+    onDone();
+  }
+  return createPortal(
+    <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="form-head"><h2>Change template</h2></div>
+        <p className="muted small">Now on: <b>{currentName ?? 'no template'}</b></p>
+        <label className="field"><span>New template</span>
+          <select value={pick} onChange={e => setPick(e.target.value)}>
+            <option value="">Choose…</option>
+            {(data?.list ?? []).filter(t => t.id !== data?.current).map(t => <option key={t.id} value={t.id}>{t.name}{t.is_default ? ' (default)' : ''}</option>)}
+          </select></label>
+        <p className="help">The payment page settings come from the new template: language, amounts, minimum, cover-fee default, receipts, donor wall, logo, color and custom fields.
+          Everything else stays: the campaign’s name, fundraisers, goal, bank account and PIN, its donations and payouts, and the page’s description, thank-you note and banner.</p>
+        {error && <div className="error">{error}</div>}
+        <div className="form-actions"><div className="spacer" />
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn primary" disabled={!pick || busy} onClick={save}>{busy ? 'Changing…' : 'Change template'}</button></div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
