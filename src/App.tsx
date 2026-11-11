@@ -24,6 +24,8 @@ import { VouchersPage } from './pages/Vouchers';
 import { TransfersPage } from './pages/Transfers';
 import TaskSheetPage from './pages/TaskSheet';
 import RequestsPage from './pages/Requests';
+import AccountSecurityPage, { CodePrompt } from './pages/Security';
+import { useMfa } from './lib/mfa';
 import TasksPage from './pages/Tasks';
 import { TemplatesPage } from './pages/Templates';
 import DashboardPage, { BalanceSummaryPage } from './pages/Dashboard';
@@ -73,6 +75,10 @@ function AdminOnly({ children }: { children: ReactNode }) {
 
 export default function App() {
   const { session, role, memberStatus, org, orgs, isPlatformOwner, isAdmin, loading, signOut, refresh, accessError } = useAuth();
+  // After the password, anyone with two-step verification is asked for a code. "Not now" carries on without bank
+  // data for this tab, so a lost phone never locks anyone out of everything.
+  const mfa = useMfa();
+  const [codeSkipped, setCodeSkipped] = useState(() => { try { return sessionStorage.getItem('mfa-skip') === '1'; } catch { return false; } });
   const [recovering, setRecovering] = useState(false);
   const [emailLink, setEmailLink] = useState(arrivedWith);
 
@@ -99,6 +105,19 @@ export default function App() {
   }
   if (recovering) return <SetNewPassword onDone={() => setRecovering(false)} />;
   if (!session) return <Login linkError={emailLink.error} />;
+  if (!mfa.loading && mfa.enrolled && !mfa.verified && !codeSkipped && mfa.factorId) {
+    return (
+      <AuthShell>
+        <div className="auth-card">
+          <h1>Enter your code</h1>
+          <p className="lead">Two-step verification is on for <b>{session.user.email}</b>.</p>
+          <CodePrompt factorId={mfa.factorId} onDone={() => void mfa.reload()}
+            onSkip={() => { try { sessionStorage.setItem('mfa-skip', '1'); } catch { /* private window */ } setCodeSkipped(true); }} />
+          <p className="muted small">“Not now” lets you in without bank and reconciliation data.</p>
+        </div>
+      </AuthShell>
+    );
+  }
   if (role === 'guest') {
     return (
       <Routes>
@@ -221,6 +240,7 @@ export default function App() {
         <Route path="task-sheet" element={<AdminOnly><TaskSheetPage /></AdminOnly>} />
         {/* Campaign Requests moved under Campaigns; old links (and notification emails) still land there. */}
         <Route path="requests" element={<Navigate to="/campaigns/requests" replace />} />
+        <Route path="security" element={<AccountSecurityPage />} />
         <Route path="users" element={<AdminOnly><UsersPage /></AdminOnly>} />
         <Route path="activity" element={<AdminOnly><ActivityPage /></AdminOnly>} />
         <Route path="organization" element={<AdminOnly><OrganizationPage /></AdminOnly>} />

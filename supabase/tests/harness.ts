@@ -128,12 +128,13 @@ type Actor = string | 'anon' | 'service_role';
 
 /**
  * Runs fn as a Supabase client would: a role, JWT claims and request headers, under row-level
- * security. `org` is what the app would send as x-org-id.
+ * security. `org` is what the app would send as x-org-id; `aal` is the session's assurance level.
  */
-export async function as<T>(db: PGlite, actor: Actor, fn: (tx: Transaction) => Promise<T>, org?: string): Promise<T> {
+export async function as<T>(db: PGlite, actor: Actor, fn: (tx: Transaction) => Promise<T>, org?: string, aal: 'aal1' | 'aal2' = 'aal2'): Promise<T> {
   const role = actor === 'anon' || actor === 'service_role' ? actor : 'authenticated';
+  // Signed-in test users have passed two-step verification (aal2) unless a test asks for a password-only session.
   const claims = role === 'authenticated'
-    ? JSON.stringify({ sub: actor, email: (await db.query<{ email: string }>('select email from auth.users where id = $1', [actor])).rows[0]?.email })
+    ? JSON.stringify({ sub: actor, aal, email: (await db.query<{ email: string }>('select email from auth.users where id = $1', [actor])).rows[0]?.email })
     : '';
   const result = await db.transaction(async tx => {
     await tx.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);

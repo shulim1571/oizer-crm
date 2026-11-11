@@ -1,3 +1,6 @@
+import { Link } from 'react-router-dom';
+import { useMfa } from '../lib/mfa';
+import { CodePrompt } from './Security';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ArrowLeftRight, CheckCheck, FileUp, Landmark, Lock, Plus, Printer, Scale, Undo2, Wand2, X } from 'lucide-react';
 import Kpi from '../components/Kpi';
@@ -34,7 +37,27 @@ const rpc = async (name: string, args: Row) => {
   return data;
 };
 
+/** Bank data needs a verified session (two-step verification); the database enforces the same. */
 export default function ReconciliationPage() {
+  const mfa = useMfa();
+  if (mfa.loading) return <section className="view"><p className="muted pad">Loading…</p></section>;
+  if (!mfa.verified) {
+    return (
+      <section className="view narrow">
+        <div className="view-head"><div className="view-title"><h1>Bank Reconciliation</h1></div></div>
+        <div className="panel-box">
+          <h2>Two-step verification needed</h2>
+          {mfa.enrolled && mfa.factorId
+            ? <CodePrompt factorId={mfa.factorId} intro="Bank and reconciliation data need a verified session. Enter the 6-digit code from your authenticator app." onDone={() => void mfa.reload()} />
+            : <p>Bank and reconciliation data need two-step verification. <Link to="/security">Set it up under Account security</Link>; it takes a minute with an authenticator app on your phone.</p>}
+        </div>
+      </section>
+    );
+  }
+  return <ReconciliationScreen />;
+}
+
+function ReconciliationScreen() {
   const [version, setVersion] = useState(0);
   const summary = useQuery(async () => (await rpc('bank_reconciliation_summary', {})) as Row[], [version]);
   const [account, setAccount] = useState<string>('');

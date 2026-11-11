@@ -219,6 +219,7 @@ export default function Layout() {
                 <div className="me-role">{inPlatformSession ? 'Platform Owner' : ROLE_LABEL[role ?? ''] ?? (isPlatformOwner ? 'Platform Owner' : '')}</div>
               </div>
               {canWork && <NavLink className="icon-btn" title="My notifications" aria-label="My notifications" to="/notifications"><Bell size={17} /></NavLink>}
+              <NavLink className="icon-btn" title="Account security" aria-label="Account security" to="/security"><ShieldCheck size={17} /></NavLink>
               <button className="icon-btn" title="Sign out" onClick={signOut}><LogOut size={17} /></button>
             </div>
           </div>
