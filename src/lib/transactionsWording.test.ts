@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 describe('Transactions summary wording', () => {
   const src = readFileSync('src/pages/Donations.tsx', 'utf8');
   it('says transactions, singular or plural', () => {
-    expect(src).toContain("transaction{data?.count === 1 ? '' : 's'}");
+    expect(src).toContain("transaction{Number(totals.data?.counted) === 1 ? '' : 's'}");
     expect(src).toMatch(/failed transactions\./);
   });
   it('no longer says gift in the summary', () => {

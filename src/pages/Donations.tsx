@@ -153,7 +153,8 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
   // Voided, refunded and failed transactions don't count, unless that's what's being looked at.
   const totals = useQuery(async () => {
     if (!query) return null;
-    let t = conditions(supabase.from('transaction_list').select('gross:amount.sum(),net:net_donation.sum(),fees:fee.sum()'));
+    // Counted over the same transactions the sums cover, so the average is right whatever type is picked.
+    let t = conditions(supabase.from('transaction_list').select('gross:amount.sum(),net:net_donation.sum(),fees:fee.sum(),counted:id.count()'));
     if (!DONATION_KINDS[kindFilter] && !query.filters.type?.trim()) t = t.in('status', ['completed', 'collect']);
     const { data, error } = await t;
     if (error) throw new Error(error.message);
@@ -261,8 +262,8 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
               <span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>
               <span>Fees <b>{money(totals.data?.fees ?? 0)}</b></span>
               <span>Net <b>{money(totals.data?.net ?? 0)}</b></span>
-              <span>{(data?.count ?? 0).toLocaleString()} transaction{data?.count === 1 ? '' : 's'}{data?.count ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / data.count)}</b></> : null}</span>
-              {!kindFilter && !query?.filters.type?.trim() && <span className="muted small">Leaves out voided, refunded and failed transactions.</span>}
+              <span>{Number(totals.data?.counted ?? 0).toLocaleString()} transaction{Number(totals.data?.counted) === 1 ? '' : 's'}{Number(totals.data?.counted) ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / Number(totals.data?.counted))}</b></> : null}</span>
+              {!kindFilter && !query?.filters.type?.trim() && <span className="muted small">Leaves out voided, refunded and failed transactions ({(data?.count ?? 0).toLocaleString()} listed in all).</span>}
             </div>
           </>
         }

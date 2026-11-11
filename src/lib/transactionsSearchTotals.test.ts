@@ -25,6 +25,8 @@ describe('Transactions search and totals', () => {
     const foot = src.slice(src.indexOf('footer={'), src.indexOf('{editor}'));
     expect(foot.indexOf('<Pager page={page} pages={pages} onPage={setPage} />')).toBeLessThan(foot.indexOf('<div className="filter-totals"'));
     expect(foot).toContain('<span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>');
-    expect(foot).toContain("transaction{data?.count === 1 ? '' : 's'}");
+    // Count and average over the same transactions the sums cover (review fix: the average used every listed row).
+    expect(src).toContain("select('gross:amount.sum(),net:net_donation.sum(),fees:fee.sum(),counted:id.count()')");
+    expect(foot).toContain('money(Number(totals.data?.gross ?? 0) / Number(totals.data?.counted))');
   });
 });

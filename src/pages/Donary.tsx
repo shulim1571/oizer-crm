@@ -27,7 +27,7 @@ export default function DonaryPage() {
   const s = (q.data as Row | null | undefined) ?? null;
   const [form, setForm] = useState({ enabled: false, guid: '', key: '' });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  useEffect(() => { if (s) setForm(f => ({ ...f, enabled: s.enabled, guid: s.org_guid ?? '' })); }, [s]);
+  useEffect(() => { if (s) setForm(f => ({ ...f, enabled: !!s.enabled, guid: s.org_guid ?? '' })); }, [s]);
   const hook = (event: string) => `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/donary-webhook?event=${event}&token=${s?.webhook_token ?? '…'}`;
 
   async function run(fn: () => PromiseLike<{ error: { message: string } | null; data?: unknown }>, ok: (d: unknown) => string) {
