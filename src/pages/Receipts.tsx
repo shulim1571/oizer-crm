@@ -300,7 +300,7 @@ function BulkReceipts({ onClose, onDone }: { onClose: () => void; onDone: () => 
 // ---------------------------------------------------------------------------
 // Receipt text: Settings (default), fundraiser and campaign
 // ---------------------------------------------------------------------------
-export function ReceiptTextCard({ level, refId, title }: { level: 'default' | 'fundraiser' | 'campaign'; refId: string; title: string }) {
+export function ReceiptTextCard({ level, refId, title }: { level: 'default' | 'fundraiser'; refId: string; title: string }) {
   const [v, setV] = useState<Row>({});
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

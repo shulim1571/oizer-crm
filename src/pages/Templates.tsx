@@ -9,7 +9,6 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { NEW_TEMPLATE, NEW_TEMPLATE_LABEL } from '../lib/templatePick';
-import { ReceiptTextCard } from './Receipts';
 
 const LANGUAGES = [['en', 'English'], ['he', 'Hebrew'], ['yi', 'Yiddish']];
 const FIELD_TYPES = [['text', 'Text'], ['number', 'Number'], ['date', 'Date'], ['dropdown', 'Dropdown'], ['checkbox', 'Checkbox']];
@@ -317,7 +316,6 @@ export function CampaignSettingsTab({ campaignId }: { campaignId: string }) {
     <div className="table-card pad">
       <PageContentCard campaignId={campaignId} current={q.data as Row | null} onSaved={() => void q.reload()} />
       <div key={q.data?.updated_at ?? 'new'}><SettingsFields value={settings} onChange={setSettings} /></div>
-      <ReceiptTextCard level="campaign" refId={campaignId} title="Receipt text for this campaign" />
       {message && <div className="notice">{message}</div>}
       {error && <div className="error">{error}</div>}
       <div className="form-actions">

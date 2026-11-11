@@ -54,7 +54,8 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 - Fees: each payment method has a fee; a failed charge never has a fee.
 - **Pledges** track promised amounts and installments; payments can be matched to a pledge.
 - **Recurring** lists scheduled card or bank charges: pause, resume, retry or cancel them.
-- **Receipts**: receipt text can be set per organization and per campaign; receipts can be emailed, texted or printed.
+- **Receipts**: the standard receipt text is set under Receipts (a fundraiser can also have their own, on their
+  page); campaigns don't have their own receipt text. Receipts can be emailed, texted or printed.
 
 ## Payouts and checks
 

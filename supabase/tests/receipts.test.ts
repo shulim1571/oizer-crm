@@ -47,20 +47,20 @@ describe('receipts', () => {
   it('take the receipt text from the nearest level that has it', async () => {
     await template(db, 'default', '', 'ברכה כללית', 'Thank you for your gift of {amount}.');
     await template(db, 'fundraiser', 'm1', 'ברכת המגבית', null);
-    await template(db, 'campaign', '1002', null, 'Campaign thanks.');
     const r1 = await get(db, await receipt(db, await give(db, '1001')));
     expect(r1).toMatchObject({ hebrew_text: 'ברכת המגבית', english_text: 'Thank you for your gift of {amount}.' });
+    // No campaign has its own text any more (Moshe Henig, 2026-11-11): the standard text applies.
     const r2 = await get(db, await receipt(db, await give(db, '1002')));
-    expect(r2).toMatchObject({ hebrew_text: 'ברכה כללית', english_text: 'Campaign thanks.' });
+    expect(r2).toMatchObject({ hebrew_text: 'ברכה כללית', english_text: 'Thank you for your gift of {amount}.' });
     const r3 = await get(db, await receipt(db, await give(db, '1002'), `, null, null, null, null, 'לכבוד המיוחד', 'One time only'`));
     expect(r3).toMatchObject({ hebrew_text: 'לכבוד המיוחד', english_text: 'One time only' });
   });
 
-  it('let the primary fundraiser set the campaign\'s text, and nobody else', async () => {
-    await template(db, 'campaign', '1001', null, 'From the fundraiser', MANAGER_1);
-    await expect(template(db, 'campaign', '1002', null, 'x', MANAGER_1)).rejects.toThrow(/primary fundraiser/);
+  it('no longer have campaign-level text: campaigns use the standard receipt text', async () => {
+    await expect(template(db, 'campaign', '1001', null, 'From the fundraiser', MANAGER_1)).rejects.toThrow(/no longer have their own receipt text/);
+    await expect(template(db, 'campaign', '1001', null, 'x')).rejects.toThrow(/no longer have their own receipt text/);
+    await expect(db.query(`insert into public.receipt_templates (org_id, level, ref_id, english_text) select org_id, 'campaign', '1001', 'x' from public.campaigns limit 1`)).rejects.toThrow(/receipt_templates_level_check/);
     await expect(template(db, 'default', '', null, 'x', MANAGER_1)).rejects.toThrow();
-    await template(db, 'campaign', '1001', null, null, MANAGER_1);
     expect(await rows(db, ADMIN, `select * from public.receipt_templates where level = 'campaign'`)).toEqual([]);
   });
 
