@@ -899,3 +899,19 @@ tr.selected td { background: var(--accent-soft); }
 .pager .pager-num { min-width: 36px; padding-left: 8px; padding-right: 8px; justify-content: center; }
 .pager .pager-num.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .pager-gap { padding: 0 4px; color: var(--muted); }
+
+/* AI help assistant: a Help button and a chat panel in the corner, for signed-in staff. */
+.help-fab { position: fixed; right: 20px; bottom: 20px; z-index: 40; display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px;
+  border-radius: 999px; border: 0; background: var(--accent); color: #fff; font-weight: 600; box-shadow: var(--shadow-lg); cursor: pointer; }
+.help-panel { position: fixed; right: 20px; bottom: 20px; z-index: 40; width: min(380px, calc(100vw - 32px)); height: min(540px, calc(100vh - 40px));
+  display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-lg); }
+.help-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.help-head b { display: inline-flex; align-items: center; gap: 6px; }
+.help-head .icon-btn { margin-left: auto; }
+.help-body { flex: 1; overflow: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.help-msg { padding: 8px 10px; border-radius: 10px; white-space: pre-wrap; line-height: 1.45; font-size: 14px; max-width: 92%; }
+.help-msg.user { align-self: flex-end; background: var(--accent-soft); }
+.help-msg.assistant { align-self: flex-start; background: var(--surface-2); }
+.help-ask { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--line); }
+.help-ask input { flex: 1; min-width: 0; }
+@media (max-width: 600px) { .help-panel { right: 16px; left: 16px; bottom: 16px; width: auto; } .help-fab { right: 16px; bottom: 16px; } }

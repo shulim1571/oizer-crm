@@ -1,3 +1,4 @@
+import { HelpAssistant } from '../pages/Assistant';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -265,6 +266,7 @@ export default function Layout() {
           <PageErrorBoundary resetKey={loc.pathname + tick}><Outlet key={tick} /></PageErrorBoundary>
           <PoweredBy orgId={org?.id} />
         </main>
+        <HelpAssistant />
       </div>
     </SearchContext.Provider>
   );

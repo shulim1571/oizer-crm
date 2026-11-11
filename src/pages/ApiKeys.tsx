@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { dateTime } from '../lib/format';
 import { supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { AssistantSettings } from './Assistant';
 
 // Read-only API keys for the organization's own systems. The Super Admin creates and revokes them; the key is
 // shown once and only its hash is kept.
@@ -121,6 +122,7 @@ export default function ApiKeysPage() {
           <li><code>GET /donations</code>, <code>/donations/&lt;id&gt;</code>, also <code>?campaign_id=</code> and <code>?donor_id=</code></li>
         </ul>
       </details>
+      <AssistantSettings />
     </section>
   );
 }
