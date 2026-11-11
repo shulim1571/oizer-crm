@@ -91,7 +91,8 @@ describe('issuing checks', () => {
     await sql(db, `update public.expenses set created_at = now() - interval '200 days' where id = $1`, [a]);
     expect((await rows(db, ADMIN, `select 1 from public.admin_task_sheet where record_id = $1 and task_type = 'stale_check'`, [a])).length).toBe(1);
     await sql(db, `select public.set_check_status($1, 'lost', 'Payee never got it')`, [k.check_id]);
-    expect(await rows(db, ADMIN, `select 1 from public.admin_task_sheet where record_id = $1`, [a])).toEqual([]);
+    // Off the stale list; a replacement check is now to be printed (Moshe Henig, 2026-11-11).
+    expect(await rows(db, ADMIN, `select task_type from public.admin_task_sheet where record_id = $1`, [a])).toEqual([{ task_type: 'check_to_print' }]);
   });
 
   it('are admin only', async () => {

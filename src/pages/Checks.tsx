@@ -160,6 +160,15 @@ export function useCheckPrinter(onPrinted?: (printed: boolean) => void) {
   return { print, dialog };
 }
 
+/** A payout paid by check with no check printed yet, on the Task Sheet: print it right there (Moshe Henig, 2026-11-11). */
+export function PayoutPrintTask({ payoutId, onDone }: { payoutId: string; onDone: () => void }) {
+  const [payout, setPayout] = useState<Row | null | undefined>(undefined);
+  useEffect(() => { supabase.from('expenses').select('*').eq('id', payoutId).maybeSingle().then(({ data }) => setPayout((data as Row | null) ?? null)); }, [payoutId]);
+  if (payout === undefined) return <p className="muted">Loading…</p>;
+  if (!payout) return <p className="muted">This payout is gone.</p>;
+  return <PayoutCheckActions record={payout} onDone={() => onDone()} />;
+}
+
 /** A check not yet confirmed printed, on the Task Sheet. */
 export function UnprintedCheckTask({ checkId, onDone }: { checkId: string; onDone: () => void }) {
   const printer = useCheckPrinter(printed => { if (printed) onDone(); });

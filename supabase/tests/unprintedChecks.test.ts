@@ -62,3 +62,30 @@ describe('check printing follow-ups (Moshe Henig, 2026-11-11)', () => {
     await expect(sql(db, `select public.mark_check_unprinted($1)`, [check.check_id], MANAGER_1)).rejects.toThrow();
   });
 });
+
+describe('check payouts waiting to be printed (Moshe Henig, 2026-11-11)', () => {
+  let db: PGlite;
+  const sheet = (db: PGlite, key: string) => one(db, `select task_type, summary from public.admin_task_sheet where task_key = $1`, [key]);
+  beforeEach(async () => {
+    db = await seededDb();
+    await sql(db, `select public.save_check_settings('a1', 'Cong Oizer', '1 Main St', 'Chase', '021000021', '123456789', 6001)`);
+  });
+
+  it('are a Check To Print task from the moment the payout is created until its check is printed', async () => {
+    const p = await one<{ id: string }>(db, `insert into public.expenses (campaign_id, amount, payee, method) values ('1001', 100, 'Test', 'Check') returning id`);
+    expect(await sheet(db, 'check_to_print:' + p.id)).toEqual({ task_type: 'check_to_print', summary: 'Check to Test: not printed yet' });
+    const k = await one(db, `select * from public.issue_check($1, 'a1', null)`, [p.id]);
+    expect(await sheet(db, 'check_to_print:' + p.id)).toBeUndefined();
+    expect((await sheet(db, 'check_unprinted:' + k.check_id)).task_type).toBe('check_unprinted');
+    await sql(db, `select public.set_check_status($1, 'voided', 'Jammed')`, [k.check_id]);
+    expect((await sheet(db, 'check_to_print:' + p.id)).task_type).toBe('check_to_print');   // back to print again
+  });
+
+  it('are not tasks for other payout methods, or once deleted', async () => {
+    const z = await one<{ id: string }>(db, `insert into public.expenses (campaign_id, amount, payee, method) values ('1001', 50, 'Z', 'Zelle') returning id`);
+    expect(await sheet(db, 'check_to_print:' + z.id)).toBeUndefined();
+    const p = await one<{ id: string }>(db, `insert into public.expenses (campaign_id, amount, payee, method) values ('1001', 20, 'Test', 'Check') returning id`);
+    await sql(db, `delete from public.expenses where id = $1`, [p.id]);
+    expect(await sheet(db, 'check_to_print:' + p.id)).toBeUndefined();
+  });
+});

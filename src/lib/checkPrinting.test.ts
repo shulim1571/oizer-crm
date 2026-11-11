@@ -23,3 +23,12 @@ describe('check printing', () => {
     expect(sheet).toContain("{item.task_type === 'check_unprinted' && <UnprintedCheckTask checkId={item.record_id} onDone={onDone} />}");
   });
 });
+
+describe('check payouts to print (Moshe Henig, 2026-11-11)', () => {
+  it('show as Check To Print on the Task Sheet, with the payout’s Print check right there', () => {
+    const sheet = readFileSync('src/pages/TaskSheet.tsx', 'utf8');
+    expect(sheet).toContain("check_to_print: { label: 'Check To Print', tone: 'amber' },");
+    expect(sheet).toContain("{item.task_type === 'check_to_print' && <PayoutPrintTask payoutId={item.record_id} onDone={onDone} />}");
+    expect(checks).toContain('return <PayoutCheckActions record={payout} onDone={() => onDone()} />;');
+  });
+});

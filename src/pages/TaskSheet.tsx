@@ -12,7 +12,7 @@ import { SplitDialog } from './DonationActions';
 import { BookingActions } from './Machines';
 import { ApprovePayout, ProcessScheduled } from './Payouts';
 import { printReceipts, receiptDocument } from './Receipts';
-import { UnprintedCheckTask } from './Checks';
+import { PayoutPrintTask, UnprintedCheckTask } from './Checks';
 import { ImportConflict } from './Imports';
 import { DeliveryFailed, SendDocumentDialog } from './Messaging';
 import { RecurringFailed } from './Recurring';
@@ -32,6 +32,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   voucher_overdue: { label: 'Voucher Overdue', tone: 'red' },
   pledge_overdue: { label: 'Pledge Overdue', tone: 'red' },
   stale_check: { label: 'Stale Check', tone: 'amber' },
+  check_to_print: { label: 'Check To Print', tone: 'amber' },
   check_unprinted: { label: 'Check Not Printed', tone: 'amber' },
   inactive_campaign: { label: 'Inactive Campaign', tone: '' },
   bank_reassign: { label: 'Bank Account Reassignment Needed', tone: 'red' },
@@ -220,6 +221,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
         </>
       )}
       {item.task_type === 'post_dated_due' && <div className="donation-actions">{dismiss('Deposited')}</div>}
+      {item.task_type === 'check_to_print' && <PayoutPrintTask payoutId={item.record_id} onDone={onDone} />}
       {item.task_type === 'check_unprinted' && <UnprintedCheckTask checkId={item.record_id} onDone={onDone} />}
       {item.task_type === 'stale_check' && (
         <div className="donation-actions">

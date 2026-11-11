@@ -255,7 +255,8 @@ describe('scheduled payouts', () => {
     expect((await one(db, `select task_type from public.admin_task_sheet where record_id = $1`, [id])).task_type).toBe('scheduled_payout');
     await sql(db, `select public.process_scheduled_payout($1, 'ZL-1')`, [id]);
     expect((await one(db, `select reference, processed_at from public.expenses where id = $1`, [id])).reference).toBe('ZL-1');
-    expect(await rows(db, ADMIN, `select 1 from public.admin_task_sheet where record_id = $1`, [id])).toEqual([]);
+    // Processed: no longer a scheduled payout; being paid by check, its check is now to be printed (Moshe Henig, 2026-11-11).
+    expect(await rows(db, ADMIN, `select task_type from public.admin_task_sheet where record_id = $1`, [id])).toEqual([{ task_type: 'check_to_print' }]);
     await expect(sql(db, `select public.process_scheduled_payout($1)`, [id])).rejects.toThrow(/already processed/);
   });
 
