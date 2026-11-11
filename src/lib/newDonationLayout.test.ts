@@ -38,3 +38,16 @@ describe('New Donation layout', () => {
     expect(form).toContain("if (!main.some(f => f.section)) return <div className=\"fields\">{main.map(fieldBox)}</div>;");   // other forms unchanged
   });
 });
+
+describe('Payment Method on New Donation (Moshe Henig, 2026-11-11: like the Campaign dropdown)', () => {
+  it('is a searchable dropdown of the organization’s payment methods, like Campaign', () => {
+    const pm = newDonationFields.find(f => f.name === 'payment_method')!;
+    const campaign = newDonationFields.find(f => f.name === 'campaign_id')!;
+    expect(pm.type).toBe('search');
+    expect(campaign.type).toBe('search');
+    expect(pm.freeText).toBeUndefined();
+    expect(typeof pm.options).toBe('function');
+    // Edit Donation keeps its typed box, for older donations with methods outside the list.
+    expect(donationFields.find(f => f.name === 'payment_method')!.type).toBe('select');
+  });
+});

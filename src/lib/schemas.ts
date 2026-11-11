@@ -95,6 +95,8 @@ const newDonationRules: Field[] = donationFields
   .filter(f => !BATCH_ONLY.includes(f.name))
   .map(f => {
     if (f.name === 'type') return { ...f, options: DONATION_TYPES.filter(o => o.value !== 'Batch') };
+    // A searchable dropdown of the organization's payment methods, like Campaign (Moshe Henig, 2026-11-11).
+    if (f.name === 'payment_method') return { ...f, type: 'search' as const, freeText: undefined };
     if (CHECK_ONLY.includes(f.name)) return { ...f, showIf: isCheck };
     if (f.name === 'delivered') return { ...f, showIf: isCashOrCheck, advanced: false };
     if (f.name === 'manual_fee') return { ...f, advanced: false };
