@@ -4,6 +4,9 @@
 //   Call in        -> "Enter the campaign number, then pound. Fundraisers, press star for your campaigns."
 //   step=campaign  -> a registered fundraiser's campaign is read out; anyone else is asked for the PIN
 //   step=pin       -> the PIN is checked (three tries, five wrong PINs an hour lock the phone)
+//   step=menu      -> after a campaign's numbers, a known caller (donor, fundraiser or admin on file) of a campaign
+//                     with teams may press 1 to hear its teams or 2 for another campaign (Moshe Henig, 2026-11-11)
+//   step=team      -> the teams are read as a numbered list; the caller presses a team's number, then pound
 //
 // While the organization's phone line is off, calls are rejected, which Twilio doesn't bill. Card payments by
 // phone are not here: they wait for the decision on Twilio <Pay> (see docs/PLATFORM_ROADMAP.md, Phase 10).
@@ -69,6 +72,24 @@ Deno.serve(async req => {
     `<Gather input="dtmf" finishOnKey="#" timeout="8" action="voice?step=pin&amp;c=${encodeURIComponent(campaign)}&amp;n=${tries}${keep}">` +
     say(`${lead}Enter the PIN for campaign ${spell(campaign)}, then press pound.`) + `</Gather>${say('Goodbye.')}<Hangup/>`;
 
+  const call = form.get('CallSid') ?? '';
+  type Team = { n: number; id: string; name: string; raised: number };
+  const teamsOf = async (campaign: string) =>
+    (call ? await rpc('phone_teams', { p_org: org.org_id, p_from: from, p_call: call, p_campaign: campaign }) : []) as Team[];
+  // After a campaign's numbers: known callers of a campaign with teams get the Teams option; everyone else, as before.
+  const reached = async (c: Campaign) => {
+    if (call) await rpc('phone_call_reached', { p_org: org.org_id, p_call: call, p_campaign: c.id });
+    const teams = await teamsOf(c.id);
+    if (!teams.length) return twiml(say(summary(c)) + askCampaign('For another campaign, '));
+    return twiml(say(summary(c)) + menu(c.id));
+  };
+  const menu = (campaign: string, again = false) =>
+    `<Gather input="dtmf" numDigits="1" timeout="8" action="voice?step=menu&amp;c=${encodeURIComponent(campaign)}${keep}">` +
+    say(`To hear ${again ? 'the teams again' : "this campaign's teams"}, press 1. For another campaign, press 2.`) + `</Gather>` + askCampaign();
+  const askTeam = (campaign: string, teams: Team[], lead = '') =>
+    `<Gather input="dtmf" finishOnKey="#" timeout="10" action="voice?step=team&amp;c=${encodeURIComponent(campaign)}${keep}">` +
+    say(`${lead}${teams.map(t => `For ${t.name}, press ${t.n}.`).join(' ')} Then press pound.`) + `</Gather>` + askCampaign();
+
   const answer = async (campaign: string | null, pin: string | null) =>
     await rpc('phone_lookup', { p_org: org.org_id, p_channel: 'voice', p_from: from, p_campaign: campaign, p_pin: pin }) as
       { outcome: string; campaign?: Campaign; campaigns?: Campaign[]; campaign_id?: string };
@@ -88,7 +109,7 @@ Deno.serve(async req => {
     }
     if (!/^\d{1,10}$/.test(digits)) return twiml(askCampaign('That isn’t a campaign number. '));
     const r = await answer(digits, null);
-    if (r.outcome === 'answered') return twiml(say(summary(r.campaign!)) + askCampaign('For another campaign, '));
+    if (r.outcome === 'answered') return reached(r.campaign!);
     if (r.outcome === 'needs_pin') return twiml(askPin(digits, 1));
     if (r.outcome === 'locked') return twiml(say('Too many wrong PINs from this phone. Please try again in an hour. Goodbye.') + '<Hangup/>');
     return twiml(askCampaign('There’s no campaign with that number. '));
@@ -98,10 +119,28 @@ Deno.serve(async req => {
     const campaign = u.searchParams.get('c') ?? '';
     const tries = Number(u.searchParams.get('n') ?? '1');
     const r = await answer(campaign, digits);
-    if (r.outcome === 'answered') return twiml(say(summary(r.campaign!)) + askCampaign('For another campaign, '));
+    if (r.outcome === 'answered') return reached(r.campaign!);
     if (r.outcome === 'locked') return twiml(say('Too many wrong PINs from this phone. Please try again in an hour. Goodbye.') + '<Hangup/>');
     if (r.outcome === 'wrong_pin' && tries < 3) return twiml(askPin(campaign, tries + 1, 'That PIN doesn’t match. '));
     return twiml(say('That PIN doesn’t match. Goodbye.') + '<Hangup/>');
+  }
+
+  // The Teams option and the team list: only for a known caller on a call that reached this campaign (checked by
+  // the database), so no one is asked for a team before pressing Teams, and callers not on file never hear it.
+  if (step === 'menu' || step === 'team') {
+    const campaign = u.searchParams.get('c') ?? '';
+    const teams = await teamsOf(campaign);
+    if (!teams.length) return twiml(askCampaign());
+    if (step === 'menu') {
+      if (digits === '1') return twiml(askTeam(campaign, teams, `Campaign ${spell(campaign)} has ${teams.length} team${teams.length === 1 ? '' : 's'}. `));
+      return twiml(askCampaign());
+    }
+    const choice = /^\d{1,3}$/.test(digits) ? Number(digits) : NaN;
+    const t = Number.isFinite(choice)
+      ? await rpc('phone_pick_team', { p_org: org.org_id, p_from: from, p_call: call, p_campaign: campaign, p_choice: choice }) as Team | null
+      : null;
+    if (!t) return twiml(askTeam(campaign, teams, 'That isn’t one of the team numbers. '));
+    return twiml(say(`Team ${spell(t.id)}, ${t.name}. Raised ${money(Number(t.raised))}.`) + menu(campaign, true));
   }
 
   return twiml(askCampaign());

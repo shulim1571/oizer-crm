@@ -98,7 +98,10 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 
 - Text the organization's number with **BAL** for your campaigns, a campaign number, or a campaign number and its
   PIN. Team and sub-campaign numbers with a letter work by text too (1001A, in any case). **RECENT** (or RECENT 1001)
-  texts back your latest 5 transactions with the donor's name. The phone line takes number IDs only for now. Admins are
+  texts back your latest 5 transactions with the donor's name. The phone line takes number IDs only for now.
+- **Teams by phone**: after a campaign's numbers are read on the phone line, a caller whose number is on file (a
+  donor, fundraiser or admin) can press 1 to hear the campaign's teams as a numbered list, then press a team's number
+  and pound to hear it. Callers not on file aren't offered teams. Admins are
   matched by the phone in their notification settings, fundraisers by a registered phone.
 - The Super Admin turns text replies and the phone line on or off; an option leaves Donary donations out of
   replies. Wrong PINs lock a phone (5 in an hour) or a campaign PIN (10 in an hour) for the rest of the hour.
