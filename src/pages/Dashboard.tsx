@@ -6,6 +6,7 @@ import Kpi from '../components/Kpi';
 import { Balance, Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
+import MethodPie, { type MethodTotal } from '../components/MethodPie';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useTaskCount } from './TaskSheet';
@@ -135,6 +136,8 @@ export default function DashboardPage() {
         <label className="inline-check"><input type="checkbox" checked={compare} onChange={e => setCompare(e.target.checked)} /> Compare to last year</label>
       </div>
 
+      {/* Donations over time, with the pie of payment methods beside it (Moshe Henig, 2026-11-11). */}
+      <div className="dash-row">
       <div className="card">
         <h3>Donations over time</h3>
         <p className="range-total">
@@ -142,6 +145,8 @@ export default function DashboardPage() {
           {compare && prior.data && <span className="muted"> · {change(Number(s?.range?.raised ?? 0), Number((prior.data as Row).range?.raised))}</span>}
         </p>
         <DailyChart daily={s?.daily ?? []} from={from} to={to} />
+      </div>
+      <MethodPie methods={(s?.methods as MethodTotal[] | undefined) ?? []} />
       </div>
 
     </section>

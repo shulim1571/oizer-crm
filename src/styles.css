@@ -1029,3 +1029,18 @@ tr.selected td { background: var(--accent-soft); }
 .give-story.rich a { color: var(--give-accent, var(--accent)); }
 .give-story.rich h3, .give-story.rich h4 { font-size: 18px; text-transform: none; letter-spacing: normal; color: inherit; font-weight: 700; }
 .give-story.rich h4 { font-size: 16px; }
+
+/* Dashboard: Donations over time with the payment-method pie beside it; stacked on narrow screens. */
+.dash-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 960px) { .dash-row { grid-template-columns: minmax(0, 1fr); } }
+:root { --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; --series-5: #e87ba4; --series-6: #008300; --series-other: #9a9a94; }
+@media (prefers-color-scheme: dark) { :root { --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-6: #008300; --series-other: #77776f; } }
+.method-pie-body { display: flex; flex-direction: column; gap: 10px; }
+.method-pie svg { width: 100%; max-width: 220px; align-self: center; }
+.method-pie path { stroke: var(--surface); stroke-width: 2; transition: opacity .15s ease; cursor: default; }
+.method-pie path.dim { opacity: .35; }
+.pie-center-value { font-size: 17px; font-weight: 700; fill: var(--text); }
+.pie-center-label { font-size: 11px; fill: var(--muted, #6b7280); }
+.pie-legend td { padding: 5px 4px; }
+.pie-legend tr.on td { background: var(--surface-2); }
+.pie-legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: middle; }
