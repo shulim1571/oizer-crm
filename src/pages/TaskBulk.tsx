@@ -81,19 +81,17 @@ export default function TaskBulk({ tasks, onClear, onDone }: { tasks: Row[]; onC
   }
 
   return (
-    <div className="panel-box bulk-bar">
-      <div className="form-actions">
-        <b>{tasks.length} selected</b>
-        <button type="button" className="link" onClick={onClear}>Clear</button>
-        <div className="spacer" />
-        {actions.some(a => a.needsCampaign) && (
-          <div className="type-pick"><SearchSelect value={campaign} options={options} onChange={setCampaign} placeholder="Campaign, including drafts…" /></div>
-        )}
-        {actions.map(a => (
-          <button key={a.key} type="button" className={`btn ${a.primary ? 'primary' : ''}`} disabled={!!busy || (a.needsCampaign && !campaign)}
-            onClick={() => apply(a)}>{busy === a.key ? 'Working…' : a.label}</button>
-        ))}
-      </div>
+    <div className="bulk-bar task-bulk">
+      <b>{tasks.length} selected</b>
+      <button type="button" className="link" onClick={onClear}>Clear</button>
+      <div className="spacer" />
+      {actions.some(a => a.needsCampaign) && (
+        <div className="type-pick"><SearchSelect value={campaign} options={options} onChange={setCampaign} placeholder="Campaign, including drafts…" /></div>
+      )}
+      {actions.map(a => (
+        <button key={a.key} type="button" className={`btn ${a.primary ? 'primary' : ''}`} disabled={!!busy || (a.needsCampaign && !campaign)}
+          onClick={() => apply(a)}>{busy === a.key ? 'Working…' : a.label}</button>
+      ))}
       {actions.length === 0 && (
         <p className="muted small">No action fits all of these together. Pick tasks of one kind, such as inactive campaigns or unattributed payments; requests, receipts and checks are handled one at a time.</p>
       )}
