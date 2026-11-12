@@ -1,3 +1,4 @@
+import AddressEditor from '../components/AddressEditor';
 import PageTabs, { usePageTab } from '../components/PageTabs';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -132,6 +133,8 @@ export function DonorDetail() {
   const nav = useNavigate();
   const { isAdmin, canWork } = useAuth();
   const [editing, setEditing] = useState(false);
+  // Edit the address right from the Address section (Moshe Henig, 2026-11-12).
+  const [editingAddress, setEditingAddress] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
   const [version, setVersion] = useState(0);
 
@@ -209,7 +212,10 @@ export function DonorDetail() {
           <dl>
             <dt>Phone</dt><dd>{d.phone || '—'}</dd>
             <dt>Email</dt><dd>{d.email || '—'}</dd>
-            <dt>Address</dt><dd>{d.address?.trim() || '—'}</dd>
+            <dt>Address</dt><dd>
+              <span className="pre-line">{d.address?.trim() || '—'}</span>
+              {canWork && <> <button type="button" className="link" onClick={() => setEditingAddress(true)}>{d.address?.trim() ? 'Edit address' : 'Add address'}</button></>}
+            </dd>
             <dt>OJC / Matbia</dt><dd>{[d.ojc_id, d.matbia_id].filter(Boolean).join(' / ') || '—'}</dd>
             <dt>Pledger / Nadvan</dt><dd>{[d.pledger_id, d.nadvan_id].filter(Boolean).join(' / ') || '—'}</dd>
             <dt>Country</dt><dd>{d.country}</dd>
@@ -282,6 +288,7 @@ export function DonorDetail() {
       />}
       <p className="muted pad">Last updated {dateTime(d.updated_at)}</p>
 
+      {editingAddress && <AddressEditor donor={d} onClose={() => setEditingAddress(false)} onSaved={() => { setEditingAddress(false); setVersion(v => v + 1); }} />}
       {editing && (
         <RecordForm table="donors" title="Edit Donor" fields={isAdmin ? donorFields : fundraiserDonorFields()} record={d} allowDelete={isAdmin}
                     onClose={() => setEditing(false)}
