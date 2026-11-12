@@ -22,6 +22,7 @@ import { RecurringFailed } from './Recurring';
 import { Overlay, PledgeDialog } from './Pledges';
 import { RequestDecision } from './Requests';
 import { VoucherDialog } from './Vouchers';
+import TaskBulk, { type BulkResult } from './TaskBulk';
 
 type Tone = 'green' | 'red' | 'amber' | 'blue' | 'violet' | '';
 const TYPES: Record<string, { label: string; tone: Tone }> = {
@@ -119,11 +120,21 @@ export default function TaskSheetPage() {
       : Promise.resolve([])),
     [view, version],
   );
-  const all = (q.data as Row[]) ?? [];
+  // Rows carry their task key as id, which is what the table's checkboxes go by (bulk edit).
+  const all: Row[] = ((q.data as Row[]) ?? []).map(r => ({ ...r, id: r.task_key }));
   const rows = all.filter(r => (!type || r.task_type === type) && (!fundraiser || r.fundraiser === fundraiser));
   const fundraisers = [...new Set(all.map(r => r.fundraiser).filter(Boolean))].sort();
   const changed = () => window.dispatchEvent(new Event('task-sheet-changed'));   // the listener above reloads
   const done = () => { setOpen(null); changed(); };
+  // Bulk edit (Moshe Henig, 2026-11-12): the tasks ticked, kept to those still waiting and shown by the filters.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
+  const selectedTasks = rows.filter(r => picked.has(r.task_key));
+  const onSelect = (list: Row[], on: boolean) => setPicked(prev => {
+    const next = new Set(prev);
+    for (const r of list) { if (on) next.add(r.task_key); else next.delete(r.task_key); }
+    return next;
+  });
 
   return (
     <section className="view">
@@ -131,6 +142,17 @@ export default function TaskSheetPage() {
         <button className={view === 'pending' ? 'active' : ''} onClick={() => setView('pending')}>Waiting ({all.filter(r => !r.held).length})</button>
         <button className={view === 'history' ? 'active' : ''} onClick={() => setView('history')}>History</button>
       </div>
+      {view === 'pending' && bulkResult && (
+        <div className={bulkResult.failed.length ? 'error' : 'notice'}>
+          {bulkResult.label}: {bulkResult.ok} done{bulkResult.failed.length ? `, ${bulkResult.failed.length} not done:` : '.'}
+          {bulkResult.failed.length > 0 && <ul>{bulkResult.failed.map(f => <li key={f}>{f}</li>)}</ul>}
+          {' '}<button type="button" className="link" onClick={() => setBulkResult(null)}>Dismiss</button>
+        </div>
+      )}
+      {view === 'pending' && selectedTasks.length > 0 && (
+        <TaskBulk tasks={selectedTasks} onClear={() => setPicked(new Set())}
+          onDone={r => { setPicked(new Set()); setBulkResult(r); changed(); }} />
+      )}
       {view === 'pending' ? (
         <DataTable
           title="Task Sheet"
@@ -140,6 +162,8 @@ export default function TaskSheetPage() {
           columns={columns}
           exportName="task-sheet"
           onOpen={setOpen}
+          selected={picked}
+          onSelect={onSelect}
           actions={
             <>
               <div className="type-pick">
