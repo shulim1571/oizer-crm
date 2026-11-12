@@ -114,10 +114,13 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
   const [round, setRound] = useState(0);
   const [thanks, setThanks] = useState<Row | null>(null);
   const load = useCallback(async () => {
-    const org = await resolveOrg();
-    setOrgId(org?.id ?? null);
-    if (!org) return setData(null);
-    const { data: p } = await supabase.rpc('public_give_page', { p_org: org.id, p_campaign: campaignId });
+    const org = await resolveOrg().catch(() => null);
+    // Not found on a refresh keeps the page already open; only the first load shows "not found".
+    if (!org) { setOrgId(o => (o === undefined ? null : o)); return setData(d => (d === undefined ? null : d)); }
+    setOrgId(org.id);
+    const { data: p, error } = await supabase.rpc('public_give_page', { p_org: org.id, p_campaign: campaignId });
+    // A refresh that fails (on returning to the tab, say) keeps the page as it is, with whatever the donor typed.
+    if (error) { setData(d => (d === undefined ? null : d)); return; }
     setData((p as Row | null) ?? null);
   }, [campaignId]);
   useEffect(() => { void load(); }, [load]);

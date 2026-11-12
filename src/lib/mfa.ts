@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
+import { isRepeatAuthEvent, MFA_EVENTS } from './authEvents';
 import { phoneCodeProblem } from './phoneCodeResult';
 
 /**
@@ -20,11 +21,14 @@ export interface MfaState {
 }
 
 export async function readMfa(): Promise<Omit<MfaState, 'loading'>> {
-  const [{ data: aal }, { data: factors }, { data: ph }] = await Promise.all([
+  const [{ data: aal, error: e1 }, { data: factors, error: e2 }, { data: ph, error: e3 }] = await Promise.all([
     supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
     supabase.auth.mfa.listFactors(),
     supabase.rpc('mfa_phone_status'),
   ]);
+  // A check that failed (for one, a token still being renewed) says nothing; it must not read as "not verified".
+  const failed = e1 ?? e2 ?? e3;
+  if (failed) throw new Error(failed.message);
   const totp = (factors?.totp ?? []).find(f => f.status === 'verified') ?? null;
   const p = ((ph ?? []) as { phone_masked: string | null; channel: 'sms' | 'call'; verified: boolean; session_verified: boolean }[])[0];
   const phone = p?.verified && p.phone_masked ? { masked: p.phone_masked, channel: p.channel } : null;
@@ -41,9 +45,21 @@ export function useMfa() {
   const reload = useCallback(async () => {
     try { setState({ loading: false, ...(await readMfa()) }); } catch { setState(s => ({ ...s, loading: false })); }
   }, []);
+  const userId = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     void reload();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => { setTimeout(() => void reload(), 0); });
+    // Only events that can change verification; not the repeat SIGNED_IN Supabase sends when the tab regains focus.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      const previous = userId.current ?? null;
+      userId.current = s?.user?.id ?? null;
+      if (isRepeatAuthEvent(event, previous, userId.current) || !MFA_EVENTS.has(event)) return;
+      // Signed out, or someone else signed in: nothing verified carries over to the next person.
+      if (event === 'SIGNED_OUT' || (previous && previous !== userId.current)) {
+        setState({ loading: false, verified: false, enrolled: false, factorId: null, phone: null });
+      }
+      if (event === 'SIGNED_OUT') return;
+      setTimeout(() => void reload(), 0);
+    });
     return () => sub.subscription.unsubscribe();
   }, [reload]);
   return { ...state, reload };

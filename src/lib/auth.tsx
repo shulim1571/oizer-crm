@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { logActivity, supabase, type Row } from './supabase';
 import { latestOnly, loadAccessSafely } from './accessLoad';
 import { clearActivity, startFreshSession, watchIdle } from './idle';
+import { isRepeatAuthEvent } from './authEvents';
 import { applyOrg, leavePlatformOrg, platformOrg, resolveOrg, type Org } from './org';
 
 type Role = 'super_admin' | 'admin' | 'manager' | 'guest' | 'pending';
@@ -53,6 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [accessError, setAccessError] = useState<string | null>(null);
   const [newest] = useState(latestOnly);
+  // Who is signed in, as of the last auth event handled (to tell a repeat event from a real change).
+  const userId = useRef<string | null>(null);
 
   async function loadAccess(s: Session | null) {
     const current = newest();
@@ -98,14 +101,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   // Signed out after 30 minutes without activity (the server also limits idle time and total session length).
+  const signedInUser = session?.user?.id ?? null;
   useEffect(() => {
-    if (!session) return;
+    if (!signedInUser) return;
     return watchIdle(() => {
       clearActivity();
       try { sessionStorage.setItem('signed-out-idle', '1'); } catch { /* ignore */ }
       void supabase.auth.signOut({ scope: 'local' });
     });
-  }, [session]);
+  }, [signedInUser]);
 
   useEffect(() => {
     // Nothing may ask about access until the requests carry the organization.
@@ -115,11 +119,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     orgReady.then(async () => {
       const { data } = await supabase.auth.getSession();
+      userId.current = data.session?.user?.id ?? null;
       setSession(data.session);
       await loadAccess(data.session);
       setLoading(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      const previous = userId.current;
+      userId.current = s?.user?.id ?? null;
+      // Coming back to the tab (Supabase says SIGNED_IN again) or a renewed token, for the same person: nothing
+      // about who they are changed, so the page is left alone (no access reload, no idle-clock reset).
+      if (isRepeatAuthEvent(event, previous, userId.current)) return;
       // A fresh sign-in restarts the idle clock before anything checks it.
       if (event === 'SIGNED_IN') startFreshSession();
       setSession(s);

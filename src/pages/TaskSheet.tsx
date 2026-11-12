@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
@@ -107,8 +107,11 @@ export default function TaskSheetPage() {
   );
   // New tasks show without a refresh: reload when anything changes tasks (a payout saved, a check voided...) and when
   // you come back to this tab (Moshe Henig, 2026-11-11).
+  // Quietly: the rows stay on screen while the fresh list loads, so nothing flashes and the scroll position, open
+  // task and ticked rows stay put (Moshe Henig, 2026-11-12).
+  const reloadQuiet = useRef<() => void>(() => {});
   useEffect(() => {
-    const again = () => setVersion(v => v + 1);
+    const again = () => reloadQuiet.current();
     const back = () => { if (document.visibilityState === 'visible') again(); };
     window.addEventListener('task-sheet-changed', again);
     document.addEventListener('visibilitychange', back);
@@ -120,6 +123,7 @@ export default function TaskSheetPage() {
       : Promise.resolve([])),
     [view, version],
   );
+  reloadQuiet.current = () => { void q.reload({ quiet: true }); if (view === 'history') void history.reload({ quiet: true }); };
   // Rows carry their task key as id, which is what the table's checkboxes go by (bulk edit).
   const all: Row[] = ((q.data as Row[]) ?? []).map(r => ({ ...r, id: r.task_key }));
   const rows = all.filter(r => (!type || r.task_type === type) && (!fundraiser || r.fundraiser === fundraiser));
