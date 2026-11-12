@@ -7,8 +7,9 @@ import { useQuery } from '../lib/useQuery';
 // Each person's own notification choices. Admins choose which alerts and digests they get; fundraisers
 // always get their campaigns' donation alerts and choose only how things reach them.
 
-type Channel = 'email' | 'sms' | 'both';
-const CHANNELS: [Channel, string][] = [['email', 'Email'], ['sms', 'Text'], ['both', 'Email and text']];
+// Each kind can also be Off (Moshe Henig, 2026-11-12): everyone, fundraisers included, picks which kinds they get.
+type Channel = 'email' | 'sms' | 'both' | 'off';
+const CHANNELS: [Channel, string][] = [['email', 'Email'], ['sms', 'Text'], ['both', 'Email and text'], ['off', 'Off (don\'t send)']];
 
 const ADMIN_KINDS: [string, string][] = [['donations', 'Donation alerts'], ['tasks', 'Task Sheet alerts'], ['messages', 'Fundraiser messages'], ['digests', 'Digests']];
 const FUNDRAISER_KINDS: [string, string][] = [
@@ -60,7 +61,7 @@ export default function NotificationsPage() {
     setVersion(v => v + 1);
   }
 
-  const wantsText = Object.values(f.channels).some(c => c !== 'email');
+  const wantsText = Object.values(f.channels).some(c => c === 'sms' || c === 'both');
   // One switch for everything (Moshe Henig, 2026-11-12): off means no notification emails or texts at all; the choices
   // below are kept for when it's turned back on.
   const on = (q.data as Row | null | undefined)?.notifications_on !== false;
@@ -151,9 +152,9 @@ export default function NotificationsPage() {
         </>
       ) : (
         <div className="panel-box">
-          <h2>How they reach me</h2>
-          <p className="muted small">You always hear about donations to your campaigns, except Donary machine payments, which come in one summary each night.
-            Texts go to the phone on your fundraiser record; ask the office to change it.</p>
+          <h2>Which ones I get, and how</h2>
+          <p className="muted small">Choose Off for any kind you don't want; the rest reach you by email, text or both. Donary machine payments come in one
+            summary each night rather than one by one. Texts go to the phone on your fundraiser record; ask the office to change it.</p>
           <div className="fields">
             {FUNDRAISER_KINDS.map(([k, label]) => (
               <label key={k} className="field"><span>{label}</span><ChannelPick value={channel(k)} onChange={c => set('channels', { ...f.channels, [k]: c })} /></label>

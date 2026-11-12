@@ -168,7 +168,8 @@ describe('notifications', () => {
 
   it('keep preferences to their owner and check them', async () => {
     await expect(prefs(db, { donation_alerts: 'over' })).rejects.toThrow(/Enter the amount/);
-    await expect(prefs(db, { channels: { donations: 'pigeon' } })).rejects.toThrow(/Choose email, text or both/);
+    await expect(prefs(db, { channels: { donations: 'pigeon' } })).rejects.toThrow(/Choose email, text, both or off/);
+    await prefs(db, { channels: { donations: 'off' } }, MANAGER_1);   // a kind can be turned off (Moshe Henig, 2026-11-12)
     await prefs(db, { donation_alerts: 'all' }, MANAGER_1);
     expect(await rows(db, MANAGER_1, `select donation_alerts from public.notification_preferences`)).toEqual([{ donation_alerts: 'off' }]);
     expect(await rows(db, ADMIN, `select * from public.notification_preferences`)).toEqual([]);
