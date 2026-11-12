@@ -5,6 +5,7 @@ import DataTable, { type Column } from '../components/DataTable';
 import SearchSelect from '../components/SearchSelect';
 import { Balance, Pill } from '../components/Pill';
 import RecordForm from '../components/RecordForm';
+import CampaignName from '../components/CampaignName';
 import { dateTime, money } from '../lib/format';
 import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
@@ -62,10 +63,27 @@ const age = (at: string) => {
   return days === 1 ? '1 day ago' : `${days} days ago`;
 };
 
+/** The office's (internal) name for a task's campaign. */
+const campaignLabel = (r: Row) => String(r.campaign?.internal_name || r.campaign_name || r.campaign?.campaign_name || '');
+
+/** Adds each task's campaign details (names, featured), so the Campaign column can show it as the Campaigns list does. */
+async function withCampaigns(tasks: Row[]): Promise<Row[]> {
+  const ids = [...new Set(tasks.map(t => t.campaign_id).filter(Boolean))] as string[];
+  if (!ids.length) return tasks;
+  const found = await fetchAll((a, b) => supabase.from('campaigns').select('id, internal_name, campaign_name, external_name, featured').in('id', ids).order('id').range(a, b) as never);
+  const byId = new Map(found.map(c => [String(c.id), c]));
+  return tasks.map(t => (t.campaign_id && byId.has(String(t.campaign_id)) ? { ...t, campaign: byId.get(String(t.campaign_id)) } : t));
+}
+
 const columns: Column[] = [
   { key: 'task_type', label: 'Type', value: r => TYPES[r.task_type]?.label, render: r => <><TypePill type={r.task_type} />{r.held && <> <Pill>Held</Pill></>}</>, width: 210 },
   { key: 'fundraiser', label: 'Fundraiser', width: 140 },
-  { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => (r.campaign_id ? `${r.campaign_name ?? ''} - ${r.campaign_id}` : ''), width: 190 },
+  // As in the Campaigns list: internal name, public name under it, and the ID (Moshe Henig, 2026-11-12).
+  { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, width: 200,
+    value: r => (r.campaign_id ? `${campaignLabel(r)} - ${r.campaign_id}` : ''),
+    render: r => r.campaign_id && (
+      <div className="campaign-cell"><CampaignName c={r.campaign ?? { internal_name: r.campaign_name }} /><span className="id-tag">{r.campaign_id}</span></div>
+    ) },
   { key: 'amount', label: 'Amount', render: r => r.amount != null && money(r.amount), align: 'right' },
   { key: 'summary', label: 'Details', width: 280, long: true },
   { key: 'submitted_at', label: 'Date', render: r => dateTime(r.submitted_at) },
@@ -102,7 +120,7 @@ export default function TaskSheetPage() {
   const [open, setOpen] = useState<Row | null>(null);
   const [version, setVersion] = useState(0);
   const q = useQuery(
-    () => fetchAll((a, b) => supabase.from('admin_task_sheet').select('*').order('submitted_at').range(a, b) as never),
+    async () => withCampaigns(await fetchAll((a, b) => supabase.from('admin_task_sheet').select('*').order('submitted_at').range(a, b) as never)),
     [version],
   );
   // New tasks show without a refresh: reload when anything changes tasks (a payout saved, a check voided...) and when
@@ -218,7 +236,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
     return <VoucherDialog id={item.record_id} onClose={onClose} onChanged={onChanged} />;
   }
 
-  const campaignLink = item.campaign_id && <Link to={`/campaigns/${encodeURIComponent(item.campaign_id)}`}>{item.campaign_name} - {item.campaign_id}</Link>;
+  const campaignLink = item.campaign_id && <Link to={`/campaigns/${encodeURIComponent(item.campaign_id)}`}>{campaignLabel(item)} - {item.campaign_id}</Link>;
   const dismiss = (label: string, question = 'Take this off the sheet? Add a note if useful:') => (
     <button type="button" className="btn" onClick={() => close('dismissed', question)}>{label}</button>
   );

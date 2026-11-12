@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, ExternalLink, Plus, Receipt, Scale, Star, TrendingUp } from 'lucide-react';
+import { Clock, ExternalLink, Plus, Receipt, Scale, TrendingUp } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import Kpi from '../components/Kpi';
@@ -12,17 +12,13 @@ import { useAuth } from '../lib/auth';
 import { money, pct } from '../lib/format';
 import { newCampaignFields } from '../lib/schemas';
 import { TemplateStep } from './Templates';
+import CampaignName from '../components/CampaignName';
 import { paymentUrl } from './Outreach';
 
 export const campaignColumns: Column[] = [
   {
     key: 'internal_name', label: 'Campaign', width: 200,
-    render: r => (
-      <div>
-        <div>{r.featured && <Star size={14} className="featured" />} {r.internal_name || r.campaign_name}</div>
-        {r.external_name && r.external_name !== r.internal_name && <div className="muted small">{r.external_name}</div>}
-      </div>
-    ),
+    render: r => <CampaignName c={r} />,
   },
   { key: 'id', label: 'ID', value: r => Number(r.id) || r.id, render: r => <span className="id-tag">{r.id}</span> },
   {
