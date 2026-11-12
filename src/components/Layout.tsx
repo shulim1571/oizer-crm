@@ -7,8 +7,9 @@ import {
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
 import { noteActivity } from '../lib/idle';
+import { findCampaigns } from '../lib/campaignJump';
 import { useUnreadMessages } from '../pages/Inbox';
-import { supabase } from '../lib/supabase';
+import { supabase, type Row } from '../lib/supabase';
 import { leavePlatformOrg, type Org } from '../lib/org';
 import { PoweredBy } from './PoweredBy';
 import PageErrorBoundary from './PageErrorBoundary';
@@ -150,6 +151,8 @@ export default function Layout() {
   const [open, setOpen] = useState(false);
   const [tick, setTick] = useState(0);
   const [campaignId, setCampaignId] = useState('');
+  const [jumpMatches, setJumpMatches] = useState<Row[]>([]);
+  const [jumpNote, setJumpNote] = useState<string | null>(null);
   const nav = useNavigate();
   const searchRef = useRef<HTMLInputElement>(null);
   const loc = useLocation();
@@ -248,12 +251,30 @@ export default function Layout() {
             <span className="kbd">Ctrl K</span>
           </label>
           {canWork && (
-            <form onSubmit={e => {
+            <form className="id-jump-form" onSubmit={async e => {
               e.preventDefault();
-              if (campaignId.trim()) nav(`/campaigns/${encodeURIComponent(campaignId.trim())}`);
-              setCampaignId('');
+              // Finds the campaign by its ID, the number alone (3040 for AS-3040), part of it or its name (Moshe Henig, 2026-11-12).
+              const found = await findCampaigns(campaignId);
+              setJumpNote(null);
+              if (found.length === 1 || (found.length > 1 && String(found[0].id).toLowerCase() === campaignId.trim().toLowerCase())) {
+                nav(`/campaigns/${encodeURIComponent(found[0].id)}`); setCampaignId(''); setJumpMatches([]);
+              } else if (found.length > 1) setJumpMatches(found);
+              else { setJumpMatches([]); setJumpNote(campaignId.trim() ? `No campaign matches "${campaignId.trim()}".` : null); }
             }}>
-              <input className="id-jump" aria-label="Go to campaign ID" placeholder="Campaign ID" value={campaignId} onChange={e => setCampaignId(e.target.value)} />
+              <input className="id-jump" aria-label="Go to campaign ID" placeholder="Campaign ID" value={campaignId}
+                onChange={e => { setCampaignId(e.target.value); setJumpMatches([]); setJumpNote(null); }}
+                onBlur={() => setTimeout(() => { setJumpMatches([]); setJumpNote(null); }, 200)} />
+              {(jumpMatches.length > 0 || jumpNote) && (
+                <ul className="ss-list id-jump-list" role="listbox">
+                  {jumpNote && <li className="muted">{jumpNote}</li>}
+                  {jumpMatches.map(c => (
+                    <li key={c.id} role="option" onMouseDown={ev => { ev.preventDefault(); nav(`/campaigns/${encodeURIComponent(c.id)}`); setCampaignId(''); setJumpMatches([]); }}>
+                      <b>{c.id}</b> {c.internal_name || c.campaign_name || c.external_name}{c.status && c.status !== 'active' ? <span className="muted small"> · {c.status}</span> : null}
+                    </li>
+                  ))}
+                  {jumpMatches.length === 20 && <li className="muted small">Showing the first 20; type more to narrow it.</li>}
+                </ul>
+              )}
             </form>
           )}
           {/* New Donation on every page, just before the bell (Moshe Henig, 2026-11-11); it's an admin page. */}
@@ -266,6 +287,7 @@ export default function Layout() {
             </button>
           )}
           <button className="icon-btn outlined" title="Refresh data" onClick={() => setTick(t => t + 1)}><RefreshCw size={16} /></button>
+          <HelpAssistant />
         </header>
 
         <main className="content">
@@ -283,7 +305,6 @@ export default function Layout() {
           <PageErrorBoundary resetKey={loc.pathname + tick}><Outlet key={tick} /></PageErrorBoundary>
           <PoweredBy orgId={org?.id} />
         </main>
-        <HelpAssistant />
       </div>
     </SearchContext.Provider>
   );
