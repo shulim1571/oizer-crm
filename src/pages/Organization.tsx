@@ -3,8 +3,9 @@ import { supabase, type Row } from '../lib/supabase';
 import { OrgLogo } from '../components/Layout';
 import type { Org } from '../lib/org';
 import { useAuth } from '../lib/auth';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FooterSettings } from '../components/PoweredBy';
+import { parseStaleDays, STALE_CHECK_DEFAULT } from '../lib/staleCheck';
 
 const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Asia/Jerusalem', 'Europe/London']
   .map(v => ({ value: v, label: v }));
@@ -66,6 +67,7 @@ export default function OrganizationPage() {
           />
         </div>
       ))}
+      <StaleCheckSetting orgId={String(org.id)} onSaved={() => setSaved('Task Sheet')} />
       <FooterSettings />
     </section>
   );
@@ -123,6 +125,56 @@ function LogoUpload({ org, onSaved }: { org: Row; onSaved: () => void }) {
         </div>
       </div>
       {error && <div className="error">{error}</div>}
+    </div>
+  );
+}
+
+/**
+ * The stale-check threshold, per organization (Moshe Henig, 2026-11-12). It was already an organization setting
+ * (stale_check_days) that the Task Sheet reads; this is the first screen that shows it and lets an admin change it.
+ */
+function StaleCheckSetting({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [days, setDays] = useState('');
+  const [stored, setStored] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    supabase.from('settings').select('value').eq('key', 'stale_check_days').maybeSingle().then(({ data, error: e }) => {
+      if (e) return setError(e.message);
+      const n = data?.value == null ? null : Number(data.value);
+      setStored(n);
+      setDays(String(n ?? STALE_CHECK_DEFAULT));
+    });
+  }, [orgId]);
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const n = parseStaleDays(days);
+    if (typeof n === 'string') return setError(n);
+    setSaving(true);
+    const { error: err } = await supabase.from('settings')
+      .upsert({ org_id: orgId, key: 'stale_check_days', value: n }, { onConflict: 'org_id,key' });
+    setSaving(false);
+    if (err) return setError(err.message);
+    setStored(n);
+    window.dispatchEvent(new Event('task-sheet-changed'));
+    onSaved();
+  }
+  return (
+    <div className="settings-section">
+      <form className="record-form" onSubmit={save}>
+        <div className="form-head"><h2>Task Sheet</h2></div>
+        <p className="muted small form-desc">When the Task Sheet flags things that need a look.</p>
+        <div className="fields">
+          <label className="field"><span>Stale check after (days)</span>
+            <input type="number" min={1} max={3650} step={1} value={days} onChange={e => setDays(e.target.value)} />
+            <small className="muted">A check payout that hasn't cleared shows on the Task Sheet as a Stale Check this many days after it was entered.
+              Voided and lost checks are skipped. {stored == null ? `Not set yet, so the default of ${STALE_CHECK_DEFAULT} applies.` : `Default ${STALE_CHECK_DEFAULT}.`}</small>
+          </label>
+        </div>
+        {error && <div className="error">{error}</div>}
+        <div className="form-actions"><div className="spacer" /><button className="btn primary" disabled={saving}>{saving ? 'Saving…' : 'Save Task Sheet settings'}</button></div>
+      </form>
     </div>
   );
 }
