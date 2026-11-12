@@ -35,7 +35,7 @@ describe('check payouts to print (Moshe Henig, 2026-11-11)', () => {
 
 describe('after every check print (Moshe Henig, 2026-11-11: "didn’t ask me afterwards")', () => {
   it('asks whether it printed before the payout or the task closes', () => {
-    expect(checks).toContain('onIssued={check => { setPrinting(false); setAsking(check); setVersion(v => v + 1); }} />}');
+    expect(checks).toContain('onIssued={check => { setPrinting(false); setAsking(check); setVersion(v => v + 1); }}');
     expect(checks).toContain('{asking && <CheckPrintedQuestion check={asking} onDone={() => { setAsking(null); setVersion(v => v + 1); onDone(record); }} />}');
   });
 });
@@ -47,5 +47,15 @@ describe('Task Sheet freshness (Moshe Henig, 2026-11-11: only after a hard refre
     expect(sheet).toContain("window.addEventListener('task-sheet-changed', again);");
     expect(sheet).toContain("document.addEventListener('visibilitychange', back);");
     expect(readFileSync('src/components/RecordForm.tsx', 'utf8')).toContain("window.dispatchEvent(new Event('task-sheet-changed'));\n      p.onSaved(data);");
+  });
+});
+
+describe('Email to fundraiser (Moshe Henig, 2026-11-11)', () => {
+  it('sits beside Print on the payout, the register, and both Task Sheet check tasks, and both stay available', () => {
+    expect(checks).toContain("supabase.rpc('email_check_to_fundraiser', { p_check: checkId, p_pdf_base64: bytesToBase64(bytes) })");
+    expect(checks).toContain('<EmailCheckButton checkId={live.id} onSent={() => setVersion(v => v + 1)} />');   // payout, after printing too
+    expect(checks).toContain('<EmailCheckButton checkId={checkId} onSent={onDone} />');                          // Check Not Printed task
+    expect(checks).toContain("onClick={() => setPrinting('email')}><Mail size={15} /> Email to fundraiser</button>"); // Check To Print task
+    expect(checks).toContain("{ label: 'Email to fundraiser', onClick: () => { emailCheck(r.id)");                // register
   });
 });

@@ -75,6 +75,9 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 - **Print check**: on a payout with method Check and a bank account set up for checks, use Print check; later,
   **Print again**. If Print says the page is out of date, reload the page and try again.
 - **Check Register** lists every check number, with void and reprint.
+- **Email to fundraiser**: beside Print on a payout's check, in the register's More menu, and on the Task Sheet's
+  check tasks. It emails the check's PDF to the campaign's primary fundraiser and completes the check like printing;
+  printing or emailing stays possible afterwards.
 
 ## Bank accounts and reconciliation
 
