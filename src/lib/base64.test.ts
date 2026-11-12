@@ -56,6 +56,7 @@ describe('check files as hex', () => {
     const checks = readFileSync('src/pages/Checks.tsx', 'utf8');
     expect(checks).toContain("bytes: fromHex(sig.data_hex, 'signature file')");
     expect(checks).toContain("bytes: fromHex(font.data_hex, 'MICR font file')");
-    expect(readFileSync('src/pages/Receipts.tsx', 'utf8')).toContain("fromHex(s.data_hex, 'director’s signature')");
+    // The signature and the letterhead come through receipt_assets() since 2026-11-12, decoded the same way.
+    expect(readFileSync('src/pages/Receipts.tsx', 'utf8')).toContain('bytesToBase64(fromHex(a.data_hex, kind))');
   });
 });

@@ -101,14 +101,14 @@ export function statementPage(s: { donor: Row; year: number; items: Row[]; scope
 }
 
 /** The pages as one complete document: what prints, what an email carries and what a texted link opens. */
-export const documentHtml = (title: string, pages: string[]) =>
-  `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title><style>${STYLE}</style></head><body>${pages.join('')}</body></html>`;
+export const documentHtml = (title: string, pages: string[], extra?: { css?: string; head?: string }) =>
+  `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title>${extra?.head ?? ''}<style>${STYLE}${extra?.css ?? ''}</style></head><body>${pages.join('')}</body></html>`;
 
 /** Opens the pages in a new window and brings up the print dialog. */
-export function printPages(title: string, pages: string[]) {
+export function printPages(title: string, pages: string[], extra?: { css?: string; head?: string }) {
   const w = window.open('', '_blank');
   if (!w) throw new Error('The browser blocked the print window. Allow pop-ups for this site and try again.');
-  w.document.write(documentHtml(title, pages));
+  w.document.write(documentHtml(title, pages, extra));
   w.document.close();
   // Give the logo and signature a moment to load first.
   setTimeout(() => { try { w.focus(); w.print(); } catch { /* the window may have closed */ } }, 600);
