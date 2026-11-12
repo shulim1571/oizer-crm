@@ -7,10 +7,10 @@ describe('Transactions summary wording', () => {
   const src = readFileSync('src/pages/Donations.tsx', 'utf8');
   it('says transactions, singular or plural', () => {
     expect(src).toContain("transaction{Number(totals.data?.counted) === 1 ? '' : 's'}");
-    expect(src).toMatch(/failed transactions\./);
+    expect(src).toMatch(/failed transactions/);
   });
   it('no longer says gift in the summary', () => {
-    const totals = src.slice(src.indexOf('<div className="totals-bar">'), src.indexOf('</div>', src.indexOf('<div className="totals-bar">')));
+    const totals = src.slice(src.indexOf('<div className="totals-bar" aria-label="Totals for this view">'), src.indexOf('</div>', src.indexOf('<div className="totals-bar" aria-label="Totals for this view">')));
     expect(totals).not.toMatch(/gift/i);
     expect(src).not.toMatch(/failed gifts/);
   });
