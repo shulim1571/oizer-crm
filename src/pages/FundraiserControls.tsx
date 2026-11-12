@@ -10,6 +10,7 @@ const OVERRIDES: [string, string][] = [
   ['payout_visibility', 'See full payout details'],
   ['view_fee_breakdown', 'View campaign fee breakdown'],
   ['source_reports', 'Source reports beyond their own campaigns'],
+  ['single_receipts', 'Generate single donation receipts'],   // off until granted here (Moshe Henig, 2026-11-12)
   ['bulk_receipts', 'Generate and download receipts in bulk'],
   ['custom_fields', 'Add custom fields to the payment page'],
 ];

@@ -12,6 +12,7 @@ import { SendDocumentDialog } from './Messaging';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
+import { isLetterhead, LETTERHEAD_FONTS, letterheadPage, letterheadStyle, SAMPLE_RECEIPT, type ReceiptLayout } from '../lib/receiptLetterhead';
 
 const ReceiptPill = ({ status }: { status: string }) => <Pill tone={status === 'issued' ? 'green' : ''}>{status === 'issued' ? 'Issued' : 'Voided'}</Pill>;
 
@@ -20,11 +21,21 @@ async function orgDetails(): Promise<OrgDetails> {
   const { data } = await supabase.from('organizations').select('name, legal_name, ein, address, phone, email, director_name, logo_url').eq('id', org).maybeSingle();
   return (data ?? { name: '' }) as OrgDetails;
 }
-async function directorSignature() {
-  const { data } = await supabase.rpc('check_asset', { p_kind: 'director_signature', p_account: '' });
-  const s = ((data ?? []) as Row[])[0];
+/** The receipt images: the director's signature and the organization's letterhead (admins, and fundraisers allowed to make receipts). */
+async function receiptAssets(): Promise<{ signature: string | null; letterhead: string | null }> {
+  const { data } = await supabase.rpc('receipt_assets');
+  const rows = (data ?? []) as Row[];
   // Comes as hex (a content filter rewrote base64 image text); made into a local image here.
-  return s ? `data:${s.mime};base64,${bytesToBase64(fromHex(s.data_hex, 'director’s signature'))}` : null;
+  const image = (kind: string) => { const a = rows.find(x => x.kind === kind); return a ? `data:${a.mime};base64,${bytesToBase64(fromHex(a.data_hex, kind))}` : null; };
+  return { signature: image('director_signature'), letterhead: image('receipt_letterhead') };
+}
+async function directorSignature() {
+  return (await receiptAssets()).signature;
+}
+/** The organization's receipt layout, if it has one (Shulim, 2026-11-12). */
+async function receiptLayout(): Promise<ReceiptLayout | null> {
+  const { data } = await supabase.from('settings').select('value').eq('key', 'receipt_layout').maybeSingle();
+  return isLetterhead(data?.value) ? (data!.value as ReceiptLayout) : null;
 }
 
 /** Receipt pages by id, in the order given. */
@@ -34,23 +45,27 @@ async function receiptPages(ids: string[]) {
   const rows = (data ?? []) as Row[];
   const corrects = rows.map(r => r.corrects_id).filter(Boolean);
   const numbers = corrects.length ? (await supabase.from('receipts').select('id, receipt_number').in('id', corrects)).data ?? [] : [];
-  const [org, sig] = await Promise.all([orgDetails(), directorSignature()]);
+  const [org, assets, layout] = await Promise.all([orgDetails(), receiptAssets(), receiptLayout()]);
   const byId = new Map(rows.map(r => [r.id, r]));
+  // The organization's letterhead once it's switched on; otherwise the standard receipt page.
+  const letterhead = layout?.enabled && assets.letterhead ? layout : null;
+  const page = (r: Row) => (letterhead ? letterheadPage(r, org, letterhead, assets.signature) : receiptPage(r, org, assets.signature));
   return {
     title: rows.length === 1 ? rows[0].receipt_number as string : `${rows.length} receipts`,
-    pages: ids.map(id => byId.get(id)).filter(Boolean).map(r => receiptPage({ ...r!, corrects_number: numbers.find(n => n.id === r!.corrects_id)?.receipt_number }, org, sig)),
+    pages: ids.map(id => byId.get(id)).filter(Boolean).map(r => page({ ...r!, corrects_number: numbers.find(n => n.id === r!.corrects_id)?.receipt_number })),
+    extra: letterhead ? { css: letterheadStyle(assets.letterhead!), head: LETTERHEAD_FONTS } : undefined,
   };
 }
 
 /** Prints receipts by id, in the order given. */
 export async function printReceipts(ids: string[]) {
-  const { title, pages } = await receiptPages(ids);
-  printPages(title, pages);
+  const { title, pages, extra } = await receiptPages(ids);
+  printPages(title, pages, extra);
 }
 
 export const receiptDocument = async (id: string) => {
-  const { title, pages } = await receiptPages([id]);
-  return documentHtml(title, pages);
+  const { title, pages, extra } = await receiptPages([id]);
+  return documentHtml(title, pages, extra);
 };
 
 // ---------------------------------------------------------------------------
@@ -377,6 +392,7 @@ export function ReceiptTextPage() {
         <label className="field"><span>Signature image (PNG or JPG)</span><input type="file" accept="image/png,image/jpeg" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} /></label>
         {error && <div className="error">{error}</div>}
       </div>
+      <LetterheadCard />
     </section>
   );
 }
@@ -499,5 +515,44 @@ function StatementDialog({ donor, onClose, onDone }: { donor: Row; onClose: () =
         <button type="button" className="btn" disabled={!items || (scope === 'fundraiser' && !manager)} onClick={send}><Send size={15} /> Send statement</button>
         <button type="button" className="btn primary" disabled={!items || (scope === 'fundraiser' && !manager)} onClick={print}><Printer size={15} /> Print statement</button></div>
     </Overlay>
+  );
+}
+
+/**
+ * The organization's own receipt letterhead (Shulim, 2026-11-12), when it has one: a preview with made-up details, and
+ * the switch that puts real receipts on it. It stays off until someone turns it on here.
+ */
+function LetterheadCard() {
+  const [version, setVersion] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const q = useQuery(async () => {
+    const [{ data }, assets] = await Promise.all([supabase.from('settings').select('value').eq('key', 'receipt_layout').maybeSingle(), receiptAssets()]);
+    return { layout: isLetterhead(data?.value) ? (data!.value as ReceiptLayout) : null, raw: data?.value as Row | undefined, assets };
+  }, [version]);
+  const d = q.data as { layout: ReceiptLayout | null; raw?: Row; assets: { signature: string | null; letterhead: string | null } } | null;
+  if (!d?.layout || !d.assets.letterhead) return null;
+  async function preview() {
+    printPages('Receipt preview (sample)', [letterheadPage(SAMPLE_RECEIPT, await orgDetails(), d!.layout!, d!.assets.signature)],
+      { css: letterheadStyle(d!.assets.letterhead!), head: LETTERHEAD_FONTS });
+  }
+  async function toggle(on: boolean) {
+    if (on && !confirm('Use the letterhead for every receipt from now on, including ones emailed and printed?')) return;
+    setError(null);
+    const { error: e } = await supabase.from('settings').update({ value: { ...d!.raw, enabled: on } }).eq('key', 'receipt_layout');
+    if (e) return setError(e.message);
+    setVersion(v => v + 1);
+  }
+  return (
+    <div className="card">
+      <h3>Receipt letterhead</h3>
+      <p className="muted small">This organization's own receipt page: its letterhead, with the Hebrew and English thank-you, and the donor's name, amount,
+        date and campaign filled in. {d.layout.enabled ? 'Receipts use it now.' : 'Not in use yet: receipts keep the standard page until it is turned on.'}</p>
+      <div className="form-actions">
+        <button type="button" className="btn" onClick={() => void preview()}>Preview with sample details</button>
+        <div className="spacer" />
+        <label className="inline-check"><input type="checkbox" checked={!!d.layout.enabled} onChange={e => void toggle(e.target.checked)} /> Use it for receipts</label>
+      </div>
+      {error && <div className="error">{error}</div>}
+    </div>
   );
 }
