@@ -104,6 +104,8 @@ interface Body extends Pay {
   name?: string; email?: string; notes?: string; zip?: string; street?: string;
   ach_authorized?: boolean;
   donation_id?: string;
+  /** A fundraiser's card payment from New Donation: a new card only, to their own campaign (checked by the database). */
+  as_fundraiser?: boolean;
 }
 
 Deno.serve(async req => {
@@ -116,6 +118,12 @@ Deno.serve(async req => {
   const user = { token, org: b.org };
   const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || null;
   b.method ??= 'card';
+  // A fundraiser's sale (Moshe Henig, 2026-11-12): only a card typed in now. Nothing saved, no saved card, no donor
+  // record, no bank or fund payment, whatever the request says; the database checks the campaign is theirs.
+  if (b.as_fundraiser) {
+    if (b.action !== 'sale') return reply({ error: 'Fundraisers can only take a card payment' }, 403);
+    b.method = 'card'; b.card_id = null; b.save_card = false; b.donor_id = null; delete b.program;
+  }
 
   if (b.action === 'save' || (b.action === 'sale' && !b.card_id)) {
     const problem = payProblem(b);
@@ -125,7 +133,11 @@ Deno.serve(async req => {
   // 1. The database checks the admin and records the attempt, as them.
   let id: string;
   try {
-    id = b.action === 'sale'
+    id = b.as_fundraiser
+      ? await rpc('begin_fundraiser_card_sale', {
+          p_campaign: b.campaign_id, p_amount: b.amount, p_name: b.name ?? null, p_email: b.email ?? null, p_notes: b.notes ?? null, p_ip: ip,
+        }, user)
+      : b.action === 'sale'
       ? await rpc('begin_admin_payment', {
           p_method: b.method, p_program: b.program ?? null, p_campaign: b.campaign_id, p_donor: b.donor_id ?? null, p_amount: b.amount,
           p_card: b.card_id ?? null, p_save: !!b.save_card, p_name: b.name ?? null, p_email: b.email ?? null, p_notes: b.notes ?? null, p_ip: ip,

@@ -9,7 +9,8 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { money } from '../lib/format';
-import { editDonationFields, newDonationFields } from '../lib/schemas';
+import { editDonationFields, fundraiserDonationFields, newDonationFields } from '../lib/schemas';
+import { campaignOptions, type Option } from '../lib/lookups';
 import TransactionBulk from './TransactionBulk';
 import { DONATION_KINDS, DONATION_SELECT, donationColumns } from './donationColumns';
 import { CardChargeDialog } from './Payments';
@@ -253,6 +254,64 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
       />
       {editor}
     </>
+  );
+}
+
+/**
+ * New Donation for fundraisers (Moshe Henig, 2026-11-12): a card payment to one of their own campaigns. With the
+ * "enter manual payments" permission they can also enter a manual payment for the campaigns it covers, held until an
+ * admin approves, the same as on the campaign page.
+ */
+export function FundraiserNewDonation() {
+  const nav = useNavigate();
+  const [charging, setCharging] = useState(false);
+  const [last, setLast] = useState<Row | null>(null);
+  const [manual, setManual] = useState<Option[] | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
+  useEffect(() => {
+    void (async () => {
+      const mine = new Set(((await supabase.rpc('my_campaign_ids')).data ?? []) as string[]);
+      const options = (await campaignOptions()).filter(o => mine.has(String(o.value)));
+      const allowed = await Promise.all(options.map(async o =>
+        !!(await supabase.rpc('has_override', { p_permission: 'enter_manual_payments', p_campaign: o.value })).data));
+      setManual(options.filter((_, i) => allowed[i]));
+    })();
+  }, []);
+  return (
+    <section className="view narrow">
+      <div className="view-head">
+        <div className="view-title"><h1>New Donation</h1><span className="count">Take a payment for one of your campaigns</span></div>
+      </div>
+      <div className="panel-box">
+        <h2>Card payment</h2>
+        <p className="muted small">Charge the donor's card now. It goes straight onto the campaign once the card is approved.</p>
+        <div className="form-actions"><div className="spacer" />
+          <button type="button" className="btn primary" onClick={() => setCharging(true)}><CreditCard size={15} /> Charge a card</button></div>
+      </div>
+      {charging && <CardChargeDialog fundraiser onClose={() => setCharging(false)} onDone={t => setLast({ amount: t.amount, campaign_id: t.campaign_id })} />}
+      {last && (
+        <div className="notice">
+          Charged {money(last.amount)} to campaign {last.campaign_id}.{' '}
+          <button className="link" onClick={() => nav(`/campaigns/${encodeURIComponent(last.campaign_id)}`)}>Open campaign</button>
+        </div>
+      )}
+      {saved && <div className="notice">{saved}</div>}
+      {manual && manual.length > 0 && (
+        <RecordForm
+          key={formKey}
+          inline
+          table="donations"
+          title="Manual payment (held for approval)"
+          description="Cash, check, Zelle and the like. It's held until the office approves it."
+          saveLabel="Enter payment"
+          fields={[{ name: 'campaign_id', label: 'Campaign', type: 'select', options: manual, required: true }, ...fundraiserDonationFields]}
+          defaults={{ source: 'Manual' }}
+          onClose={() => nav(-1)}
+          onSaved={row => { setSaved(`Entered ${money(row.amount)} for campaign ${row.campaign_id}, held until the office approves it.`); setFormKey(k => k + 1); }}
+        />
+      )}
+    </section>
   );
 }
 

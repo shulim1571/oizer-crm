@@ -128,10 +128,24 @@ export function CardFields({ ifieldsKey, onTokens, exp, onExp, tall = false, lab
 // ---------------------------------------------------------------------------
 const FREQ_LABEL: Record<string, string> = { weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', annually: 'Yearly' };
 const usDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmount, title, onClose, onDone }: {
+/** What a fundraiser's card form needs (Sola's public browser key and whether cards are set up), nothing more. */
+const useFundraiserPaymentConfig = (on: boolean) => useQuery(async () => {
+  if (!on) return null;
+  const row = (((await supabase.rpc('fundraiser_payment_config')).data ?? []) as Row[])[0];
+  return row ? { ...row, ach_enabled: false, daf_programs: [] } as unknown as PaymentConfig : null;
+}, [on]);
+
+/**
+ * `fundraiser`: a fundraiser's card payment from New Donation (Moshe Henig, 2026-11-12): campaign, amount and a card
+ * typed in now. No donor record, saved cards, saving, bank or fund payments, or recurring; the server holds to the same.
+ */
+export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmount, title, onClose, onDone, fundraiser = false }: {
   campaignId?: string | null; donorId?: string | null; cardId?: string | null; amount?: number; title?: string; onClose: () => void; onDone?: (t: Row) => void;
+  fundraiser?: boolean;
 }) {
-  const config = usePaymentConfig();
+  const officeConfig = usePaymentConfig();
+  const fundraiserConfig = useFundraiserPaymentConfig(fundraiser);
+  const config = fundraiser ? fundraiserConfig : officeConfig;
   const [campaigns, setCampaigns] = useState<Option[]>([]);
   const [campaign, setCampaign] = useState<string | null>(campaignId ?? null);
   const [donor, setDonor] = useState<string | null>(donorId ?? null);
@@ -157,7 +171,14 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
   const tokens = useRef<() => Promise<{ card: string; cvv: string }>>();
   const setTokens = useRef((get: () => Promise<{ card: string; cvv: string }>) => { tokens.current = get; }).current;
 
-  useEffect(() => { void campaignOptions().then(setCampaigns); }, []);
+  useEffect(() => {
+    void campaignOptions().then(async all => {
+      if (!fundraiser) return setCampaigns(all);
+      // A fundraiser charges only to campaigns they work on (the server checks the same).
+      const mine = new Set(((await supabase.rpc('my_campaign_ids')).data ?? []) as string[]);
+      setCampaigns(all.filter(o => mine.has(String(o.value))));
+    });
+  }, [fundraiser]);
   useEffect(() => {
     setCards([]);
     if (!donor) return;
@@ -169,7 +190,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
 
   const cfg = config.data as PaymentConfig | null;
   const expDigits = exp.replace(/\D/g, '');
-  const canRepeat = !!donor && (!!card || method !== 'daf');
+  const canRepeat = !fundraiser && !!donor && (!!card || method !== 'daf');
   const repeating = rec.on && canRepeat;
   const later = repeating && rec.when === 'later';
   const count = rec.fixed ? Number(rec.count) : null;
@@ -202,10 +223,12 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
     try {
       const pay = card ? {} : method === 'ach' ? { ...bankBody(bank), ach_authorized: bank.agreed } : method === 'daf' ? dafBody(program!, daf)
         : await tokens.current!().then(t => ({ method: 'card', card_sut: t.card, cvv_sut: t.cvv, exp: expDigits }));
-      const r = await callPayments({
-        action: 'sale', campaign_id: campaign, donor_id: donor, amount: Number(amount), card_id: card || null, save_card: (save || repeating) && !card,
-        name, email, notes, zip, ...pay,
-      });
+      const r = await callPayments(fundraiser
+        ? { action: 'sale', as_fundraiser: true, campaign_id: campaign, amount: Number(amount), name, email, notes, zip, ...pay }
+        : {
+            action: 'sale', campaign_id: campaign, donor_id: donor, amount: Number(amount), card_id: card || null, save_card: (save || repeating) && !card,
+            name, email, notes, zip, ...pay,
+          });
       if (r.error) throw new Error(r.error);
       setResult(r.transaction!);
       if (r.transaction?.status === 'approved') {
@@ -250,7 +273,8 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
       <div className="form-head"><h2><CreditCard size={18} /> {title ?? 'Take a payment'} {cfg?.sandbox && <Pill tone="amber">Sandbox</Pill>}</h2>
         <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
       {config.loading ? null : !cfg?.ifields_key || !cfg.api_key_set ? (
-        <p>Card payments aren't set up yet. The Super Admin adds this organization's Sola keys under <Link to="/payments-settings">Settings → Payments</Link>.</p>
+        fundraiser ? <p>Card payments aren't set up yet. Ask the office to set them up.</p>
+          : <p>Card payments aren't set up yet. The Super Admin adds this organization's Sola keys under <Link to="/payments-settings">Settings → Payments</Link>.</p>
       ) : result ? (
         <>
           {result.status === 'scheduled' ? <div className="notice">Recurring donation set up; nothing was charged today.</div>
@@ -270,7 +294,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
             OJC 6900664467242419; Pledger 6599973975864259; Donors Fund 6599992999456587 (under $5).</p>}
           <div className="fields">
             <label className="field"><span>Campaign</span><SearchSelect value={campaign} options={campaigns} onChange={setCampaign} required /></label>
-            <label className="field"><span>Donor</span><DonorPicker value={donor} onChange={v => { setDonor(v); setCard(''); }} placeholder="Optional · search or add a donor" /></label>
+            {!fundraiser && <label className="field"><span>Donor</span><DonorPicker value={donor} onChange={v => { setDonor(v); setCard(''); }} placeholder="Optional · search or add a donor" /></label>}
             <label className="field"><span>Amount</span><input type="number" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></label>
             {cards.length > 0 && (
               <label className="field"><span>Card</span>
@@ -282,8 +306,8 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
           </div>
           {!card && (
             <>
-              <MethodTabs value={method} program={program} ach={cfg.ach_enabled} daf={cfg.daf_programs ?? []} L={OFFICE_PAY}
-                onChange={(m, p) => { setMethod(m); setProgram(p); setDaf(emptyDaf()); setError(null); if (m === 'ach') setBank(b => ({ ...b, account_name: b.account_name || name })); }} />
+              {!fundraiser && <MethodTabs value={method} program={program} ach={cfg.ach_enabled} daf={cfg.daf_programs ?? []} L={OFFICE_PAY}
+                onChange={(m, p) => { setMethod(m); setProgram(p); setDaf(emptyDaf()); setError(null); if (m === 'ach') setBank(b => ({ ...b, account_name: b.account_name || name })); }} />}
               {method === 'card' && (
                 <>
                   <CardFields ifieldsKey={cfg.ifields_key} onTokens={setTokens} exp={exp} onExp={setExp} />
@@ -295,7 +319,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
               )}
               {method === 'ach' && <BankFields value={bank} onChange={setBank} L={OFFICE_PAY} authorization={cfg.ach_authorization_text} />}
               {method === 'daf' && program && <DafFields program={program} value={daf} onChange={setDaf} L={OFFICE_PAY} />}
-              {donor && !repeating && <label className="inline-check"><input type="checkbox" checked={save} onChange={e => setSave(e.target.checked)} />
+              {!fundraiser && donor && !repeating && <label className="inline-check"><input type="checkbox" checked={save} onChange={e => setSave(e.target.checked)} />
                 Save this {method === 'ach' ? 'bank account' : 'card'} on the donor for next time{method === 'daf' ? ' (if the fund allows it)' : ''}</label>}
             </>
           )}

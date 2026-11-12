@@ -6,7 +6,7 @@ import { supabase } from './lib/supabase';
 import Login, { AuthShell, ConfirmEmailLink, SetNewPassword, readEmailLink } from './pages/Login';
 import Campaigns from './pages/Campaigns';
 import CampaignDetail from './pages/CampaignDetail';
-import { AllDonations, NewDonation } from './pages/Donations';
+import { AllDonations, FundraiserNewDonation, NewDonation } from './pages/Donations';
 import { DonorDetail, DonorsPage } from './pages/Donors';
 import UsersPage from './pages/Users';
 import ActivityPage from './pages/Activity';
@@ -214,7 +214,8 @@ export default function App() {
         <Route path="donations/batch" element={<AdminOnly><BatchEntry /></AdminOnly>} />
         <Route path="templates" element={<AdminOnly><TemplatesPage /></AdminOnly>} />
         <Route path="fees" element={<AdminOnly><FeesPage /></AdminOnly>} />
-        <Route path="donations/new" element={<AdminOnly><NewDonation /></AdminOnly>} />
+        {/* Fundraisers get their own New Donation: card payments, and manual ones with the permission (Moshe Henig, 2026-11-12). */}
+        <Route path="donations/new" element={isAdmin ? <NewDonation /> : <FundraiserNewDonation />} />
         {/* The Last 7 Days tab became a date range on the list; old links land there. */}
         <Route path="donations/recent" element={<Navigate to="/donations/all" replace />} />
         <Route path="donations/all" element={<AllDonations />} />
