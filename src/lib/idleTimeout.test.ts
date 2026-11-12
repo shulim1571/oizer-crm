@@ -7,6 +7,8 @@ function fakeStorage() {
   return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, String(v)), removeItem: (k: string) => void m.delete(k), clear: () => m.clear() };
 }
 const MIN = 60 * 1000;
+const listeners = new Map<string, () => void>();
+const hide = () => { (document as { visibilityState: string }).visibilityState = 'hidden'; listeners.get('visibilitychange')?.(); };
 
 describe('idle sign-out', () => {
   beforeEach(() => {
@@ -15,6 +17,8 @@ describe('idle sign-out', () => {
     vi.stubGlobal('localStorage', fakeStorage());
     vi.stubGlobal('sessionStorage', fakeStorage());
     vi.stubGlobal('window', { addEventListener: () => {}, removeEventListener: () => {}, setInterval: (f: () => void, ms: number) => setInterval(f, ms), clearInterval: (id: number) => clearInterval(id) });
+    listeners.clear();
+    vi.stubGlobal('document', { visibilityState: 'visible', addEventListener: (e: string, f: () => void) => listeners.set(e, f), removeEventListener: () => {} });
     vi.resetModules();
   });
   afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
@@ -42,7 +46,7 @@ describe('idle sign-out', () => {
     expect(onIdle).not.toHaveBeenCalled();
     vi.advanceTimersByTime(2 * MIN);
     expect(onIdle).toHaveBeenCalled();
-    expect(renew.mock.calls.length).toBeLessThanOrEqual(3);
+    expect(renew.mock.calls.length).toBeLessThanOrEqual(4);   // on load, then every 10 minutes inside the window
   });
 
   it('activity resets the clock', async () => {
@@ -88,5 +92,47 @@ describe('idle sign-out', () => {
     expect(parseIdleMinutes('30')).toBe(30);
     expect(parseIdleMinutes('720')).toBe(720);
     for (const bad of ['', '4', '721', '10.5', 'x']) expect(typeof parseIdleMinutes(bad)).toBe('string');
+  });
+
+  // Moshe Henig, 2026-11-12: an idle or background tab was signed out before 30 minutes. The server ends a session 30
+  // minutes after its last renewal, and background tabs' timers are slowed or frozen.
+  it('renews when the tab is hidden after activity, so a frozen background tab keeps the full 30 minutes', async () => {
+    const idle = await import('./idle');
+    const renewedAt: number[] = [];
+    idle.watchIdle(() => {}, idle.IDLE_LIMIT_MS, async () => { renewedAt.push(Date.now()); });
+    vi.advanceTimersByTime(8 * MIN);
+    vi.setSystemTime(Date.now() + 30 * 1000);
+    idle.noteActivity();                         // working...
+    const lastActivity = Date.now();
+    vi.setSystemTime(Date.now() + 20 * 1000);
+    hide();                                      // ...then switches away; from here the tab's timers may never run
+    const lastRenewal = renewedAt[renewedAt.length - 1];
+    expect(lastRenewal).toBeGreaterThanOrEqual(lastActivity);
+    // The server keeps the session until 30 minutes after that renewal: past the 30-minute idle limit.
+    expect(lastRenewal + 30 * MIN).toBeGreaterThanOrEqual(lastActivity + idle.IDLE_LIMIT_MS);
+  });
+
+  it('renews on page load instead of assuming the session was just renewed', async () => {
+    const idle = await import('./idle');
+    const renew = vi.fn(async () => {});
+    idle.watchIdle(() => {}, idle.IDLE_LIMIT_MS, renew);
+    expect(renew).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't renew again on every quick tab switch", async () => {
+    const idle = await import('./idle');
+    const renew = vi.fn(async () => {});
+    idle.watchIdle(() => {}, idle.IDLE_LIMIT_MS, renew);
+    for (let i = 0; i < 10; i++) { vi.setSystemTime(Date.now() + 1000); idle.noteActivity(Date.now() + 20_000); hide(); }
+    expect(renew.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+
+  it('while active, the last renewal is never more than about 5 minutes before the last activity', async () => {
+    const idle = await import('./idle');
+    const renewedAt: number[] = [];
+    idle.watchIdle(() => {}, idle.IDLE_LIMIT_MS, async () => { renewedAt.push(Date.now()); });
+    for (let m = 0; m < 60; m++) { vi.advanceTimersByTime(MIN); idle.noteActivity(); }
+    const gap = Date.now() - renewedAt[renewedAt.length - 1];
+    expect(gap).toBeLessThanOrEqual(5.5 * MIN);
   });
 });

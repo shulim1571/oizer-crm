@@ -74,27 +74,52 @@ function markRenewed(now: number) {
   try { localStorage.setItem(RENEWED_KEY, String(now)); } catch { /* ignore */ }
 }
 
+/** While someone is active, the session is renewed at least this often (and whenever the tab is hidden after activity). */
+export const RENEW_ACTIVE_MS = 5 * 60 * 1000;
+
 /**
- * Watches for activity and calls onIdle once `limit` passes without any. While the person is still active (inside the
- * limit), calls renew every 10 minutes (shared across tabs), so the server never ends a session that's in use.
- * Returns a function that stops watching.
+ * Watches for activity and calls onIdle once `limit` passes without any. Keeps the server session alive for the whole
+ * idle window (Moshe Henig, 2026-11-12: an idle or background tab was signed out before 30 minutes). The server ends
+ * a session 30 minutes after its last renewal, so the last renewal must come at or after the last real activity:
+ *   - renewed every 5 minutes while there is activity, and every 10 minutes while still inside the idle limit;
+ *   - renewed the moment the tab is hidden or closed if there was activity since the last renewal, because browsers
+ *     slow down or freeze timers in background tabs;
+ *   - renewed on page load (the last renewal before it isn't known), and checked again as soon as the tab is back.
+ * Renewals are shared across tabs. Returns a function that stops watching.
  */
 export function watchIdle(onIdle: () => void, limit = IDLE_LIMIT_MS, renew?: () => PromiseLike<unknown>): () => void {
   if (idleTooLong(readLastActivity(), Date.now(), limit)) { onIdle(); return () => {}; }
   markActivity();
-  if (!readRenewed()) markRenewed(Date.now());
-  const seen = () => noteActivity();
-  const events = ['pointerdown', 'keydown', 'scroll', 'wheel', 'touchstart', 'mousemove'] as const;
-  events.forEach(e => window.addEventListener(e, seen, { passive: true }));
+  const renewNow = (now: number) => {
+    if (!renew) return;
+    markRenewed(now);   // marked before asking, so renewals stay spaced (across tabs too) even if one never answers
+    Promise.resolve(renew()).catch(() => { /* a failed renewal signs out through Supabase */ });
+  };
+  const activeSinceRenewal = () => (readLastActivity() ?? 0) > readRenewed();
   const check = () => {
     const now = Date.now();
     if (idleTooLong(readLastActivity(), now, limit)) return onIdle();
-    // Marked before asking, so renewals stay 10 minutes apart (across tabs too) even if one never answers.
-    if (renew && now - readRenewed() >= RENEW_EVERY_MS) {
-      markRenewed(now);
-      Promise.resolve(renew()).catch(() => { /* a failed renewal signs out through Supabase */ });
-    }
+    const since = now - readRenewed();
+    if (since >= RENEW_EVERY_MS || (since >= RENEW_ACTIVE_MS && activeSinceRenewal())) renewNow(now);
   };
+  // Leaving the tab (or the page): renew now if anything happened since the last renewal, since timers may not run.
+  const leaving = () => {
+    if (idleTooLong(readLastActivity(), Date.now(), limit)) return;
+    if (activeSinceRenewal() && Date.now() - readRenewed() >= 15_000) renewNow(Date.now());
+  };
+  const visibility = () => { if (document.visibilityState === 'hidden') leaving(); else check(); };
+  if (Date.now() - readRenewed() >= 60_000) renewNow(Date.now());   // page load: renew rather than assume
+  const seen = () => noteActivity();
+  const events = ['pointerdown', 'keydown', 'scroll', 'wheel', 'touchstart', 'mousemove'] as const;
+  events.forEach(e => window.addEventListener(e, seen, { passive: true }));
+  const hasDocument = typeof document !== 'undefined' && typeof document.addEventListener === 'function';
+  if (hasDocument) document.addEventListener('visibilitychange', visibility);
+  window.addEventListener('pagehide', leaving);
   const timer = window.setInterval(check, 30_000);
-  return () => { events.forEach(e => window.removeEventListener(e, seen)); window.clearInterval(timer); };
+  return () => {
+    events.forEach(e => window.removeEventListener(e, seen));
+    if (hasDocument) document.removeEventListener('visibilitychange', visibility);
+    window.removeEventListener('pagehide', leaving);
+    window.clearInterval(timer);
+  };
 }
