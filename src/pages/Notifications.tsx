@@ -61,10 +61,29 @@ export default function NotificationsPage() {
   }
 
   const wantsText = Object.values(f.channels).some(c => c !== 'email');
+  // One switch for everything (Moshe Henig, 2026-11-12): off means no notification emails or texts at all; the choices
+  // below are kept for when it's turned back on.
+  const on = (q.data as Row | null | undefined)?.notifications_on !== false;
+  const [switchError, setSwitchError] = useState<string | null>(null);
+  async function toggle(next: boolean) {
+    setSwitchError(null);
+    const { error: e } = await supabase.rpc('set_my_notifications', { p_on: next });
+    if (e) return setSwitchError(e.message);
+    setVersion(v => v + 1);
+  }
   return (
     <section className="view">
       <div className="view-head">
         <div className="view-title"><h1>My Notifications</h1><span className="count">What reaches you, and how</span></div>
+      </div>
+
+      <div className={`panel-box notify-switch ${on ? '' : 'off'}`}>
+        <label className="inline-check"><input type="checkbox" checked={on} disabled={q.loading} onChange={e => void toggle(e.target.checked)} />
+          <b>{on ? 'Notifications are on' : 'Notifications are off'}</b></label>
+        <p className="muted small">{on
+          ? 'Turn this off to stop all notification emails and texts to you. Your choices below are kept.'
+          : 'No notification emails or texts reach you. Turn it back on any time; your choices below still apply then.'}</p>
+        {switchError && <div className="error">{switchError}</div>}
       </div>
 
       {isAdmin ? (
