@@ -90,6 +90,16 @@ export default function DashboardPage() {
 
   const q = useQuery(() => stats(from, to), [from, to]);
   const prior = useQuery(() => (compare ? stats(lastYear(from), lastYear(to)) : Promise.resolve(null)), [compare, from, to]);
+  // Upcoming recurring card and bank charges (Moshe Henig, 2026-11-11: the box takes its numbers from them, not from
+  // recurring pledges): each active schedule's amount times its charges due in the next 30 and 90 days.
+  const recurring = useQuery(async () => {
+    const list = (await supabase.from('recurring_list').select('amount, due_30, due_90').eq('status', 'active')).data as Row[] ?? [];
+    return {
+      next30: list.reduce((t, r) => t + Number(r.amount) * Number(r.due_30 ?? 0), 0),
+      next90: list.reduce((t, r) => t + Number(r.amount) * Number(r.due_90 ?? 0), 0),
+      active: list.length,
+    };
+  }, []);
   const myTasks = useQuery(async () => (isAdmin ? [] : (await supabase.from('tasks').select('id, status, due_date').neq('status', 'Done')).data ?? []) as Row[], [isAdmin]);
 
   // Any part missing reads as zero rather than breaking the page.
@@ -111,7 +121,8 @@ export default function DashboardPage() {
         <Kpi label="This month" value={money(per('month')?.raised ?? 0)} icon={<CalendarRange size={18} />} tone="green" sub={period(per('month'))} />
         {isAdmin && <Kpi label="This year" value={money(per('year')?.raised ?? 0)} icon={<TrendingUp size={18} />} tone="green" sub={period(per('year'))} />}
         <Kpi label="Pledged (open)" value={money(s?.pledged ?? 0)} icon={<Handshake size={18} />} tone="blue" sub="Not confirmed income" />
-        <Kpi label="Recurring pledges" value={money(s?.scheduled_30 ?? 0)} icon={<CalendarClock size={18} />} tone="violet" sub={`next 30 days · ${money(s?.scheduled_90 ?? 0)} next 90`} />
+        <Kpi label="Recurring transactions" value={<Link to="/donations/recurring">{money(recurring.data?.next30 ?? 0)}</Link>} icon={<CalendarClock size={18} />} tone="violet"
+          sub={`next 30 days · ${money(recurring.data?.next90 ?? 0)} next 90 · ${recurring.data?.active ?? 0} active`} />
         {isAdmin && <Kpi label="Tasks waiting" value={<Link to="/task-sheet">{taskCount}</Link>} icon={<AlertTriangle size={18} />} tone="amber" sub="On the Task Sheet" />}
         {!isAdmin && <Kpi label="My tasks" value={<Link to="/tasks">{tasksOpen.length}</Link>} icon={<AlertTriangle size={18} />} tone="amber" sub={`${tasksOpen.filter(t => t.due_date && t.due_date < today).length} overdue`} />}
       </div>

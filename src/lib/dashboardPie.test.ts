@@ -17,3 +17,13 @@ describe('dashboard All Time box (Moshe Henig, 2026-11-11)', () => {
     expect(d).not.toContain('<Kpi label="This week"');
   });
 });
+
+describe('dashboard Recurring Transactions box (Moshe Henig, 2026-11-11)', () => {
+  it('is named Recurring transactions and adds up the upcoming recurring charges', () => {
+    const d = readFileSync('src/pages/Dashboard.tsx', 'utf8');
+    expect(d).toContain('<Kpi label="Recurring transactions"');
+    expect(d).not.toContain('label="Recurring pledges"');
+    expect(d).toContain("supabase.from('recurring_list').select('amount, due_30, due_90').eq('status', 'active')");
+    expect(d).toContain("next30: list.reduce((t, r) => t + Number(r.amount) * Number(r.due_30 ?? 0), 0),");
+  });
+});
