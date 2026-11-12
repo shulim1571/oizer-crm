@@ -9,7 +9,8 @@ interface Ctx { request: Request; params: { id: string | string[] }; env: { ASSE
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
-const absolute = (u: unknown, base: string) => { try { return u ? new URL(String(u), base).href : null; } catch { return null; } };
+// Only web addresses: an uploaded logo (a data: image) can't be fetched by link-preview services.
+const absolute = (u: unknown, base: string) => { try { const h = u ? new URL(String(u), base).href : null; return h && /^https?:/i.test(h) ? h : null; } catch { return null; } };
 
 async function rpc(name: string, body: Json) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {

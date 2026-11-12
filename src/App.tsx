@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import Layout from './components/Layout';
+import Layout, { PRODUCT_MARK } from './components/Layout';
 import { useAuth } from './lib/auth';
 import { supabase } from './lib/supabase';
 import Login, { AuthShell, ConfirmEmailLink, SetNewPassword, readEmailLink } from './pages/Login';
@@ -104,7 +104,7 @@ export default function App() {
   if (giveCampaign) return <GivePage campaignId={giveCampaign} />;
   // The embeddable page can sit inside any website, so it shows donation forms and nothing else.
   if (embedded) return <div className="shared-missing"><h1>Donation form not found</h1></div>;
-  if (loading) return <div className="splash"><div className="logo">O</div></div>;
+  if (loading) return <div className="splash"><img className="splash-mark" src={PRODUCT_MARK} alt="Donor Base" /></div>;
   if (emailLink.tokenHash && emailLink.type) {
     return (
       <ConfirmEmailLink tokenHash={emailLink.tokenHash} type={emailLink.type} onDone={() => {
@@ -115,7 +115,7 @@ export default function App() {
   }
   if (recovering) return <SetNewPassword onDone={() => setRecovering(false)} />;
   if (!session) return <Login linkError={emailLink.error} />;
-  if (needsCode && trust !== 'checked') return <div className="splash"><div className="logo">O</div></div>;
+  if (needsCode && trust !== 'checked') return <div className="splash"><img className="splash-mark" src={PRODUCT_MARK} alt="Donor Base" /></div>;
   if (needsCode) {
     return (
       <AuthShell>

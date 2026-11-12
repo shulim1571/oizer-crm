@@ -11,11 +11,24 @@ import { supabase } from '../lib/supabase';
 import { leavePlatformOrg, type Org } from '../lib/org';
 import { PoweredBy } from './PoweredBy';
 import PageErrorBoundary from './PageErrorBoundary';
+import { sharpLogoUrl } from '../lib/sharpLogo';
 
-export function OrgLogo({ org }: { org: Org | null }) {
+/** The product: Donor Base (Shulim, 2026-11-12). Oizer and other organizations are customers inside it. */
+export const PRODUCT_NAME = 'Donor Base';
+export const PRODUCT_TILE = `${import.meta.env.BASE_URL}brand/donor-base-tile.png`;
+export const PRODUCT_MARK = `${import.meta.env.BASE_URL}brand/donor-base-mark.png`;
+export const PRODUCT_MARK_WHITE = `${import.meta.env.BASE_URL}brand/donor-base-mark-white.png`;
+
+/** The Donor Base logo: its tile on light backgrounds; just the white mark on a colored one (the sign-in panel). */
+export function ProductLogo({ onColor = false }: { onColor?: boolean }) {
+  return <img className={`logo product-logo${onColor ? ' on-color' : ''}`} src={onColor ? PRODUCT_MARK_WHITE : PRODUCT_TILE} alt={PRODUCT_NAME} />;
+}
+
+/** The organization's own logo where it has one (sharp, at any size); otherwise the Donor Base logo. */
+export function OrgLogo({ org, onColor = false }: { org: Org | null; onColor?: boolean }) {
   return org?.logo_url
-    ? <img className="logo" src={org.logo_url} alt="" />
-    : <div className="logo">{(org?.name?.[0] ?? 'C').toUpperCase()}</div>;
+    ? <img className="logo org-logo" src={sharpLogoUrl(org.logo_url)!} alt={org.name ? `${org.name} logo` : ''} />
+    : <ProductLogo onColor={onColor} />;
 }
 
 export const ROLE_LABEL: Record<string, string> = {
@@ -186,7 +199,7 @@ export default function Layout() {
         <nav className={`sidebar ${open ? 'open' : ''}`}>
           <div className="logo-row">
             <OrgLogo org={org} />
-            <div className="logo-text">{org?.name ?? 'Campaign CRM'}{org && <small>Campaign CRM</small>}</div>
+            <div className="logo-text">{org?.name ?? PRODUCT_NAME}{org && <small>{PRODUCT_NAME}</small>}</div>
           </div>
           {NAV.map(section => {
             const items = section.items.filter(n => visible(n) && !n.offMenu);

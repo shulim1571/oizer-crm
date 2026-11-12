@@ -1,7 +1,7 @@
 import { PoweredBy } from '../components/PoweredBy';
 import { useRef, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import type { EmailOtpType } from '@supabase/supabase-js';
-import { OrgLogo } from '../components/Layout';
+import { OrgLogo, PRODUCT_NAME } from '../components/Layout';
 import { useAuth } from '../lib/auth';
 import { signInWithPassword, supabase } from '../lib/supabase';
 
@@ -21,8 +21,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
     <div className="auth">
       <div className="auth-art">
         <div className="logo-row">
-          <OrgLogo org={org} />
-          <div className="logo-text">{org?.name ?? 'Campaign CRM'}{org && <small style={{ color: 'rgba(255,255,255,.7)' }}>Campaign CRM</small>}</div>
+          <OrgLogo org={org} onColor />
+          <div className="logo-text">{org?.name ?? PRODUCT_NAME}{org && <small style={{ color: 'rgba(255,255,255,.7)' }}>{PRODUCT_NAME}</small>}</div>
         </div>
         <div>
           <h2>Every campaign, donor and dollar in one place.</h2>

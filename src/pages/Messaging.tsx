@@ -1,4 +1,5 @@
 import PageTabs, { usePageTab } from '../components/PageTabs';
+import { PRODUCT_MARK } from '../components/Layout';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, MessageSquare, Send, X } from 'lucide-react';
@@ -395,7 +396,7 @@ export function SharedDocumentPage({ token }: { token: string }) {
     supabase.rpc('shared_document', { p_token: token }).then(({ data }) => setDoc(((data ?? []) as { title: string; html: string }[])[0] ?? null));
   }, [token]);
   useEffect(() => { if (doc) document.title = doc.title; }, [doc]);
-  if (doc === undefined) return <div className="splash"><div className="logo">O</div></div>;
+  if (doc === undefined) return <div className="splash"><img className="splash-mark" src={PRODUCT_MARK} alt="Donor Base" /></div>;
   if (!doc) return <div className="shared-missing"><h1>This link has expired</h1><p>Ask the office to send it again.</p></div>;
   return (
     <div className="shared-doc">
