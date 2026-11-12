@@ -946,9 +946,11 @@ tr.selected td { background: var(--accent-soft); }
 .pager-gap { padding: 0 4px; color: var(--muted); }
 
 /* AI help assistant: a Help button and a chat panel in the corner, for signed-in staff. */
-.help-fab { position: fixed; right: 20px; bottom: 20px; z-index: 40; display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px;
-  border-radius: 999px; border: 0; background: var(--accent); color: #fff; font-weight: 600; box-shadow: var(--shadow-lg); cursor: pointer; }
-.help-panel { position: fixed; right: 20px; bottom: 20px; z-index: 40; width: min(380px, calc(100vw - 32px)); height: min(540px, calc(100vh - 40px));
+/* Help sits in the top bar (Moshe Henig, 2026-11-12): nothing floats over page content, list footers or dialogs. */
+.help-btn { display: inline-flex; align-items: center; gap: 6px; width: auto; padding: 0 10px; }
+.help-btn.on { background: var(--accent-soft); color: var(--accent-text); }
+.help-btn-label { font-size: 13px; font-weight: 550; }
+.help-panel { position: fixed; right: 16px; top: 64px; z-index: 45; width: min(380px, calc(100vw - 32px)); height: min(540px, calc(100vh - 80px));
   display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-lg); }
 .help-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .help-head b { display: inline-flex; align-items: center; gap: 6px; }
@@ -959,7 +961,7 @@ tr.selected td { background: var(--accent-soft); }
 .help-msg.assistant { align-self: flex-start; background: var(--surface-2); }
 .help-ask { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--line); }
 .help-ask input { flex: 1; min-width: 0; }
-@media (max-width: 600px) { .help-panel { right: 16px; left: 16px; bottom: 16px; width: auto; } .help-fab { right: 16px; bottom: 16px; } }
+@media (max-width: 600px) { .help-panel { right: 8px; left: 8px; top: 60px; width: auto; height: min(540px, calc(100dvh - 72px)); } .help-btn-label { display: none; } .help-btn { padding: 0; width: 36px; justify-content: center; } }
 .help-msg.assistant { white-space: normal; }
 .help-answer p { margin: 0 0 6px; }
 .help-answer p:last-child, .help-answer ul:last-child, .help-answer ol:last-child { margin-bottom: 0; }
@@ -1087,3 +1089,11 @@ code.break { word-break: break-all; }
 
 /* Transactions: search by the card's last 4 digits (Moshe Henig, 2026-11-12). */
 .card-search { width: 120px; font-variant-numeric: tabular-nums; letter-spacing: .08em; }
+
+/* Header Campaign ID box: several matches show as a list to pick from (Moshe Henig, 2026-11-12). */
+.id-jump-form { position: relative; }
+.id-jump-list { min-width: 280px; z-index: 60; }
+
+/* My Notifications: the on/off switch for all of them (Moshe Henig, 2026-11-12). */
+.notify-switch.off { background: var(--surface-2); }
+.notify-switch.off ~ .panel-box { opacity: .6; }

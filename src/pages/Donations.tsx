@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CreditCard, Plus } from 'lucide-react';
+import { CreditCard, Plus, X } from 'lucide-react';
+import { Overlay } from './Pledges';
 import DataTable, { exactValue, parseNumberFilter, type Column, type ServerQuery } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import Pager from '../components/Pager';
@@ -15,9 +16,66 @@ import TransactionBulk from './TransactionBulk';
 import { DONATION_KINDS, DONATION_SELECT, donationColumns } from './donationColumns';
 import { CardChargeDialog } from './Payments';
 
+/**
+ * A fundraiser asks the office for a receipt for a donation on their campaign (Moshe Henig, 2026-11-12). It lands on
+ * the Task Sheet as Receipt Requested, like the donor's own "Send me a receipt"; an admin issues and sends it.
+ */
+function RequestReceiptDialog({ row, onClose }: { row: Row; onClose: () => void }) {
+  const [email, setEmail] = useState(String(row.email ?? ''));
+  const [phone, setPhone] = useState(String(row.phone ?? ''));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const live = row.status === 'completed' || row.status === 'collect';
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null); setBusy(true);
+    const { error: err } = await supabase.rpc('fundraiser_request_receipt', { p_donation: row.id, p_email: email.trim() || null, p_phone: phone.trim() || null });
+    setBusy(false);
+    if (err) return setError(err.message);
+    setDone(true);
+  }
+  return (
+    <Overlay onClose={onClose}>
+      <form className="record-form" onSubmit={send}>
+        <div className="form-head"><h2>Donation {row.id}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+        <dl className="record-facts">
+          <dt>Amount</dt><dd>{money(row.amount)}</dd>
+          <dt>Donor</dt><dd>{row.donors?.display_name || row.donor_name || row.name || '—'}</dd>
+          <dt>Campaign</dt><dd>{row.campaign_internal || row.campaign_id}</dd>
+          <dt>Date</dt><dd>{new Date(row.created_at).toLocaleString()}</dd>
+        </dl>
+        {done ? (
+          <>
+            <div className="notice">Receipt requested. It's on the office's Task Sheet; they'll issue and send it.</div>
+            <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={onClose}>Done</button></div>
+          </>
+        ) : live ? (
+          <>
+            <p className="muted small">Ask the office for a receipt for this donation. Where should it go? Leave both empty to use the donor's details on file.</p>
+            <div className="fields">
+              <label className="field"><span>Email</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+              <label className="field"><span>Text to</span><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} /></label>
+            </div>
+            {error && <div className="error">{error}</div>}
+            <div className="form-actions"><div className="spacer" />
+              <button type="button" className="btn" onClick={onClose}>Close</button>
+              <button className="btn primary" disabled={busy}>{busy ? 'Sending…' : 'Request receipt'}</button></div>
+          </>
+        ) : <p className="muted small">Only a completed donation can have a receipt.</p>}
+      </form>
+    </Overlay>
+  );
+}
+
 function useDonationEditor(onChange: (row: Row) => void) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, canWork } = useAuth();
   const [editing, setEditing] = useState<Row | null>(null);
+  const [requesting, setRequesting] = useState<Row | null>(null);
+  // Fundraisers: a row opens the donation with Request receipt (admins get the edit form).
+  if (!isAdmin) {
+    return { open: canWork ? setRequesting : undefined, editor: requesting && <RequestReceiptDialog row={requesting} onClose={() => setRequesting(null)} /> };
+  }
   const editor = editing && (
     <RecordForm
       table="donations"
@@ -34,7 +92,7 @@ function useDonationEditor(onChange: (row: Row) => void) {
       }}
     />
   );
-  return { open: isAdmin ? setEditing : undefined, editor };
+  return { open: setEditing, editor };
 }
 
 const replaceRow = (list: Row[] | null, row: Row) =>
@@ -149,13 +207,26 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
       const like = `%${text}%`;
       s = s.or(
         [`name.ilike.${like}`, `donor_name.ilike.${like}`, `notes.ilike.${like}`, `payment_method.ilike.${like}`,
-         `phone.ilike.${like}`, `batch_id.ilike.${like}`, `check_number.ilike.${like}`, `id.eq.${text}`, `campaign_id.eq.${text}`, `voucher_id.eq.${text}`].join(','),
+         `phone.ilike.${like}`, `batch_id.ilike.${like}`, `check_number.ilike.${like}`, `id.eq.${text}`, `campaign_id.eq.${text}`, `voucher_id.eq.${text}`,
+         ...(campaignHits?.length ? [`campaign_id.in.(${campaignHits.map(id => `"${id.replace(/"/g, '')}"`).join(',')})`] : [])].join(','),
       );
     }
     return applyColumnFilters(s, columns, query?.filters ?? {});
   };
 
-  const queryKey = JSON.stringify([debounced, kindFilter, query, filter?.column, filter?.value, version, cardIds]);
+  // Campaigns the search text matches (ID, the number alone such as 3040 for AS-3040, part of it, or a name), looked up
+  // first so their transactions come from the campaign index (Moshe Henig, 2026-11-12).
+  const [campaignHits, setCampaignHits] = useState<string[] | null>(null);
+  useEffect(() => {
+    const t = debounced.trim().replace(/[,()*%\\]/g, ' ').trim();
+    if (!t) { setCampaignHits(null); return; }
+    let live = true;
+    const like = `*${t}*`;
+    supabase.from('campaigns').select('id').or(`id.ilike.${like},internal_name.ilike.${like},external_name.ilike.${like},campaign_name.ilike.${like}`).limit(200)
+      .then(({ data }) => { if (live) setCampaignHits(((data ?? []) as Row[]).map(c => String(c.id))); });
+    return () => { live = false; };
+  }, [debounced]);
+  const queryKey = JSON.stringify([debounced, kindFilter, query, filter?.column, filter?.value, version, cardIds, campaignHits]);
   useEffect(() => setPage(0), [queryKey]);
   useEffect(() => setSelected(new Map()), [queryKey]);
 

@@ -3,7 +3,7 @@
   "supabase": {
     "advisor_fail_levels": ["ERROR"],
     "advisor_max_counts": {
-      "authenticated_security_definer_function_executable": 249,
+      "authenticated_security_definer_function_executable": 251,
       "rls_enabled_no_policy": 37,
       "function_search_path_mutable": 29,
       "anon_security_definer_function_executable": 10,
