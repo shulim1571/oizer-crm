@@ -62,24 +62,21 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    title: 'Donations',
+    // Transactions joined Payouts, Transfers and Bank Reconciliation in one group named Transactions; the Donations
+    // group went away (New Donation is off the menu, in the header bar) (Moshe Henig, 2026-11-11).
+    title: 'Transactions',
     items: [
-      // Opened from the New Donation button in the header bar, so it's off the sidebar (Moshe Henig, 2026-11-11).
-      { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true, offMenu: true,
-        // Batch Entry gave way to new pledges and vouchers (Moshe Henig, 2026-11-11); it stays on a campaign's page.
-        tabs: [{ to: '/donations/new', label: 'One donation' }, { to: '/donations/pledges/new', label: 'New pledge' },
-          { to: '/donations/vouchers/new', label: 'New vouchers' }] },
       // One list with a date range (Last 7 days, 30, 60, a year or custom) instead of a Last 7 Days tab; Recurring,
       // Pledges, Vouchers and Receipts are tabs here, like Requests under Campaigns (Moshe Henig, 2026-11-11).
       { to: '/donations/all', label: 'Transactions', icon: <CircleDollarSign size={I} />,
         tabs: [{ to: '/donations/all', label: 'Transactions' }, { to: '/donations/recurring', label: 'Recurring' },
           { to: '/donations/pledges', label: 'Pledges' }, { to: '/donations/vouchers', label: 'Vouchers', admin: true },
           { to: '/donations/receipts', label: 'Receipts', admin: true }] },
-    ],
-  },
-  {
-    title: 'Payouts',
-    items: [
+      // Opened from the New Donation button in the header bar, so it's off the sidebar (Moshe Henig, 2026-11-11).
+      { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true, offMenu: true,
+        // Batch Entry gave way to new pledges and vouchers (Moshe Henig, 2026-11-11); it stays on a campaign's page.
+        tabs: [{ to: '/donations/new', label: 'One donation' }, { to: '/donations/pledges/new', label: 'New pledge' },
+          { to: '/donations/vouchers/new', label: 'New vouchers' }] },
       { to: '/expenses', label: 'Payouts', icon: <Receipt size={I} />,
         // Check Register is a tab between Payouts and Requests, admins only (Moshe Henig, 2026-11-11).
         tabs: [{ to: '/expenses', label: 'Payouts' }, { to: '/checks', label: 'Check Register', admin: true }, { to: '/payout-requests', label: 'Requests' }] },

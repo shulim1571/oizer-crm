@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 const src = (...p: string[]) => readFileSync(join(__dirname, '..', ...p), 'utf8');
 const layout = src('components', 'Layout.tsx');
 const app = src('App.tsx');
-const entry = layout.slice(layout.indexOf("label: 'New Donation'"), layout.indexOf("label: 'Transactions'"));
+const entry = layout.slice(layout.indexOf("label: 'New Donation'"), layout.indexOf("label: 'Payouts', icon:"));
 
 describe('New Donation tabs', () => {
   it('offer one donation, a new pledge and new vouchers, not Batch Entry', () => {

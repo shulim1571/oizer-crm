@@ -62,3 +62,13 @@ describe('your own settings (Moshe Henig, 2026-11-11)', () => {
     expect(foot).not.toContain('to="/security"');
   });
 });
+
+describe('Transactions group (Moshe Henig, 2026-11-11)', () => {
+  it('holds Transactions first, then Payouts, Transfers and Bank Reconciliation; there is no Donations group', () => {
+    const group = navBlock.slice(navBlock.indexOf("title: 'Transactions'"), navBlock.indexOf("title: 'People'"));
+    const shown = [...group.matchAll(/\{ to: '([^']+)', label: '([^']+)', icon:[^\n]*/g)].filter(m => !m[0].includes('offMenu: true')).map(m => m[2]);
+    expect(shown).toEqual(['Transactions', 'Payouts', 'Transfers', 'Bank Reconciliation']);
+    expect(navBlock).not.toContain("title: 'Donations'");
+    expect(navBlock).not.toContain("title: 'Payouts'");
+  });
+});
