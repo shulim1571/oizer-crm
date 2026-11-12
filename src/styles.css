@@ -373,11 +373,20 @@ input:focus, select:focus, textarea:focus {
 
 .table-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
-  overflow: hidden; display: flex; flex-direction: column; min-height: 0;
+  overflow: hidden; overflow: clip; display: flex; flex-direction: column; min-height: 0;
 }
 .content > .view { height: 100%; }
 .content > .view > .table-card { flex: 1; min-height: 300px; }
 .table-wrap { overflow: auto; flex: 1; min-height: 0; }
+/* The horizontal scroll bar stays on screen (Moshe Henig, 2026-11-12): the table's own bar is hidden and a mirror bar
+   (.hscroll) sticks to the bottom of the window while the table is taller than the screen. "overflow: clip" on the
+   card (above) keeps the rounded corners without stopping the bar from sticking. Lists that scroll inside a box of
+   their own (.detail) keep their own bar. */
+.table-wrap.proxied:not(.detail .table-wrap) { scrollbar-width: none; }
+.table-wrap.proxied:not(.detail .table-wrap)::-webkit-scrollbar { height: 0; }
+.hscroll { position: sticky; bottom: 0; z-index: 3; overflow-x: auto; overflow-y: hidden; background: var(--surface); border-top: 1px solid var(--line); flex: none; }
+.hscroll.hidden { display: none; }
+.detail .hscroll { display: none; }
 .detail .table-wrap { max-height: 70vh; }
 table.grid { border-collapse: separate; border-spacing: 0; width: 100%; }
 .grid th {
@@ -418,6 +427,7 @@ table.grid { border-collapse: separate; border-spacing: 0; width: 100%; }
 .detail-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .detail-head h1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .detail-head .sub { color: var(--muted); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.campaign-cell { display: flex; align-items: flex-start; gap: 8px; justify-content: space-between; }
 .id-tag { font-size: 13px; font-weight: 500; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 8px; }
 .hero-avatar {
   width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; flex: none; font-size: 20px; font-weight: 650;
@@ -1066,3 +1076,7 @@ img.logo.org-logo { background: #fff; padding: 2px; }
 .logo-upload-row .btn { margin-right: 8px; margin-top: 4px; }
 img.logo.product-logo.on-color { width: 38px; height: 38px; background: none; box-shadow: none; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .18)); }
 code.break { word-break: break-all; }
+
+/* "Check with USPS" under address fields (Shulim, 2026-11-12). */
+.address-check { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
+.address-suggestion { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }

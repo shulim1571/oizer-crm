@@ -3,8 +3,8 @@
   "supabase": {
     "advisor_fail_levels": ["ERROR"],
     "advisor_max_counts": {
-      "authenticated_security_definer_function_executable": 243,
-      "rls_enabled_no_policy": 36,
+      "authenticated_security_definer_function_executable": 249,
+      "rls_enabled_no_policy": 37,
       "function_search_path_mutable": 29,
       "anon_security_definer_function_executable": 10,
       "extension_in_public": 1
@@ -12,7 +12,7 @@
     "_anon_executable_functions": "Signed-out callers reach these by design (payment page, receipts, unsubscribe, shared documents, organization lookup); rls_auto_enable is Supabase's event-trigger function and cannot be called through the API.",
     "anon_executable_functions": ["donary_track", "org_footer", "public_cover_fee", "public_give_page", "recurring_card", "request_receipt", "resolve_org", "rls_auto_enable", "shared_document", "unsubscribe_email"],
     "_functions_without_jwt_verification": "Each authenticates itself: signed-in user token, API key, cron token, provider signature, per-organization secret, or is the public payment page.",
-    "functions_without_jwt_verification": ["sign-in", "send-messages", "message-events", "payments", "sola-webhook", "give", "recurring-charges", "api", "domains", "voice", "donary-sync", "donary-webhook", "plaid", "assistant", "phone-code", "make-ingest"],
+    "functions_without_jwt_verification": ["sign-in", "send-messages", "message-events", "payments", "sola-webhook", "give", "recurring-charges", "api", "domains", "voice", "donary-sync", "donary-webhook", "plaid", "assistant", "phone-code", "make-ingest", "usps-address"],
     "auth_equals": {
       "mfa_totp_enroll_enabled": true,
       "mfa_totp_verify_enabled": true,

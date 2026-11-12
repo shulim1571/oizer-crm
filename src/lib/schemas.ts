@@ -195,7 +195,7 @@ export const payeeFields: Field[] = [
   { name: 'name', label: 'Name', required: true },
   { name: 'phone', label: 'Phone' },
   { name: 'email', label: 'Email', type: 'email' },
-  { name: 'address', label: 'Address', type: 'textarea' },
+  { name: 'address', label: 'Address', type: 'textarea', uspsCheck: true },
   { name: 'preferred_method', label: 'Preferred payout method', type: 'select', options: payoutMethodOptions },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
@@ -245,7 +245,7 @@ export const donorFields: Field[] = [
   { name: 'yiddish_suffix', label: 'Yiddish Suffix' },
   { name: 'phone', label: 'Phone' },
   { name: 'email', label: 'Email', type: 'email' },
-  { name: 'address', label: 'Address' },
+  { name: 'address', label: 'Address', uspsCheck: true },
   { name: 'ojc_id', label: 'OJC ID' },
   { name: 'nadvan_id', label: 'Nadvan ID' },
   { name: 'matbia_id', label: 'Matbia ID' },

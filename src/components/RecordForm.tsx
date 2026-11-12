@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom';
 import CampaignBalanceNote from './CampaignBalanceNote';
+import AddressCheck from './AddressCheck';
 import { NewDonorDialog } from './DonorPicker';
 import { useEffect, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
@@ -31,6 +32,8 @@ export interface Field {
   showIf?: (values: Row) => boolean;
   /** Groups the form into titled sections, in the order they first appear (layout only). */
   section?: string;
+  /** A US address: offers "Check with USPS" under it once the organization has USPS keys (Shulim, 2026-11-12). */
+  uspsCheck?: boolean;
   /** How to make a new one from right here, without leaving this form. */
   create?: () => { noun: string; table: string; fields: Field[]; defaults?: Row; pk?: string };
 }
@@ -240,6 +243,7 @@ export default function RecordForm(p: Props) {
       <label key={f.name} className={`field ${f.type === 'textarea' ? 'wide' : ''} ${f.type === 'checkbox' ? 'check' : ''}`}>
         <span>{f.label}{f.required && ' *'}</span>
         {renderInput(f)}
+        {f.uspsCheck && !f.readOnly && <AddressCheck value={values[f.name]} oneLine={f.type !== 'textarea'} onUse={v => set(f.name, v)} />}
         {f.help && <small className="muted">{f.help}</small>}
       </label>
     );

@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth';
 import { useEffect, useState } from 'react';
 import { FooterSettings } from '../components/PoweredBy';
 import { parseStaleDays, STALE_CHECK_DEFAULT } from '../lib/staleCheck';
+import { IDLE_MINUTES_DEFAULT, parseIdleMinutes } from '../lib/idle';
 
 const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Asia/Jerusalem', 'Europe/London']
   .map(v => ({ value: v, label: v }));
@@ -17,7 +18,7 @@ const SECTIONS: { title: string; description: string; save: string; fields: Fiel
       { name: 'name', label: 'Organization name', required: true, help: 'Shown across the portal' },
       { name: 'legal_name', label: 'Legal name', help: 'As it appears on receipts' },
       { name: 'ein', label: 'EIN' },
-      { name: 'address', label: 'Address' },
+      { name: 'address', label: 'Address', uspsCheck: true },
       { name: 'phone', label: 'Phone' },
       { name: 'email', label: 'Email', type: 'email' },
     ],
@@ -67,7 +68,17 @@ export default function OrganizationPage() {
           />
         </div>
       ))}
-      <StaleCheckSetting orgId={String(org.id)} onSaved={() => setSaved('Task Sheet')} />
+      {/* The stale-check threshold (Moshe Henig, 2026-11-12): already a setting the Task Sheet reads. */}
+      <NumberSetting orgId={String(org.id)} settingKey="stale_check_days" title="Task Sheet" intro="When the Task Sheet flags things that need a look."
+        label="Stale check after (days)" unit="days" defaultValue={STALE_CHECK_DEFAULT} parse={parseStaleDays} saveLabel="Save Task Sheet settings"
+        help="A check payout that hasn't cleared shows on the Task Sheet as a Stale Check this many days after it was entered. Voided and lost checks are skipped."
+        onSaved={() => { window.dispatchEvent(new Event('task-sheet-changed')); setSaved('Task Sheet'); }} />
+      {/* Idle sign-out (Moshe Henig, 2026-11-12): signed out only after this long with no activity. */}
+      <NumberSetting orgId={String(org.id)} settingKey="idle_timeout_minutes" title="Security" intro="How long someone can leave Donor Base untouched before being signed out."
+        label="Sign out after (minutes idle)" unit="minutes" defaultValue={IDLE_MINUTES_DEFAULT} parse={parseIdleMinutes} saveLabel="Save security settings"
+        help="Anyone who leaves the app with no activity (clicks, typing, scrolling, moving between pages, saving) for this long is signed out. From 5 to 720 minutes; it applies from each person's next sign-in or page load."
+        onSaved={() => { setSaved('Security'); void refresh(); }} />
+      <UspsKeys />
       <FooterSettings />
     </section>
   );
@@ -130,50 +141,116 @@ function LogoUpload({ org, onSaved }: { org: Row; onSaved: () => void }) {
 }
 
 /**
- * The stale-check threshold, per organization (Moshe Henig, 2026-11-12). It was already an organization setting
- * (stale_check_days) that the Task Sheet reads; this is the first screen that shows it and lets an admin change it.
+ * One number kept as an organization setting (settings table, one row per organization and key), shown and changed
+ * here by the organization's admins. The database keeps each admin to their own organization's rows.
  */
-function StaleCheckSetting({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
-  const [days, setDays] = useState('');
+function NumberSetting({ orgId, settingKey, title, intro, label, unit, help, defaultValue, parse, saveLabel, onSaved }: {
+  orgId: string; settingKey: string; title: string; intro: string; label: string; unit: string; help: string;
+  defaultValue: number; parse: (text: string) => number | string; saveLabel: string; onSaved: () => void;
+}) {
+  const [text, setText] = useState('');
   const [stored, setStored] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    supabase.from('settings').select('value').eq('key', 'stale_check_days').maybeSingle().then(({ data, error: e }) => {
+    supabase.from('settings').select('value').eq('key', settingKey).maybeSingle().then(({ data, error: e }) => {
       if (e) return setError(e.message);
       const n = data?.value == null ? null : Number(data.value);
       setStored(n);
-      setDays(String(n ?? STALE_CHECK_DEFAULT));
+      setText(String(n ?? defaultValue));
     });
-  }, [orgId]);
+  }, [orgId, settingKey, defaultValue]);
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const n = parseStaleDays(days);
+    const n = parse(text);
     if (typeof n === 'string') return setError(n);
     setSaving(true);
-    const { error: err } = await supabase.from('settings')
-      .upsert({ org_id: orgId, key: 'stale_check_days', value: n }, { onConflict: 'org_id,key' });
+    const { error: err } = await supabase.from('settings').upsert({ org_id: orgId, key: settingKey, value: n }, { onConflict: 'org_id,key' });
     setSaving(false);
     if (err) return setError(err.message);
     setStored(n);
-    window.dispatchEvent(new Event('task-sheet-changed'));
     onSaved();
   }
   return (
     <div className="settings-section">
       <form className="record-form" onSubmit={save}>
-        <div className="form-head"><h2>Task Sheet</h2></div>
-        <p className="muted small form-desc">When the Task Sheet flags things that need a look.</p>
+        <div className="form-head"><h2>{title}</h2></div>
+        <p className="muted small form-desc">{intro}</p>
         <div className="fields">
-          <label className="field"><span>Stale check after (days)</span>
-            <input type="number" min={1} max={3650} step={1} value={days} onChange={e => setDays(e.target.value)} />
-            <small className="muted">A check payout that hasn't cleared shows on the Task Sheet as a Stale Check this many days after it was entered.
-              Voided and lost checks are skipped. {stored == null ? `Not set yet, so the default of ${STALE_CHECK_DEFAULT} applies.` : `Default ${STALE_CHECK_DEFAULT}.`}</small>
+          <label className="field"><span>{label}</span>
+            <input type="number" step={1} value={text} onChange={e => setText(e.target.value)} />
+            <small className="muted">{help} {stored == null ? `Not set yet, so the default of ${defaultValue} ${unit} applies.` : `Default ${defaultValue} ${unit}.`}</small>
           </label>
         </div>
         {error && <div className="error">{error}</div>}
-        <div className="form-actions"><div className="spacer" /><button className="btn primary" disabled={saving}>{saving ? 'Saving…' : 'Save Task Sheet settings'}</button></div>
+        <div className="form-actions"><div className="spacer" /><button className="btn primary" disabled={saving}>{saving ? 'Saving…' : saveLabel}</button></div>
+      </form>
+    </div>
+  );
+}
+
+/**
+ * The organization's own USPS credentials for address checks (Shulim, 2026-11-12): a consumer key and secret from a
+ * USPS developer account (developers.usps.com). Stored encrypted; the secret never comes back to the browser. Only the
+ * Super Admin sets them; admins see whether they're set.
+ */
+function UspsKeys() {
+  const { isSuperAdmin } = useAuth();
+  const [version, setVersion] = useState(0);
+  const [status, setStatus] = useState<Row | null | undefined>(undefined);
+  const [key, setKey] = useState('');
+  const [secret, setSecret] = useState('');
+  const [env, setEnv] = useState('production');
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.rpc('usps_keys_status').then(({ data }) => {
+      const row = ((data ?? []) as Row[])[0] ?? null;
+      setStatus(row);
+      if (row?.environment) setEnv(row.environment);
+    });
+  }, [version]);
+  const set = !!status?.key_hint && !!status?.secret_set;
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null); setNote(null);
+    const { error: err } = await supabase.rpc('save_usps_keys', { p_consumer_key: key || null, p_consumer_secret: secret || null, p_environment: env });
+    if (err) return setError(err.message);
+    setKey(''); setSecret(''); setNote('USPS keys saved. Reload the page to see "Check with USPS" under address fields.');
+    setVersion(v => v + 1);
+  }
+  async function clear() {
+    if (!confirm('Remove this organization\'s USPS keys? Address checks stop being offered.')) return;
+    const { error: err } = await supabase.rpc('clear_usps_keys');
+    if (err) return setError(err.message);
+    setVersion(v => v + 1);
+  }
+  if (status === undefined) return null;
+  return (
+    <div className="settings-section">
+      <form className="record-form" onSubmit={save}>
+        <div className="form-head"><h2>USPS address check</h2></div>
+        <p className="muted small form-desc">
+          With your own USPS developer keys, address fields (donors, payees, this page) get a "Check with USPS" button that standardizes the address.
+          {set ? ` Set up: key ${status?.key_hint}, ${status?.environment === 'test' ? 'USPS test environment' : 'production'}${status?.updated_by ? `, by ${status.updated_by}` : ''}.` : ' Not set up yet.'}
+        </p>
+        {isSuperAdmin ? (
+          <>
+            <div className="fields">
+              <label className="field"><span>Consumer key</span><input value={key} onChange={e => setKey(e.target.value)} placeholder={set ? 'Leave empty to keep the one on file' : 'From developers.usps.com → Apps'} autoComplete="off" /></label>
+              <label className="field"><span>Consumer secret</span><input type="password" value={secret} onChange={e => setSecret(e.target.value)} placeholder={set ? 'Leave empty to keep the one on file' : ''} autoComplete="new-password" /></label>
+              <label className="field"><span>USPS environment</span>
+                <select value={env} onChange={e => setEnv(e.target.value)}><option value="production">Production (apis.usps.com)</option><option value="test">Test (apis-tem.usps.com)</option></select></label>
+            </div>
+            {error && <div className="error">{error}</div>}
+            {note && <div className="notice">{note}</div>}
+            <div className="form-actions">
+              {set && <button type="button" className="btn danger" onClick={() => void clear()}>Remove keys</button>}
+              <div className="spacer" /><button className="btn primary">Save USPS keys</button>
+            </div>
+          </>
+        ) : <p className="muted small">The Super Admin enters these.</p>}
       </form>
     </div>
   );
