@@ -1,3 +1,4 @@
+import { lastFirst } from '../lib/nameSort';
 import { useNavigate } from 'react-router-dom';
 import { RequestPayoutDialog } from './Payouts';
 import { Plus } from 'lucide-react';
@@ -125,7 +126,7 @@ export function AccountsPage() {
 }
 
 const personColumns = [
-  { key: 'full_name', label: 'Name', width: 200 },
+  { key: 'full_name', label: 'Name', width: 200, sortValue: (r: Record<string, unknown>) => lastFirst(r, 'full_name') },
   { key: 'phone', label: 'Phone' },
   { key: 'email', label: 'Email' },
   { key: 'notes', label: 'Notes' },

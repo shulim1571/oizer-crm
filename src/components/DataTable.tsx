@@ -17,6 +17,8 @@ export interface Column {
   key: string;
   label: string;
   render?: (row: Row) => ReactNode;
+  /** What to sort by when it isn't the shown value: a value, or parts compared in order (last name, then first name). */
+  sortValue?: (row: Row) => unknown;
   /** Plain value used for sorting, search and CSV; defaults to row[key]. */
   value?: (row: Row) => unknown;
   align?: 'right';
@@ -249,7 +251,20 @@ export default function DataTable(p: Props) {
       if (col) {
         const dir = sort.dir === 'asc' ? 1 : -1;
         rows = [...rows].sort((a, b) => {
-          const x = val(col, a), y = val(col, b);
+          // Parts compared one after another, e.g. last name then first name (Moshe Henig, 2026-11-12).
+          if (col.sortValue) {
+            const xs = col.sortValue(a), ys = col.sortValue(b);
+            if (Array.isArray(xs) && Array.isArray(ys)) {
+              const blank = (v: unknown[]) => v.every(t => t == null || String(t).trim() === '');
+              if (blank(xs) !== blank(ys)) return blank(xs) ? 1 : -1;
+              for (let i = 0; i < Math.max(xs.length, ys.length); i++) {
+                const c = String(xs[i] ?? '').localeCompare(String(ys[i] ?? ''), undefined, { sensitivity: 'base' });
+                if (c) return c * dir;
+              }
+              return 0;
+            }
+          }
+          const x = col.sortValue ? col.sortValue(a) : val(col, a), y = col.sortValue ? col.sortValue(b) : val(col, b);
           if (x == null || x === '') return 1;
           if (y == null || y === '') return -1;
           const nx = Number(x), ny = Number(y);

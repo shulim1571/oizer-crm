@@ -1,4 +1,5 @@
 import AddressEditor from '../components/AddressEditor';
+import { lastFirst } from '../lib/nameSort';
 import { useDonationEditor } from './Donations';
 import PageTabs, { usePageTab } from '../components/PageTabs';
 import { useMemo, useState } from 'react';
@@ -43,6 +44,7 @@ export function DonorsPage() {
           {
             key: 'display_name', label: 'Donor', width: 220,
             value: r => `${r.display_name} ${r.yiddish_name ?? ''}`,
+            sortValue: r => lastFirst(r, 'display_name'),
             render: r => (
               <div className="person">
                 <span className="avatar sm">{(r.display_name || '?')[0]}</span>
