@@ -1097,3 +1097,23 @@ code.break { word-break: break-all; }
 /* My Notifications: the on/off switch for all of them (Moshe Henig, 2026-11-12). */
 .notify-switch.off { background: var(--surface-2); }
 .notify-switch.off ~ .panel-box { opacity: .6; }
+
+/* List views: only the list scrolls (Moshe Henig, 2026-11-12). On a page whose list sits directly in it (or one level
+   down, as on the Task Sheet), the page area is a column that fills the window: the top bar, page header, filters,
+   search and summary stay put, the list's card takes the rest, and only the table inside it scrolls, with its column
+   headers stuck to the top and the page buttons under it. If a phone's header is too tall to leave room, the table
+   keeps a minimum height and the page scrolls as before. Detail pages with lists inside are left as they are. */
+.content:has(> .view > .table-area .table-card),
+.content:has(> .view > .view > .table-area .table-card) { display: flex; flex-direction: column; }
+.content:has(> .view > .table-area .table-card) > :not(.view),
+.content:has(> .view > .view > .table-area .table-card) > :not(.view) { flex: none; }
+.content > .view:has(> .table-area .table-card),
+.content > .view:has(> .view > .table-area .table-card) { flex: 1 1 auto; height: auto; min-height: 0; }
+.view:has(> .view > .table-area .table-card) > :not(.view) { flex: none; }
+.view:has(> .view > .table-area .table-card) > .view { flex: 1 1 auto; min-height: 0; }
+.view:has(> .table-area .table-card) > :not(.table-area) { flex: none; }
+.view:has(> .table-area .table-card) > .table-area { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+.table-area > .table-main:has(> .table-card) { min-height: 0; }
+.table-main > .table-card { flex: 1 1 auto; min-height: 260px; }
+.table-main > :not(.table-card) { flex: none; }
+@media (max-width: 600px) { .table-main > .table-card { min-height: 220px; } }
