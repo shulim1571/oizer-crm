@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import CampaignBalanceNote from './CampaignBalanceNote';
 import { NewDonorDialog } from './DonorPicker';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -299,9 +300,12 @@ export default function RecordForm(p: Props) {
   }
 
   if (p.inline) return <div className="card">{body}{nested}</div>;
-  return (
+  // Drawn at the end of the page, like the other dialogs, so a form opened from another window (editing a voucher
+  // from its details) lands on top of it instead of underneath (Moshe Henig, 2026-11-11).
+  return createPortal(
     <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && p.onClose()}>
       <div className="modal">{body}{nested}</div>
-    </div>
+    </div>,
+    document.body,
   );
 }
