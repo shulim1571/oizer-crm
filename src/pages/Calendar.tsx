@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../lib/auth';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { dateTime, localToday, money } from '../lib/format';
 import { dateOf, isoOf, jewishDays, type JewishDay } from '../lib/jewishCalendar';
@@ -11,7 +12,11 @@ const WEEK_HEAD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const startOfWeek = (d: Date) => addDays(d, -d.getDay());
 
+// Fundraisers have this calendar too (Moshe Henig, 2026-11-11): they see only their own bookings (the database's
+// row rules on machine bookings decide), can book a day for themselves, and don't see admin details (scheduled
+// payouts, machine capacity, confirming or assigning machines).
 export default function CalendarPage() {
+  const { isAdmin } = useAuth();
   const [mode, setMode] = useState<'month' | 'week'>('month');
   const [anchor, setAnchor] = useState(() => dateOf(localToday()));
   const [open, setOpen] = useState<JewishDay | null>(null);
@@ -31,11 +36,13 @@ export default function CalendarPage() {
     const [list, avail, payouts] = await Promise.all([
       fetchAll((a, b) => supabase.from('machine_booking_list').select('*').gte('booking_date', from).lte('booking_date', to).neq('status', 'cancelled').order('queue_at').range(a, b) as never),
       supabase.rpc('machine_availability', { p_from: from, p_to: to }),
-      supabase.from('expenses').select('id, amount, payee, method, scheduled_for, campaign_id').is('processed_at', null).gte('scheduled_for', from).lte('scheduled_for', to).order('scheduled_for'),
+      isAdmin
+        ? supabase.from('expenses').select('id, amount, payee, method, scheduled_for, campaign_id').is('processed_at', null).gte('scheduled_for', from).lte('scheduled_for', to).order('scheduled_for')
+        : Promise.resolve({ data: [] }),
     ]);
     if (avail.error) throw new Error(avail.error.message);
     return { list: list as Row[], machines: (avail.data as Row[])[0]?.machines ?? 0, payouts: (payouts.data ?? []) as Row[] };
-  }, [from, to, version]);
+  }, [from, to, version, isAdmin]);
   const machines = data.data?.machines ?? 0;
   const byDay = useMemo(() => {
     const m = new Map<string, Row[]>();
@@ -108,12 +115,12 @@ export default function CalendarPage() {
         })}
       </div>
       <p className="muted small">Machine bookings show on their day; click a day to confirm, move or cancel them. Shabbos and Yom Tov are shaded. Times are for New York. Scheduled payouts show on the day they're due.</p>
-      {open && <DayDialog day={open} machines={machines} bookings={byDay.get(open.iso) ?? []} payouts={payoutsByDay.get(open.iso) ?? []} onClose={() => setOpen(null)} onChanged={() => setVersion(v => v + 1)} />}
+      {open && <DayDialog isAdmin={isAdmin} day={open} machines={machines} bookings={byDay.get(open.iso) ?? []} payouts={payoutsByDay.get(open.iso) ?? []} onClose={() => setOpen(null)} onChanged={() => setVersion(v => v + 1)} />}
     </section>
   );
 }
 
-function DayDialog({ day, machines, bookings, payouts, onClose, onChanged }: { day: JewishDay; machines: number; bookings: Row[]; payouts: Row[]; onClose: () => void; onChanged: () => void }) {
+function DayDialog({ isAdmin, day, machines, bookings, payouts, onClose, onChanged }: { isAdmin: boolean; day: JewishDay; machines: number; bookings: Row[]; payouts: Row[]; onClose: () => void; onChanged: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [adding, setAdding] = useState(false);
@@ -148,8 +155,8 @@ function DayDialog({ day, machines, bookings, payouts, onClose, onChanged }: { d
           </ul>
         </>
       )}
-      <h3>Machine requests</h3>
-      <p className="muted small">{bookings.length} request{bookings.length === 1 ? '' : 's'} · {confirmed} confirmed · {machines} machine{machines === 1 ? '' : 's'} in service{bookings.length > machines ? ' · Over Capacity' : ''}</p>
+      <h3>{isAdmin ? 'Machine requests' : 'Your machine bookings'}</h3>
+      {isAdmin && <p className="muted small">{bookings.length} request{bookings.length === 1 ? '' : 's'} · {confirmed} confirmed · {machines} machine{machines === 1 ? '' : 's'} in service{bookings.length > machines ? ' · Over Capacity' : ''}</p>}
       {error && <div className="error">{error}</div>}
       {bookings.map(b => (
         <div key={b.id} className="panel-box">
@@ -160,13 +167,13 @@ function DayDialog({ day, machines, bookings, payouts, onClose, onChanged }: { d
           <div className="muted small">
             Requested {dateTime(b.requested_at)}{b.notes ? ` · ${b.notes}` : ''}{b.offered_at && b.status === 'pending' ? ' · A machine opened up' : ''}{b.priority_note ? ` · Moved: ${b.priority_note}` : ''}
           </div>
-          {!past && <BookingActions booking={b} onAct={call => act(call)} version={version} />}
+          {!past && isAdmin && <BookingActions booking={b} onAct={call => act(call)} version={version} />}
         </div>
       ))}
-      {bookings.length === 0 && <p className="muted">No requests for this day.</p>}
+      {bookings.length === 0 && <p className="muted">{isAdmin ? 'No requests for this day.' : 'You have no booking on this day.'}</p>}
       {!past && (adding
-        ? <RequestForm initialDate={day.iso} title="Add a booking for this day" onDone={() => { setVersion(v => v + 1); onChanged(); window.dispatchEvent(new Event('task-sheet-changed')); }} />
-        : <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> Add a booking for this day</button></div>)}
+        ? <RequestForm initialDate={day.iso} title={isAdmin ? 'Add a booking for this day' : 'Book a machine for this day'} onDone={() => { setVersion(v => v + 1); onChanged(); window.dispatchEvent(new Event('task-sheet-changed')); }} />
+        : <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> {isAdmin ? 'Add a booking for this day' : 'Book this day'}</button></div>)}
     </Overlay>
   );
 }

@@ -198,7 +198,8 @@ export default function App() {
         <Route index element={<Navigate to={isAdmin ? '/task-sheet' : '/dashboard'} replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="balance-summary" element={<AdminOnly><BalanceSummaryPage /></AdminOnly>} />
-        <Route path="calendar" element={<AdminOnly><Suspense fallback={null}><CalendarPage /></Suspense></AdminOnly>} />
+        {/* Fundraisers have the calendar too, with only their own bookings (Moshe Henig, 2026-11-11). */}
+        <Route path="calendar" element={<Suspense fallback={null}><CalendarPage /></Suspense>} />
         <Route path="machines" element={<MachinesPage />} />
         <Route path="machine-report" element={<AdminOnly><MachineReportPage /></AdminOnly>} />
         <Route path="machine-registry" element={<AdminOnly><MachineRegistryPage /></AdminOnly>} />
