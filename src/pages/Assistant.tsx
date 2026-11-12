@@ -128,7 +128,10 @@ export function HelpAssistant() {
 
   return (
     <>
-      {!open && <button type="button" className="help-fab" onClick={() => setOpen(true)} aria-label="Help"><HelpCircle size={20} /> Help</button>}
+      {/* In the top bar, not floating over the page (Moshe Henig, 2026-11-12: the floating button covered other buttons,
+          such as list page buttons and dialog Save buttons). The panel opens under the top bar only when asked for. */}
+      <button type="button" className={`icon-btn outlined help-btn ${open ? 'on' : ''}`} title="Help" aria-label="Help" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <HelpCircle size={16} /><span className="help-btn-label">Help</span></button>
       {open && (
         <div className="help-panel" role="dialog" aria-label="Help assistant">
           <div className="help-head"><b><Sparkles size={15} /> Help</b><span className="muted small">{left} question{left === 1 ? '' : 's'} left today</span>
