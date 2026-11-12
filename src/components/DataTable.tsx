@@ -297,6 +297,7 @@ export default function DataTable(p: Props) {
   // Frozen columns stay put while scrolling sideways, so each needs the width of those before it.
   const freeze = Math.min(config.freeze ?? 0, columns.length);
   const headRow = useRef<HTMLTableRowElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [offsets, setOffsets] = useState<number[]>([]);
   const selectable = !!p.onSelect;
   useLayoutEffect(() => {
@@ -466,7 +467,7 @@ export default function DataTable(p: Props) {
       {p.error && <div className="error">{p.error}</div>}
 
       <div className="table-card">
-        <div className="table-wrap">
+        <div className="table-wrap proxied" ref={wrapRef}>
           <table className="grid">
             <thead>
               <tr ref={headRow}>
@@ -520,6 +521,7 @@ export default function DataTable(p: Props) {
             </tbody>
           </table>
         </div>
+        <StickyHScroll target={wrapRef} />
         {!server && !p.loading && pages > 1 && (
           <div className="table-foot">
             <span>Page {currentPage + 1} of {pages} · {visible.length.toLocaleString()} records</span>
@@ -618,3 +620,35 @@ function GroupPicker({ label, groups, value, onChange, badge }: {
 /** Group badge that shows a dollar total instead of a count. */
 export const sumBadge = (key: string) => (rows: Row[]) => money(rows.reduce((s, r) => s + Number(r[key] ?? 0), 0));
 
+/**
+ * The list's horizontal scroll bar, kept on screen (Moshe Henig, 2026-11-12: on a 100-row list it was only at the very
+ * bottom of the table). A mirror bar sits under the table and sticks to the bottom of the window while the table runs
+ * past it; it and the table scroll together. Shown only when the table is wider than its box.
+ */
+function StickyHScroll({ target }: { target: React.RefObject<HTMLDivElement | null> }) {
+  const bar = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [needed, setNeeded] = useState(false);
+  useEffect(() => {
+    const el = target.current;
+    if (!el) return;
+    const measure = () => {
+      setWidth(el.scrollWidth);
+      setNeeded(el.scrollWidth > el.clientWidth + 1);
+      if (bar.current) bar.current.scrollLeft = el.scrollLeft;
+    };
+    const follow = () => { if (bar.current && bar.current.scrollLeft !== el.scrollLeft) bar.current.scrollLeft = el.scrollLeft; };
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    ro?.observe(el);
+    if (el.firstElementChild) ro?.observe(el.firstElementChild);
+    el.addEventListener('scroll', follow, { passive: true });
+    measure();
+    return () => { ro?.disconnect(); el.removeEventListener('scroll', follow); };
+  }, [target]);
+  return (
+    <div className={`hscroll ${needed ? '' : 'hidden'}`} ref={bar} aria-hidden="true"
+      onScroll={e => { const el = target.current; if (el && el.scrollLeft !== e.currentTarget.scrollLeft) el.scrollLeft = e.currentTarget.scrollLeft; }}>
+      <div style={{ width, height: 1 }} />
+    </div>
+  );
+}
