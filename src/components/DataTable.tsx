@@ -520,14 +520,17 @@ export default function DataTable(p: Props) {
             </tbody>
           </table>
         </div>
-        <StickyHScroll target={wrapRef} />
-        {!server && !p.loading && pages > 1 && (
-          <div className="table-foot">
-            <span>Page {currentPage + 1} of {pages} · {visible.length.toLocaleString()} records</span>
-            <Pager page={currentPage} pages={pages} onPage={setPage} />
-          </div>
-        )}
-        {p.footer && <div className="table-foot">{p.footer}</div>}
+        {/* The scroll bar and the page buttons stay together at the bottom of the window (Moshe Henig, 2026-11-12). */}
+        <div className="table-sticky-foot">
+          <StickyHScroll target={wrapRef} />
+          {!server && !p.loading && pages > 1 && (
+            <div className="table-foot">
+              <span>Page {currentPage + 1} of {pages} · {visible.length.toLocaleString()} records</span>
+              <Pager page={currentPage} pages={pages} onPage={setPage} />
+            </div>
+          )}
+          {p.footer && <div className="table-foot">{p.footer}</div>}
+        </div>
       </div>
       </div>
       {showFilters && !p.plain && (
