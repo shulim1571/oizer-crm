@@ -99,6 +99,15 @@ export default function TaskSheetPage() {
     () => fetchAll((a, b) => supabase.from('admin_task_sheet').select('*').order('submitted_at').range(a, b) as never),
     [version],
   );
+  // New tasks show without a refresh: reload when anything changes tasks (a payout saved, a check voided...) and when
+  // you come back to this tab (Moshe Henig, 2026-11-11).
+  useEffect(() => {
+    const again = () => setVersion(v => v + 1);
+    const back = () => { if (document.visibilityState === 'visible') again(); };
+    window.addEventListener('task-sheet-changed', again);
+    document.addEventListener('visibilitychange', back);
+    return () => { window.removeEventListener('task-sheet-changed', again); document.removeEventListener('visibilitychange', back); };
+  }, []);
   const history = useQuery(
     () => (view === 'history'
       ? fetchAll((a, b) => supabase.from('task_sheet_actions').select('*').order('created_at', { ascending: false }).range(a, b) as never)
@@ -108,7 +117,7 @@ export default function TaskSheetPage() {
   const all = (q.data as Row[]) ?? [];
   const rows = all.filter(r => (!type || r.task_type === type) && (!fundraiser || r.fundraiser === fundraiser));
   const fundraisers = [...new Set(all.map(r => r.fundraiser).filter(Boolean))].sort();
-  const changed = () => { setVersion(v => v + 1); window.dispatchEvent(new Event('task-sheet-changed')); };
+  const changed = () => window.dispatchEvent(new Event('task-sheet-changed'));   // the listener above reloads
   const done = () => { setOpen(null); changed(); };
 
   return (

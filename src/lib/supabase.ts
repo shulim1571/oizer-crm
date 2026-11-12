@@ -15,11 +15,15 @@ export const requestOrgId = () => requestOrg;
 
 // Tells the database which organization a data request is for. The database still checks the
 // signed-in user belongs to it, so this only ever selects, it never grants.
+// Data is never taken from a cache: every request goes to the database (cache: 'no-store'; the browser then also
+// tells any proxy on the way not to answer from its cache). Moshe Henig, 2026-11-11: a new Task Sheet task only
+// appeared after a hard refresh, which is what a cached answer looks like.
 const orgFetch: typeof fetch = (input, init) => {
-  if (!requestOrg || !String(input instanceof Request ? input.url : input).includes('/rest/v1/')) return fetch(input, init);
+  const fresh: RequestInit = { ...init, cache: 'no-store' };
+  if (!requestOrg || !String(input instanceof Request ? input.url : input).includes('/rest/v1/')) return fetch(input, fresh);
   const headers = new Headers(init?.headers);
   headers.set('x-org-id', requestOrg);
-  return fetch(input, { ...init, headers });
+  return fetch(input, { ...fresh, headers });
 };
 
 // PKCE puts the email-link code in ?code= so it doesn't collide with HashRouter's #/ routes.

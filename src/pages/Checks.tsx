@@ -218,8 +218,9 @@ export function PayoutCheckActions({ record, onDone }: { record: Row; onDone: (r
       {checks.filter(k => k !== live).map(k => <span key={k.id} className="muted small">#{k.check_number} {STATUS[k.status]?.label.toLowerCase()}{k.status_reason ? `: ${k.status_reason}` : ''}</span>)}
       {printer.dialog}
       {printing && <PrintCheckDialog payout={record} onClose={() => setPrinting(false)}
-        onIssued={check => { setPrinting(false); setAsking(check); setVersion(v => v + 1); onDone(record); }} />}
-      {asking && <CheckPrintedQuestion check={asking} onDone={() => { setAsking(null); setVersion(v => v + 1); }} />}
+        onIssued={check => { setPrinting(false); setAsking(check); setVersion(v => v + 1); }} />}
+      {/* Ask first, then let the payout or the task close: closing first took the question with it (Moshe Henig, 2026-11-11). */}
+      {asking && <CheckPrintedQuestion check={asking} onDone={() => { setAsking(null); setVersion(v => v + 1); onDone(record); }} />}
     </div>
   );
 }

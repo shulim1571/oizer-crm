@@ -127,7 +127,11 @@ export default function RecordForm(p: Props) {
       return p.onBulk(patch);
     }
     const data = await persist();
-    if (data) p.onSaved(data);
+    if (data) {
+      // A save can add or clear Task Sheet tasks (a check payout, for one); the sheet and its count update now.
+      window.dispatchEvent(new Event('task-sheet-changed'));
+      p.onSaved(data);
+    }
   }
 
   /** Saves the form and returns the saved row (or null, with the error shown), without closing it. */
