@@ -1,4 +1,5 @@
 import AddressEditor from '../components/AddressEditor';
+import { useDonationEditor } from './Donations';
 import PageTabs, { usePageTab } from '../components/PageTabs';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -148,6 +149,16 @@ export function DonorDetail() {
     fetchAll((a, b) => supabase.from('donations').select(DONATION_SELECT).eq('donor_id', id).order('created_at', { ascending: false }).range(a, b)),
   [id, version]);
 
+  // Edit a donation straight from the giving history (Moshe Henig, 2026-11-12): the same editor and rules as the
+  // Transactions list, so only those who can edit donations can, and the change log is the same.
+  const giftEditor = useDonationEditor(() => setVersion(v => v + 1));
+  const giftColumns = useMemo(() => [
+    ...(isAdmin ? [{ key: '_edit', label: '', width: 60, render: (r: Row) => (
+      <button type="button" className="link" onClick={e => { e.stopPropagation(); giftEditor.open?.(r); }}>Edit</button>
+    ) }] : []),
+    ...donationColumns().filter(c => c.key !== 'donor'),
+  ], [isAdmin]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   const tasks = useQuery(async () => {
     const { data } = await supabase.from('tasks').select('*, campaigns(id, internal_name, campaign_name)').eq('donor_id', id).order('created_at', { ascending: false });
     return data ?? [];
@@ -283,9 +294,11 @@ export function DonorDetail() {
         rows={gifts.data ?? []}
         loading={gifts.loading}
         error={gifts.error}
-        columns={donationColumns().filter(c => c.key !== 'donor')}
+        columns={giftColumns}
+        onOpen={giftEditor.open}
         serverSearch
       />}
+      {giftEditor.editor}
       <p className="muted pad">Last updated {dateTime(d.updated_at)}</p>
 
       {editingAddress && <AddressEditor donor={d} onClose={() => setEditingAddress(false)} onSaved={() => { setEditingAddress(false); setVersion(v => v + 1); }} />}

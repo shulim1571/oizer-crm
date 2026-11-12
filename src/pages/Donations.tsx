@@ -27,6 +27,30 @@ function RequestReceiptDialog({ row, onClose }: { row: Row; onClose: () => void 
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const live = row.status === 'completed' || row.status === 'collect';
+  // A fundraiser an admin gave "Generate single donation receipts" makes the receipt here (Moshe Henig, 2026-11-12).
+  const [canIssue, setCanIssue] = useState(false);
+  const [existing, setExisting] = useState<Row | null>(null);
+  useEffect(() => {
+    if (!row.campaign_id) return;
+    supabase.rpc('has_override', { p_permission: 'single_receipts', p_campaign: row.campaign_id }).then(({ data }) => setCanIssue(!!data));
+    supabase.from('receipts').select('id, receipt_number').contains('donation_ids', [row.id]).eq('status', 'issued').maybeSingle().then(({ data }) => setExisting((data as Row | null) ?? null));
+  }, [row.id, row.campaign_id]);
+  async function generate() {
+    setError(null); setBusy(true);
+    try {
+      let id = existing?.id as string | undefined;
+      if (!id) {
+        const { data, error: err } = await supabase.rpc('issue_receipt', { p_donation: row.id });
+        if (err) throw new Error(err.message);
+        id = data as string;
+        setExisting({ id, receipt_number: '' });
+      }
+      const { printReceipts } = await import('./Receipts');
+      await printReceipts([id]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally { setBusy(false); }
+  }
   async function send(e: React.FormEvent) {
     e.preventDefault();
     setError(null); setBusy(true);
@@ -52,6 +76,13 @@ function RequestReceiptDialog({ row, onClose }: { row: Row; onClose: () => void 
           </>
         ) : live ? (
           <>
+            {canIssue && (
+              <div className="panel-box">
+                <p className="muted small">{existing ? `Receipt ${existing.receipt_number || ''} is already issued for this donation.` : 'You can make the receipt for this donation yourself.'}</p>
+                <div className="form-actions"><div className="spacer" />
+                  <button type="button" className="btn primary" disabled={busy} onClick={() => void generate()}>{existing ? 'Open receipt' : 'Generate receipt'}</button></div>
+              </div>
+            )}
             <p className="muted small">Ask the office for a receipt for this donation. Where should it go? Leave both empty to use the donor's details on file.</p>
             <div className="fields">
               <label className="field"><span>Email</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
@@ -68,7 +99,7 @@ function RequestReceiptDialog({ row, onClose }: { row: Row; onClose: () => void 
   );
 }
 
-function useDonationEditor(onChange: (row: Row) => void) {
+export function useDonationEditor(onChange: (row: Row) => void) {
   const { isAdmin, canWork } = useAuth();
   const [editing, setEditing] = useState<Row | null>(null);
   const [requesting, setRequesting] = useState<Row | null>(null);
