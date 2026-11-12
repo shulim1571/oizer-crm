@@ -50,12 +50,18 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    // Campaigns and People in one menu, in this order (Moshe Henig, 2026-11-11): Campaigns, Fundraisers, Donors,
+    // Payees, Machine Bookings.
     title: 'Campaigns',
     items: [
       { to: '/campaigns/active', label: 'Campaigns', icon: <Landmark size={I} />,
         tabs: [{ to: '/campaigns/active', label: 'Active' }, { to: '/campaigns/all', label: 'All' }, { to: '/campaigns/archived', label: 'Archived' },
           { to: '/campaigns/closed', label: 'Closed' },
           { to: '/campaigns/requests', label: 'Requests' }] },
+      { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true,
+        tabs: [{ to: '/managers', label: 'Fundraisers' }, { to: '/fundraiser-directory', label: 'Directory' }] },
+      { to: '/donors', label: 'Donors', icon: <Contact size={I} /> },
+      { to: '/payees', label: 'Payees', icon: <BookUser size={I} /> },
       // Everyone opens the calendar, where bookings show on their day; fundraisers see only their own (Moshe Henig, 2026-11-11).
       { to: '/machines', label: 'Machine Bookings', icon: <CalendarDays size={I} />,
         tabs: [{ to: '/calendar', label: 'Calendar' }, { to: '/machines', label: 'Bookings' }] },
@@ -82,15 +88,6 @@ const NAV: NavSection[] = [
         tabs: [{ to: '/expenses', label: 'Payouts' }, { to: '/checks', label: 'Check Register', admin: true }, { to: '/payout-requests', label: 'Requests' }] },
       { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} />, admin: true },
       { to: '/reconciliation', label: 'Bank Reconciliation', icon: <Scale size={I} />, admin: true },
-    ],
-  },
-  {
-    title: 'People',
-    items: [
-      { to: '/donors', label: 'Donors', icon: <Contact size={I} /> },
-      { to: '/managers', label: 'Fundraisers', icon: <UserCircle size={I} />, admin: true,
-        tabs: [{ to: '/managers', label: 'Fundraisers' }, { to: '/fundraiser-directory', label: 'Directory' }] },
-      { to: '/payees', label: 'Payees', icon: <BookUser size={I} /> },
     ],
   },
   {
@@ -178,7 +175,7 @@ export default function Layout() {
   const tab = matches?.n.tabs?.find(t => t.to === matches.p);
   const current = matches ? { section: matches.n.section, label: tab && tab.label !== matches.n.label ? `${matches.n.label} · ${tab.label}` : matches.n.label, item: matches.n }
     : loc.pathname.startsWith('/campaigns/') ? { section: 'Campaigns', label: 'Campaign', item: undefined }
-      : loc.pathname.startsWith('/donors/') ? { section: 'People', label: 'Donor', item: undefined } : undefined;
+      : loc.pathname.startsWith('/donors/') ? { section: 'Campaigns', label: 'Donor', item: undefined } : undefined;
   const pageTabs = current?.item ? tabsOf(current.item) : [];
   const badge = (n: NavItem) => (n.badge === 'tasks' && isAdmin ? taskCount : n.badge === 'inbox' ? unread : 0);
   const email = profile?.email ?? '';

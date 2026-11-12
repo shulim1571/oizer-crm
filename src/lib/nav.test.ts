@@ -65,10 +65,18 @@ describe('your own settings (Moshe Henig, 2026-11-11)', () => {
 
 describe('Transactions group (Moshe Henig, 2026-11-11)', () => {
   it('holds Transactions first, then Payouts, Transfers and Bank Reconciliation; there is no Donations group', () => {
-    const group = navBlock.slice(navBlock.indexOf("title: 'Transactions'"), navBlock.indexOf("title: 'People'"));
+    const group = navBlock.slice(navBlock.indexOf("title: 'Transactions'"), navBlock.indexOf("title: 'Settings'"));
     const shown = [...group.matchAll(/\{ to: '([^']+)', label: '([^']+)', icon:[^\n]*/g)].filter(m => !m[0].includes('offMenu: true')).map(m => m[2]);
     expect(shown).toEqual(['Transactions', 'Payouts', 'Transfers', 'Bank Reconciliation']);
     expect(navBlock).not.toContain("title: 'Donations'");
     expect(navBlock).not.toContain("title: 'Payouts'");
+  });
+});
+
+describe('Campaigns menu (Moshe Henig, 2026-11-11)', () => {
+  it('combines Campaigns and People in this order: Campaigns, Fundraisers, Donors, Payees, Machine Bookings', () => {
+    const group = navBlock.slice(navBlock.indexOf("title: 'Campaigns'"), navBlock.indexOf("title: 'Transactions'"));
+    expect([...group.matchAll(/\{ to: '([^']+)', label: '([^']+)', icon:/g)].map(m => m[2])).toEqual(['Campaigns', 'Fundraisers', 'Donors', 'Payees', 'Machine Bookings']);
+    expect(navBlock).not.toContain("title: 'People'");
   });
 });
