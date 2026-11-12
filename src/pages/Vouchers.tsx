@@ -38,7 +38,6 @@ export const voucherColumns = (hideCampaign = false): Column[] => [
   { key: 'id', label: 'Ref', width: 150 },
   { key: 'issuer', label: 'Issuer', value: (r: Row) => issuerName(r.issuer) },
   { key: 'issuer_number', label: 'Issuer #', optional: true },
-  { key: 'issuer_reference', label: "Issuer's ref. #", optional: true },
   { key: 'account_number', label: 'Account #', optional: true },
   { key: 'donor_name', label: 'Donor', width: 170 },
   ...(hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: (r: Row) => `${r.campaign_internal || r.campaign_external || ''} - ${r.campaign_id}`, width: 200 }]),
@@ -98,7 +97,6 @@ export function VoucherSavedNotice({ voucher: v, shownRef, onClose }: { voucher:
         <dl className="record-facts">
           <dt>Issuer</dt><dd>{issuerName(v.issuer)}</dd>
           {v.issuer_number && <><dt>Issuer voucher / batch #</dt><dd>{v.issuer_number}</dd></>}
-          {v.issuer_reference && <><dt>Issuer's ref. #</dt><dd>{v.issuer_reference}</dd></>}
           <dt>Face value</dt><dd>{money(v.face_value)}</dd>
         </dl>
         <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" autoFocus onClick={onClose}>Done</button></div>
@@ -183,7 +181,6 @@ export function VoucherDialog({ id, onClose, onChanged }: { id: string; onClose:
       </div>
       <dl className="record-facts">
         <dt>Issuer</dt><dd>{issuerName(v.issuer)}{v.issuer_number && ` · #${v.issuer_number}`}</dd>
-        {v.issuer_reference && <><dt>Issuer's ref. #</dt><dd>{v.issuer_reference}</dd></>}
         <dt>Submitted</dt><dd>{v.submission === 'mailed' ? `Mailed in · account ${v.account_number ?? 'not recorded'}` : 'Online'}</dd>
         <dt>Donor</dt><dd>{v.donor_id ? <Link to={`/donors/${encodeURIComponent(v.donor_id)}`}>{v.donor_name}</Link> : v.donor_name || '—'}</dd>
         <dt>Campaign</dt><dd><Link to={`/campaigns/${encodeURIComponent(v.campaign_id)}`}>{v.campaign_internal || v.campaign_external} - {v.campaign_id}</Link></dd>

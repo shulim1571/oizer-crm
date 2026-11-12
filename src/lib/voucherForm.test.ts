@@ -4,13 +4,15 @@ import { describe, expect, it } from 'vitest';
 import { voucherFields } from './schemas';
 
 describe('voucher form', () => {
-  it("has an issuer's ref. # separate from the batch #, and shows our ref # once the voucher exists", () => {
+  it('shows our ref # and one fee amount, with no issuer ref. # or fee options (Moshe Henig, 2026-11-11)', () => {
     const names = voucherFields.map(f => f.name);
-    expect(names).toEqual(expect.arrayContaining(['id', 'issuer_number', 'issuer_reference']));
+    expect(names).toEqual(expect.arrayContaining(['id', 'issuer_number', 'fee_flat']));
+    expect(names).not.toEqual(expect.arrayContaining(['issuer_reference']));
+    expect(names.filter(n => ['fee_type', 'fee_percent'].includes(n))).toEqual([]);
+    expect(voucherFields.find(f => f.name === 'fee_flat')!.label).toBe('Fee ($)');
     const ref = voucherFields.find(f => f.name === 'id')!;
     expect(ref).toMatchObject({ label: 'Voucher ref #', readOnly: true });
     expect(ref.showIf).toBeUndefined();
-    expect(voucherFields.find(f => f.name === 'issuer_reference')!.label).toBe("Issuer's ref. #");
   });
 
   it('opens with the next voucher ref # filled in, and shows the number given after saving', () => {

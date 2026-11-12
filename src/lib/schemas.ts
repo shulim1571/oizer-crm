@@ -169,14 +169,12 @@ export const voucherFields: Field[] = [
   // Oizer's voucher ref # (VCH-...), filled in when the form opens and never typed (Moshe Henig, 2026-11-11).
   { name: 'id', label: 'Voucher ref #', readOnly: true, help: 'Filled in by Oizer. Write this on the physical voucher' },
   { name: 'issuer_number', label: 'Issuer voucher / batch #' },
-  { name: 'issuer_reference', label: "Issuer's ref. #", help: "The issuer's own reference number, separate from our voucher ref #" },
   { name: 'campaign_id', label: 'Campaign', type: 'search', options: campaignOptions, required: true },
   { name: 'donor_id', label: 'Donor', type: 'search', options: donorOptions, create: create.donor },
   { name: 'name', label: 'Donor name, if not linked' },
   { name: 'face_value', label: 'Face value', type: 'number', required: true },
-  { name: 'fee_type', label: 'Fee type', type: 'select', options: [['flat', 'Flat $'], ['percent', '% rate'], ['none', 'None']].map(([value, label]) => ({ value, label })), help: "Leave empty to use the issuer's rate from Methods & Fees. Set once: it can't change after funds arrive." },
-  { name: 'fee_percent', label: '% rate', type: 'number' },
-  { name: 'fee_flat', label: 'Flat $ per funding', type: 'number' },
+  // One fee field (Moshe Henig, 2026-11-11): an amount, or empty for the issuer's rate.
+  { name: 'fee_flat', label: 'Fee ($)', type: 'number', help: "Taken when the funds arrive. Leave empty to use the issuer's rate from Methods & Fees. It can't change after funds arrive." },
   { name: 'submission', label: 'Submission', type: 'select', options: [['online', 'Submitted online'], ['mailed', 'Mailed in']].map(([value, label]) => ({ value, label })), required: true },
   { name: 'account_number', label: 'Account #', help: 'Only for a damaged voucher that is mailed in' },
   { name: 'date_received', label: 'Date received', type: 'date', required: true },
