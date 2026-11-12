@@ -42,7 +42,7 @@ import InboxPage from './pages/Inbox';
 import { PaymentsSettingsPage } from './pages/Payments';
 import GivePage from './pages/Give';
 import { RecurringPage } from './pages/Recurring';
-import { FundraiserLinksPage, OutreachHistoryPage, OutreachPage, OutreachTemplatesPage, UnsubscribePage } from './pages/Outreach';
+import { OutreachHistoryPage, OutreachPage, OutreachTemplatesPage, UnsubscribePage } from './pages/Outreach';
 import { FundraiserDirectoryPage, SourceReportPage } from './pages/Reports';
 import { DataImportPage } from './pages/Imports';
 import { MachineRegistryPage, MachineReportPage, MachinesPage } from './pages/Machines';
@@ -245,7 +245,6 @@ export default function App() {
         <Route path="outreach" element={<AdminOnly><OutreachPage /></AdminOnly>} />
         <Route path="outreach/history" element={<AdminOnly><OutreachHistoryPage /></AdminOnly>} />
         <Route path="outreach/templates" element={<AdminOnly><OutreachTemplatesPage /></AdminOnly>} />
-        <Route path="outreach/links" element={<AdminOnly><FundraiserLinksPage /></AdminOnly>} />
         <Route path="messages" element={<AdminOnly><MessagesPage /></AdminOnly>} />
         <Route path="messaging-settings" element={<AdminOnly><MessagingSettingsPage /></AdminOnly>} />
         <Route path="receipt-text"element={<AdminOnly><ReceiptTextPage /></AdminOnly>} />

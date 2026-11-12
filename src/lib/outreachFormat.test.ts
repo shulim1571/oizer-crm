@@ -13,7 +13,7 @@ describe('outreach formatting', () => {
   it('says what works on the New Template form', () => {
     expect(EMAIL_HELP).toMatch(/\*\*bold\*\*.*\*italic\*.*links/);
     expect(SMS_HELP).toMatch(/plain/);
-    expect(MERGE_FIELDS).toEqual(['{first_name}', '{last_name}', '{campaign_name}', '{payment_link}']);
+    expect(MERGE_FIELDS).toEqual(['{first_name}', '{last_name}', '{campaign_name}']);   // {payment_link} left with Fundraiser Links (2026-11-12)
     const src = readFileSync('src/pages/Outreach.tsx', 'utf8');
     const dialog = src.slice(src.indexOf('function TemplateDialog'));
     expect(dialog).toMatch(/\{EMAIL_HELP\}[^]*\{SMS_HELP\}[^]*first_name[^]*last_name[^]*campaign_name/);
