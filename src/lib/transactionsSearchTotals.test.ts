@@ -8,8 +8,10 @@ const src = readFileSync('src/pages/Donations.tsx', 'utf8');
 describe('Transactions search and totals', () => {
   it('searches every date: the range is set aside while there is search text', () => {
     const cond = src.slice(src.indexOf('const conditions = (base: any) => {'), src.indexOf('return applyColumnFilters(s, columns'));
-    expect(cond.indexOf("const text = debounced.trim()")).toBeLessThan(cond.indexOf("if (!text && query?.range.from)"));
-    expect(cond).toContain("if (!text && query?.range.to) s = s.lt('created_at', query.range.to);");
+    // Also while searching by the card's last 4 digits (Moshe Henig, 2026-11-12).
+    expect(cond.indexOf("const text = debounced.trim()")).toBeLessThan(cond.indexOf("if (!anyDate && query?.range.from)"));
+    expect(cond).toContain("const anyDate = !!text || cardIds !== null;");
+    expect(cond).toContain("if (!anyDate && query?.range.to) s = s.lt('created_at', query.range.to);");
     expect(src).toContain('Searching all dates: the date range is set aside while you search.');
   });
 

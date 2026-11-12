@@ -45,7 +45,7 @@ describe('date range', () => {
   it('filters the rows, totals and select-all by the range, starting on Last 7 days, and is saved with the view', () => {
     const src = readFileSync('src/pages/Donations.tsx', 'utf8');
     expect(src).toContain("dateRange={{ column: 'created_at', defaultPreset: filter ? 'all' : '7' }}");
-    expect(src).toMatch(/const conditions = \(base: any\) => \{[^]*if \(!text && query\?\.range\.from\) s = s\.gte\('created_at', query\.range\.from\);[^]*if \(!text && query\?\.range\.to\) s = s\.lt\('created_at', query\.range\.to\);/);
+    expect(src).toMatch(/const conditions = \(base: any\) => \{[^]*const anyDate = !!text \|\| cardIds !== null;[^]*if \(!anyDate && query\?\.range\.from\) s = s\.gte\('created_at', query\.range\.from\);[^]*if \(!anyDate && query\?\.range\.to\) s = s\.lt\('created_at', query\.range\.to\);/);
     const table = readFileSync('src/components/DataTable.tsx', 'utf8');
     expect(table).toContain('const setRange = (r: DateRange) => setConfig({ ...config, range: r });');
     expect(table).toContain("<select aria-label=\"Date\" value={range.preset}");

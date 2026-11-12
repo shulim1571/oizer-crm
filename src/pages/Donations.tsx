@@ -107,6 +107,21 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
   const [notice, setNotice] = useState<string | null>(arrived);
   const [version, setVersion] = useState(0);
   const columns = useMemo(() => donationColumns(), []);
+  // Card last 4 (Moshe Henig, 2026-11-12): a separate box that searches only the last four digits of the card, for
+  // payments taken through Sola. Admins only (card details are theirs to see); like the search, it covers all dates.
+  const [card, setCard] = useState('');
+  const [cardIds, setCardIds] = useState<string[] | null>(null);
+  const [cardError, setCardError] = useState<string | null>(null);
+  useEffect(() => {
+    setCardError(null);
+    if (!/^\d{4}$/.test(card)) { setCardIds(null); return; }
+    let live = true;
+    supabase.rpc('transactions_by_card_last4', { p_last4: card }).then(({ data, error: e }) => {
+      if (!live) return;
+      if (e) { setCardError(e.message); setCardIds([]); } else setCardIds((data ?? []) as string[]);
+    });
+    return () => { live = false; };
+  }, [card]);
 
   useEffect(() => {
     const t = setTimeout(() => { setDebounced(q); setPage(0); }, 350);
@@ -125,8 +140,10 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     const text = debounced.trim().replace(/[,()*]/g, ' ');
     // The date range picked above the list (replaces the Last 7 Days tab). Searching looks through every date
     // (Moshe Henig, 2026-11-11), so the range is set aside while there is search text.
-    if (!text && query?.range.from) s = s.gte('created_at', query.range.from);
-    if (!text && query?.range.to) s = s.lt('created_at', query.range.to);
+    const anyDate = !!text || cardIds !== null;
+    if (!anyDate && query?.range.from) s = s.gte('created_at', query.range.from);
+    if (!anyDate && query?.range.to) s = s.lt('created_at', query.range.to);
+    if (cardIds !== null) s = s.in('id', cardIds.length ? cardIds : ['(none)']);
     if (kindFilter === DUPLICATES) s = s.eq('possible_duplicate', true);
     if (text) {
       const like = `%${text}%`;
@@ -138,7 +155,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     return applyColumnFilters(s, columns, query?.filters ?? {});
   };
 
-  const queryKey = JSON.stringify([debounced, kindFilter, query, filter?.column, filter?.value, version]);
+  const queryKey = JSON.stringify([debounced, kindFilter, query, filter?.column, filter?.value, version, cardIds]);
   useEffect(() => setPage(0), [queryKey]);
   useEffect(() => setSelected(new Map()), [queryKey]);
 
@@ -164,7 +181,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     return (data as Row[])?.[0] ?? null;
   }, [queryKey]);
 
-  const searching = !!debounced.trim();
+  const searching = !!debounced.trim() || cardIds !== null;
 
   const { open, editor } = useDonationEditor(row => {
     if (row._deleted) return setVersion(v => v + 1);
@@ -221,6 +238,8 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
               {!kindFilter && !query?.filters.type?.trim() && <span className="muted small">Leaves out voided, refunded and failed transactions ({(data?.count ?? 0).toLocaleString()} listed in all).</span>}
             </div>
             {searching && <p className="muted small">Searching all dates: the date range is set aside while you search.</p>}
+            {cardIds !== null && <p className="muted small">Card ending {card}: {cardIds.length ? `${cardIds.length} transaction${cardIds.length === 1 ? '' : 's'}` : 'none found'}. Only card payments taken through Sola carry the card's last 4 digits; imported ones don't.</p>}
+            {cardError && <div className="error">{cardError}</div>}
             {notice && <div className="notice">{notice}</div>}
             {isAdmin && (
               <TransactionBulk
@@ -236,6 +255,10 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
         more={[{ label: 'Batch entry', onClick: () => nav('/donations/batch'), hidden: !isAdmin || !!filter }]}
         actions={
           <>
+            {isAdmin && (
+              <input className="card-search" inputMode="numeric" maxLength={4} placeholder="Card last 4" aria-label="Search by the card's last 4 digits"
+                title="Searches only the last 4 digits of the card" value={card} onChange={e => setCard(e.target.value.replace(/\D/g, '').slice(0, 4))} />
+            )}
             <select value={kindFilter} onChange={e => setKindFilter(e.target.value)} aria-label="Type">
               <option value="">All types</option>
               {Object.keys(DONATION_KINDS).map(t => <option key={t}>{t}</option>)}
