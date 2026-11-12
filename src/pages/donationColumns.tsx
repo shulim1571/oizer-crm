@@ -57,6 +57,11 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
   ) },
   ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, width: 180, value: (r: Row) => campLabel(r.campaigns), filter: { column: 'campaign_internal', type: 'text' as const }, filterOptions: names('campaigns', 'internal_name') }]),
   { key: 'payment_method', label: 'Method', filter: { column: 'payment_method', type: 'text' }, filterOptions: names('payment_methods', 'name') },
+  // The voucher's Ref# (assigned when the voucher is logged) on transactions tied to one (Moshe Henig, 2026-11-12).
+  {
+    key: 'voucher_id', label: 'Voucher Ref#', width: 150, filter: { column: 'voucher_id', type: 'text' },
+    render: r => r.voucher_id && <AdminLink to={`/donations/vouchers?open=${encodeURIComponent(r.voucher_id)}`}>{r.voucher_id}</AdminLink>,
+  },
   { key: 'check_number', label: 'Check #', optional: true, filter: { column: 'check_number', type: 'text' } },
   { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170, filter: { column: 'created_at', type: 'date' } },
   // A failed charge took no money, so it shows no fee and no net (the database stores both as zero).

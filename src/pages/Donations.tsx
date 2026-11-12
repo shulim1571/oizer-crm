@@ -132,7 +132,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
       const like = `%${text}%`;
       s = s.or(
         [`name.ilike.${like}`, `donor_name.ilike.${like}`, `notes.ilike.${like}`, `payment_method.ilike.${like}`,
-         `phone.ilike.${like}`, `batch_id.ilike.${like}`, `check_number.ilike.${like}`, `id.eq.${text}`, `campaign_id.eq.${text}`].join(','),
+         `phone.ilike.${like}`, `batch_id.ilike.${like}`, `check_number.ilike.${like}`, `id.eq.${text}`, `campaign_id.eq.${text}`, `voucher_id.eq.${text}`].join(','),
       );
     }
     return applyColumnFilters(s, columns, query?.filters ?? {});

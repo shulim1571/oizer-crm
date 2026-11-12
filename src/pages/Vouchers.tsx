@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
@@ -110,7 +110,9 @@ export function VouchersPage({ startNew = false }: { startNew?: boolean }) {
   const nav = useNavigate();
   const [status, setStatus] = useState('');
   const [overdue, setOverdue] = useState(false);
-  const [open, setOpen] = useState<string | null>(null);
+  // ?open=<Ref#> opens that voucher straight away (from the Voucher Ref# column in Transactions).
+  const search = useLocation().search;
+  const [open, setOpen] = useState<string | null>(() => new URLSearchParams(search).get('open'));
   const [version, setVersion] = useState(0);
   const q = useQuery(
     () => fetchAll((a, b) => supabase.from('voucher_list').select('*').order('created_at', { ascending: false }).range(a, b) as never),
