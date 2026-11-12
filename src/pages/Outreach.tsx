@@ -449,7 +449,7 @@ export function OutreachTemplatesPage() {
   ];
   return (
     <section className="view">
-      <DataTable title="Outreach Templates" subtitle="Saved messages to start from. {first_name}, {last_name} and {campaign_name} fill in per person."
+      <DataTable title="Outreach Templates" subtitle="Saved messages to start from. {first_name}, {last_name}, {campaign_name} and {payment_link} fill in per person."
         rows={(q.data as Row[]) ?? []} loading={q.loading} error={q.error} columns={columns} exportName="outreach-templates" onOpen={setOpen}
         actions={<button type="button" className="btn primary" onClick={() => setOpen({})}>New template</button>} />
       {open && <TemplateDialog template={open} onClose={() => setOpen(null)} onSaved={() => { setOpen(null); setVersion(v => v + 1); }} />}
@@ -485,7 +485,7 @@ function TemplateDialog({ template: t, onClose, onSaved }: { template: Row; onCl
         <label className="field wide"><span>Text message</span><textarea rows={3} value={sms} onChange={e => setSms(e.target.value)} />
           <small className="muted">{SMS_HELP}</small><SmsCount text={smsPlain(sms)} /></label>
       </div>
-      <p className="help">Fill in per person, in the subject, email or text: <code>{'{first_name}'}</code>, <code>{'{last_name}'}</code> and <code>{'{campaign_name}'}</code>. Where someone has no name or campaign on file, that field is left blank.</p>
+      <p className="help">Fill in per person, in the subject, email or text: <code>{'{first_name}'}</code>, <code>{'{last_name}'}</code>, <code>{'{campaign_name}'}</code> and <code>{'{payment_link}'}</code> (the fundraiser's own link, set under Fundraiser Links). Where someone has no name or campaign on file, that field is left blank.</p>
       {error && <div className="error">{error}</div>}
       <div className="form-actions">
         {t.id && <button type="button" className="btn danger" onClick={remove}><Trash2 size={15} /> Delete</button>}
@@ -499,6 +499,59 @@ function TemplateDialog({ template: t, onClose, onSaved }: { template: Row; onCl
 // Unsubscribe, from the link in a marketing email. No sign-in; a click is needed, so link scanners
 // that open every link in an email don't unsubscribe anyone.
 // ---------------------------------------------------------------------------
+/**
+ * Each fundraiser's own payment link (Moshe Henig, 2026-11-11). Messages fill it in with {payment_link}: a fundraiser
+ * gets their own; a donor messaged about a campaign gets the link of that campaign's primary fundraiser.
+ */
+export function FundraiserLinksPage() {
+  const [version, setVersion] = useState(0);
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [note, setNote] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const q = useQuery(
+    async () => (await supabase.from('managers').select('id, full_name, email, status, payment_link').neq('status', 'deactivated').order('full_name')).data as Row[] ?? [],
+    [version],
+  );
+  async function save(m: Row) {
+    const link = (edits[m.id] ?? m.payment_link ?? '').trim();
+    setNote(null); setError(null);
+    if (link && !/^https?:\/\/\S+$/i.test(link)) return setError(`${m.full_name}: a link starts with https:// and has no spaces.`);
+    const { error: e } = await supabase.from('managers').update({ payment_link: link || null }).eq('id', m.id);
+    if (e) return setError(e.message);
+    setEdits(x => { const y = { ...x }; delete y[m.id]; return y; });
+    setNote(`Saved ${m.full_name}'s payment link.`);
+    setVersion(v => v + 1);
+  }
+  const rows = (q.data as Row[]) ?? [];
+  return (
+    <section className="view">
+      <div className="view-head"><div className="view-title"><h1>Fundraiser payment links</h1>
+        <span className="count">Each fundraiser's own link. In a message, <code>{'{payment_link}'}</code> fills it in: a fundraiser gets their own, a donor gets the link of the campaign's primary fundraiser.</span></div></div>
+      {note && <div className="notice">{note}</div>}
+      {error && <div className="error">{error}</div>}
+      {q.error && <div className="error">{q.error}</div>}
+      <div className="card"><table className="mini fundraiser-links"><thead><tr><th>Fundraiser</th><th>Payment link</th><th /></tr></thead><tbody>
+        {rows.map(m => {
+          const value = edits[m.id] ?? m.payment_link ?? '';
+          const changed = value.trim() !== (m.payment_link ?? '');
+          return (
+            <tr key={m.id}>
+              <td>{m.full_name}{m.status === 'suspended' && <span className="muted small"> (suspended)</span>}<div className="muted small">{m.email ?? ''}</div></td>
+              <td><input aria-label={`Payment link for ${m.full_name}`} placeholder="https://…" value={value} inputMode="url"
+                onChange={e => setEdits(x => ({ ...x, [m.id]: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') void save(m); }} /></td>
+              <td className="right">
+                {changed && <button type="button" className="btn primary small" onClick={() => void save(m)}>Save</button>}
+                {!changed && m.payment_link && <a className="btn small" href={m.payment_link} target="_blank" rel="noopener noreferrer">Open</a>}
+              </td>
+            </tr>
+          );
+        })}
+        {!q.loading && rows.length === 0 && <tr><td className="muted" colSpan={3}>No fundraisers yet.</td></tr>}
+      </tbody></table></div>
+    </section>
+  );
+}
+
 export function UnsubscribePage({ token }: { token: string }) {
   const [state, setState] = useState<'ask' | 'done' | 'missing'>('ask');
   const [org, setOrg] = useState<string | null>(null);

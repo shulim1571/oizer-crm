@@ -13,14 +13,15 @@ describe('outreach formatting', () => {
   it('says what works on the New Template form', () => {
     expect(EMAIL_HELP).toMatch(/\*\*bold\*\*.*\*italic\*.*links/);
     expect(SMS_HELP).toMatch(/plain/);
-    expect(MERGE_FIELDS).toEqual(['{first_name}', '{last_name}', '{campaign_name}']);
+    expect(MERGE_FIELDS).toEqual(['{first_name}', '{last_name}', '{campaign_name}', '{payment_link}']);
     const src = readFileSync('src/pages/Outreach.tsx', 'utf8');
     const dialog = src.slice(src.indexOf('function TemplateDialog'));
     expect(dialog).toMatch(/\{EMAIL_HELP\}[^]*\{SMS_HELP\}[^]*first_name[^]*last_name[^]*campaign_name/);
   });
 
-  it('matches the server: the database fills the same three fields and formats email the same way', () => {
-    const sql = readFileSync('supabase/migrations/20261118000000_outreach.sql', 'utf8');
+  it('matches the server: the database fills the same fields and formats email the same way', () => {
+    // {payment_link} is filled by the fundraiser payment link migration (Moshe Henig, 2026-11-11).
+    const sql = readFileSync('supabase/migrations/20261118000000_outreach.sql', 'utf8') + readFileSync('supabase/migrations/20261222001500_fundraiser_payment_link.sql', 'utf8');
     for (const f of MERGE_FIELDS) expect(sql).toContain(`'${f}'`);
     expect(sql).toMatch(/<b>\\1<\/b>/);
     expect(sql).toMatch(/<i>\\2<\/i>/);

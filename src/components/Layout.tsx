@@ -43,7 +43,7 @@ const NAV: NavSection[] = [
       { to: '/inbox', label: 'Messages', icon: <MessagesSquare size={I} />, badge: 'inbox' },
       { to: '/outreach', label: 'Outreach', icon: <Send size={I} />, admin: true,
         tabs: [{ to: '/outreach', label: 'New Message' }, { to: '/outreach/history', label: 'History' },
-          { to: '/outreach/templates', label: 'Templates' }, { to: '/messages', label: 'Sent Messages' }] },
+          { to: '/outreach/templates', label: 'Templates' }, { to: '/outreach/links', label: 'Fundraiser Links' }, { to: '/messages', label: 'Sent Messages' }] },
       { to: '/source-report', label: 'Reports', icon: <PieChart size={I} />,
         tabs: [{ to: '/source-report', label: 'Sources' }, { to: '/sources', label: 'Source list', admin: true }, { to: '/balance-summary', label: 'Balances', admin: true },
           { to: '/machine-report', label: 'Bookings', admin: true }] },

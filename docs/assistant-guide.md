@@ -89,7 +89,9 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
 - **Messages** is the internal inbox between the office and fundraisers.
 - **Outreach** sends email and text campaigns: New Message, History, Templates, Sent Messages. In emails,
   **bold** and *italic* work and web addresses become links. Texts are plain (the stars are taken out). Merge
-  fields {first_name}, {last_name} and {campaign_name} fill in per person in the subject, email and text.
+  fields {first_name}, {last_name}, {campaign_name} and {payment_link} fill in per person in the subject, email and text.
+  {payment_link} is the fundraiser's own payment link (Outreach > Fundraiser Links): a fundraiser gets theirs, a donor
+  gets the link of the campaign's primary fundraiser.
 
 ## Machines and calendar
 
