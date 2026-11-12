@@ -5,6 +5,9 @@ import { supabase, type Row } from '../lib/supabase';
 import type { Column } from './DataTable';
 import type { DateRange } from '../lib/dateRange';
 
+/** Rows per page when a list has no saved choice (Moshe Henig, 2026-11-12: 50, so lists draw faster). */
+export const DEFAULT_PAGE_SIZE = 50;
+
 export interface TableConfig {
   columns?: string[];
   widths?: Record<string, number>;
@@ -224,7 +227,7 @@ export default function TableCustomize({ columns, visibleKeys, saved, onClose }:
       <h3>Layout</h3>
       <div className="layout-opts">
         <label>Rows per page{' '}
-          <select value={config.pageSize ?? 100} onChange={e => setConfig({ ...config, pageSize: Number(e.target.value) })}>
+          <select value={config.pageSize ?? DEFAULT_PAGE_SIZE} onChange={e => setConfig({ ...config, pageSize: Number(e.target.value) })}>
             {[10, 25, 50, 100].map(n => <option key={n}>{n}</option>)}
           </select>
         </label>

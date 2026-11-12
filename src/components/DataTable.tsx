@@ -11,7 +11,7 @@ import { printReport } from '../lib/printReport';
 import { XLSX_TYPE, downloadBytes, sheetValue, toXlsx } from '../lib/sheets';
 import { useAuth } from '../lib/auth';
 import { useSearch } from './Layout';
-import TableCustomize, { useSavedViews } from './TableCustomize';
+import TableCustomize, { DEFAULT_PAGE_SIZE, useSavedViews } from './TableCustomize';
 
 export interface Column {
   key: string;
@@ -96,7 +96,6 @@ interface Props {
 }
 
 const EMPTY = '(none)';
-const DEFAULT_PAGE_SIZE = 100;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}T/;
 
 const display = (v: unknown) => {
