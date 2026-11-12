@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { useTaskCount } from '../pages/TaskSheet';
+import { noteActivity } from '../lib/idle';
 import { useUnreadMessages } from '../pages/Inbox';
 import { supabase } from '../lib/supabase';
 import { leavePlatformOrg, type Org } from '../lib/org';
@@ -159,6 +160,7 @@ export default function Layout() {
   useEffect(() => {
     setQ('');
     setOpen(false);
+    noteActivity();   // moving between pages counts as activity for the idle sign-out
   }, [loc.pathname]);
 
   useEffect(() => {
@@ -255,7 +257,8 @@ export default function Layout() {
             </form>
           )}
           {/* New Donation on every page, just before the bell (Moshe Henig, 2026-11-11); it's an admin page. */}
-          {isAdmin && <button className="btn primary small header-new-donation" onClick={() => nav('/donations/new')}><PlusCircle size={15} /> New Donation</button>}
+          {/* Fundraisers too (Moshe Henig, 2026-11-12): theirs takes card payments, and manual ones with the permission. */}
+          {canWork && <button className="btn primary small header-new-donation" onClick={() => nav('/donations/new')}><PlusCircle size={15} /> New Donation</button>}
           {canWork && (
             <button className="icon-btn outlined bell" title={`${unread} unread message${unread === 1 ? '' : 's'}${isAdmin ? `, ${taskCount} on the Task Sheet` : ''}`}
               onClick={() => nav(isAdmin && !unread && taskCount ? '/task-sheet' : '/inbox')}>

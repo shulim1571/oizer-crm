@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { startFreshSession } from './idle';
+import { countsAsActivity, noteActivity, startFreshSession } from './idle';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -19,6 +19,8 @@ export const requestOrgId = () => requestOrg;
 // tells any proxy on the way not to answer from its cache). Moshe Henig, 2026-11-11: a new Task Sheet task only
 // appeared after a hard refresh, which is what a cached answer looks like.
 const orgFetch: typeof fetch = (input, init) => {
+  // The app's requests count as activity for the idle sign-out, except its own timed ones (Moshe Henig, 2026-11-12).
+  if (countsAsActivity(String(input instanceof Request ? input.url : input))) noteActivity();
   const fresh: RequestInit = { ...init, cache: 'no-store' };
   if (!requestOrg || !String(input instanceof Request ? input.url : input).includes('/rest/v1/')) return fetch(input, fresh);
   const headers = new Headers(init?.headers);

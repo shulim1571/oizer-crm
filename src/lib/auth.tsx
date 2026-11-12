@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { Session } from '@supabase/supabase-js';
 import { logActivity, supabase, type Row } from './supabase';
 import { latestOnly, loadAccessSafely } from './accessLoad';
-import { clearActivity, startFreshSession, watchIdle } from './idle';
+import { clearActivity, idleLimitMs, startFreshSession, watchIdle } from './idle';
 import { isRepeatAuthEvent } from './authEvents';
 import { applyOrg, leavePlatformOrg, platformOrg, resolveOrg, type Org } from './org';
 
@@ -51,6 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [org, setOrg] = useState<Org | null>(null);
   const [access, setAccess] = useState<Access | null>(null);
   const [defaultAccountId, setDefaultAccountId] = useState<string | null>(null);
+  // The organization's idle sign-out limit (idle_timeout_minutes; 30 minutes when not set).
+  const [idleMinutes, setIdleMinutes] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [accessError, setAccessError] = useState<string | null>(null);
   const [newest] = useState(latestOnly);
@@ -86,10 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // A Platform Owner's session expired or was closed elsewhere: back to their own view.
     if (platformOrg() && !next?.in_platform_session) return leavePlatformOrg();
     if (next?.org_id) {
-      const [{ data: full }, { data: account }] = await Promise.all([
+      const [{ data: full }, { data: account }, { data: idle }] = await Promise.all([
         supabase.from('organizations').select('*').eq('id', next.org_id).maybeSingle(),
         supabase.from('settings').select('value').eq('key', 'default_account_id').maybeSingle(),
+        supabase.from('settings').select('value').eq('key', 'idle_timeout_minutes').maybeSingle(),
       ]);
+      setIdleMinutes(idle?.value ?? null);
       if (full) {
         applyOrg(full as Org);
         setOrg(full as Org);
@@ -100,16 +104,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccess(next);
   }
 
-  // Signed out after 30 minutes without activity (the server also limits idle time and total session length).
+  // Signed out after the organization's idle limit (30 minutes unless set) without activity; while active, the
+  // session is renewed every 10 minutes so the server's own 30-minute inactivity limit never ends it mid-work.
   const signedInUser = session?.user?.id ?? null;
+  const idleLimit = idleLimitMs(idleMinutes);
   useEffect(() => {
     if (!signedInUser) return;
     return watchIdle(() => {
       clearActivity();
       try { sessionStorage.setItem('signed-out-idle', '1'); } catch { /* ignore */ }
       void supabase.auth.signOut({ scope: 'local' });
-    });
-  }, [signedInUser]);
+    }, idleLimit, () => supabase.auth.refreshSession());
+  }, [signedInUser, idleLimit]);
 
   useEffect(() => {
     // Nothing may ask about access until the requests carry the organization.
