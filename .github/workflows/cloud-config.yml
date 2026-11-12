@@ -1,0 +1,49 @@
+# Daily cloud-configuration monitoring (Plaid security attestation, 2026-11-12): Supabase security advisors, auth
+# settings, edge-function JWT settings, backups and database network; anonymous data-API reads; live-site headers
+# and certificate; Cloudflare Pages and Workers settings. Compared with security/cloud-baseline.json; a failed run
+# shows in Actions and GitHub emails the workflow's owner. Read-only: nothing is changed anywhere.
+#
+# Repository variables (not secret): SCAN_BRANCH, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_PROJECT_REF,
+#   APP_URLS, CLOUDFLARE_ACCOUNT_ID, CF_PAGES_PROJECTS, CF_WORKERS
+# Repository secrets: SUPABASE_ACCESS_TOKEN, CLOUDFLARE_API_TOKEN (read-only: Pages Read, Workers Scripts Read)
+name: Cloud configuration check
+
+on:
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ vars.SCAN_BRANCH }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          APP_URLS: ${{ vars.APP_URLS }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_PAGES_PROJECTS: ${{ vars.CF_PAGES_PROJECTS }}
+          CF_WORKERS: ${{ vars.CF_WORKERS }}
+          REPORT_PATH: cloud-report.json
+        run: node scripts/security/cloud-check.mjs
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cloud-config-report
+          path: cloud-report.json
+          retention-days: 90
