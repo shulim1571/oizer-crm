@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import SearchSelect from '../components/SearchSelect';
-import { Pill } from '../components/Pill';
+import { Balance, Pill } from '../components/Pill';
+import RecordForm from '../components/RecordForm';
 import { dateTime, money } from '../lib/format';
 import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { editDonationFields } from '../lib/schemas';
+import { DONATION_SELECT } from './donationColumns';
 import { SplitDialog } from './DonationActions';
 import { BookingActions } from './Machines';
 import { ApprovePayout, ProcessScheduled } from './Payouts';
@@ -48,6 +51,8 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   ach_returned: { label: 'Bank Payment Returned', tone: 'red' },
   bank_move_needed: { label: 'Bank Transfer Needed', tone: 'amber' },
 };
+/** Tasks whose record is a transaction (donation): those can be edited or deleted from the sheet. */
+const TRANSACTION_TASKS = new Set(['pending_payment', 'unattributed', 'returned_check', 'post_dated_due', 'ach_returned', 'receipt_requested']);
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
 const age = (at: string) => {
@@ -205,6 +210,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
         {item.held_note && <><dt>Held</dt><dd>{item.held_note}</dd></>}
       </dl>
       {error && <div className="error">{error}</div>}
+      {item.task_type === 'inactive_campaign' && <CampaignBalanceFacts campaignId={item.record_id} />}
 
       {(item.task_type === 'campaign_request' || item.task_type === 'changes_resubmitted') && (
         <RequestDecision id={item.record_id} onDone={action => { void log(action).then(onDone); }} />
@@ -267,6 +273,10 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       )}
       {item.task_type === 'bank_reassign' && (
         <p className="muted">Open the campaign and choose another bank account, or clear it to use the default. This leaves the sheet once that's done.</p>
+      )}
+      {TRANSACTION_TASKS.has(item.task_type) && (
+        <EditTransaction donationId={item.record_id}
+          onSaved={deleted => { void log(deleted ? 'deleted' : 'edited').then(onDone); }} />
       )}
     </Overlay>
   );
@@ -409,6 +419,66 @@ function UnattributedActions({ item, onAct, onHold, onSplit, log }: {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Edit or delete the transaction behind a task (Moshe Henig, 2026-11-12), with the same form as the Transactions list:
+ * Delete asks for a reason and keeps the transaction on file, exactly as it does there. After a save the sheet reloads,
+ * so the task stays, changes or goes according to the transaction as it is now; the History tab records it.
+ */
+function EditTransaction({ donationId, onSaved }: { donationId: string; onSaved: (deleted: boolean) => void }) {
+  const [record, setRecord] = useState<Row | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function start() {
+    setError(null);
+    const { data, error: e } = await supabase.from('donations').select(DONATION_SELECT).eq('id', donationId).maybeSingle();
+    if (e) return setError(e.message);
+    if (!data) return setError('This transaction is no longer on file.');
+    setRecord(data as Row);
+  }
+  return (
+    <>
+      {error && <div className="error">{error}</div>}
+      <div className="form-actions"><div className="spacer" />
+        <button type="button" className="btn" onClick={start}>Edit or delete transaction</button>
+      </div>
+      {record && (
+        <RecordForm table="donations" title="Edit Donation" fields={editDonationFields} record={record} allowDelete
+          onClose={() => setRecord(null)}
+          onSaved={row => { setRecord(null); onSaved(!!row._deleted); }} />
+      )}
+    </>
+  );
+}
+
+/** An inactive campaign's balance, the same figures as the top of its campaign page (Moshe Henig, 2026-11-12). */
+function CampaignBalanceFacts({ campaignId }: { campaignId: string }) {
+  const q = useQuery(async () => {
+    const { data, error } = await supabase.from('campaign_summary')
+      .select('balance, balance_mode, combined_raised, combined_fees, combined_expenses, pending_balance, post_dated_amount, awaiting_approval, pledged_open, last_donation_at')
+      .eq('id', campaignId).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data as Row | null;
+  }, [campaignId]);
+  const c = q.data as Row | null | undefined;
+  if (q.error) return <div className="error">{String(q.error)}</div>;
+  if (!c) return q.loading ? <p className="muted small">Loading the balance…</p> : null;
+  return (
+    <div className="panel-box">
+      <h3>Campaign balance</h3>
+      <dl className="record-facts">
+        <dt>Balance</dt><dd>{c.balance_mode === 'shared' ? <span className="muted">Shared: counted in the parent's balance</span> : <Balance value={c.balance} />}</dd>
+        <dt>Raised</dt><dd>{money(c.combined_raised)}</dd>
+        <dt>Fees</dt><dd>{money(c.combined_fees)}</dd>
+        <dt>Expenses</dt><dd>{money(c.combined_expenses)}</dd>
+        {Number(c.pending_balance) > 0 && <><dt>Pending</dt><dd>{money(c.pending_balance)} <span className="muted small">not in the balance yet</span></dd></>}
+        {Number(c.post_dated_amount) > 0 && <><dt>Post-dated checks</dt><dd>{money(c.post_dated_amount)} <span className="muted small">not in the balance yet</span></dd></>}
+        {Number(c.awaiting_approval) > 0 && <><dt>Awaiting approval</dt><dd>{money(c.awaiting_approval)} <span className="muted small">not in the balance yet</span></dd></>}
+        {Number(c.pledged_open) > 0 && <><dt>Pledged (open)</dt><dd>{money(c.pledged_open)} <span className="muted small">not in the balance</span></dd></>}
+        <dt>Last gift</dt><dd>{c.last_donation_at ? dateTime(c.last_donation_at) : 'None yet'}</dd>
+      </dl>
     </div>
   );
 }
