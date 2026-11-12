@@ -106,7 +106,8 @@ export default function DashboardPage() {
 
       <div className="kpis">
         <Kpi label="Today" value={money(per('today')?.raised ?? 0)} icon={<Clock size={18} />} tone="green" sub={period(per('today'))} />
-        <Kpi label="This week" value={money(per('week')?.raised ?? 0)} icon={<CalendarDays size={18} />} tone="green" sub={period(per('week'))} />
+        {/* All Time in place of This Week (Moshe Henig, 2026-11-11). */}
+        <Kpi label="All time" value={money(per('all')?.raised ?? 0)} icon={<CalendarDays size={18} />} tone="green" sub={period(per('all'))} />
         <Kpi label="This month" value={money(per('month')?.raised ?? 0)} icon={<CalendarRange size={18} />} tone="green" sub={period(per('month'))} />
         {isAdmin && <Kpi label="This year" value={money(per('year')?.raised ?? 0)} icon={<TrendingUp size={18} />} tone="green" sub={period(per('year'))} />}
         <Kpi label="Pledged (open)" value={money(s?.pledged ?? 0)} icon={<Handshake size={18} />} tone="blue" sub="Not confirmed income" />
