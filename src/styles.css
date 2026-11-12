@@ -384,7 +384,11 @@ input:focus, select:focus, textarea:focus {
    their own (.detail) keep their own bar. */
 .table-wrap.proxied:not(.detail .table-wrap) { scrollbar-width: none; }
 .table-wrap.proxied:not(.detail .table-wrap)::-webkit-scrollbar { height: 0; }
-.hscroll { position: sticky; bottom: 0; z-index: 3; overflow-x: auto; overflow-y: hidden; background: var(--surface); border-top: 1px solid var(--line); flex: none; }
+/* The mirror bar and the page buttons share one footer pinned to the bottom of the window (Moshe Henig, 2026-11-12). */
+.table-sticky-foot { position: sticky; bottom: 0; z-index: 3; background: var(--surface); flex: none; }
+.table-sticky-foot:empty { display: none; }
+.hscroll { overflow-x: auto; overflow-y: hidden; background: var(--surface); border-top: 1px solid var(--line); }
+.detail .table-sticky-foot { position: static; }
 .hscroll.hidden { display: none; }
 .detail .hscroll { display: none; }
 .detail .table-wrap { max-height: 70vh; }
@@ -1080,3 +1084,6 @@ code.break { word-break: break-all; }
 /* "Check with USPS" under address fields (Shulim, 2026-11-12). */
 .address-check { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
 .address-suggestion { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+
+/* Transactions: search by the card's last 4 digits (Moshe Henig, 2026-11-12). */
+.card-search { width: 120px; font-variant-numeric: tabular-nums; letter-spacing: .08em; }
