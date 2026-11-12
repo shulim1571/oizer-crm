@@ -9,7 +9,7 @@ const fallback = (name: string, value: string) => (process.env[name] || fileEnv[
 
 export default defineConfig({
   test: {
-    include: ['supabase/tests/**/*.test.ts', 'src/**/*.test.ts', 'workers/**/*.test.ts', 'functions/**/*.test.ts', 'supabase/functions/**/*.test.ts'],
+    include: ['supabase/tests/**/*.test.ts', 'src/**/*.test.ts', 'workers/**/*.test.ts', 'functions/**/*.test.ts', 'supabase/functions/**/*.test.ts', 'scripts/**/*.test.ts'],
     testTimeout: 60_000,
     hookTimeout: 60_000,
     // Each test builds its own in-memory database; too many files at once runs out of memory.

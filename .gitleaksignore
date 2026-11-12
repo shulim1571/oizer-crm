@@ -1,0 +1,6 @@
+# Reviewed false positives (fake values in tests), one fingerprint each: commit:file:rule:line. Reviewed 2026-11-12.
+82bded63684873a6ff0d480ef0298b677a7720d8:supabase/functions/_shared/giveRetry.test.ts:generic-api-key:47
+e6b4afcfac5bb1db85f64b41d5f89adf463c1715:supabase/tests/donary.test.ts:generic-api-key:6
+226bb5c7f9bab78f0d7b16fcf9b590523f72bd48:supabase/tests/integrationkeys.test.ts:generic-api-key:11
+226bb5c7f9bab78f0d7b16fcf9b590523f72bd48:supabase/tests/integrationkeys.test.ts:generic-api-key:34
+83b88319bd0625aab53f4be582404df3b1145812:supabase/tests/integrationkeys.test.ts:generic-api-key:35

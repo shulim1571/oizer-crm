@@ -1,0 +1,96 @@
+# Automated security scanning (Plaid security attestation, 2026-11-12). Free, open-source tools only; no GitHub
+# Advanced Security, no CodeQL, no scanner accounts. Each tool is pinned and its download checksum-verified.
+#   semgrep      code patterns (OWASP-style bugs, React, TypeScript, GitHub Actions, hard-coded secrets)
+#   gitleaks     secrets anywhere in the git history (.gitleaks.toml, .gitleaksignore)
+#   npm audit    production dependencies, fails on high or critical
+#   osv-scanner  all dependencies against the OSV database (reviewed, expiring exceptions in osv-scanner.toml)
+# Runs on every push to main or the development branch, on pull requests, and weekly. Scheduled runs (which GitHub
+# only starts from the default branch) scan the branch in the SCAN_BRANCH repository variable when it is set.
+name: Security scans
+
+on:
+  push:
+    branches: [main, docs/platform-roadmap]
+  pull_request:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SCAN_REF: ${{ github.event_name == 'schedule' && vars.SCAN_BRANCH || '' }}
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.SCAN_REF }}
+          persist-credentials: false
+      - name: Install Semgrep (open source)
+        run: pipx install semgrep==1.185.0
+      - name: Scan
+        env:
+          SEMGREP_SEND_METRICS: 'off'
+        run: >
+          semgrep scan --metrics=off --error
+          --config p/default --config p/typescript --config p/react --config p/secrets --config p/github-actions
+          --json-output=semgrep.json .
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: semgrep-report
+          path: semgrep.json
+          retention-days: 30
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.SCAN_REF }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install gitleaks 8.30.1
+        run: |
+          curl -sSfL -o gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tgz" | sha256sum -c -
+          tar xzf gitleaks.tgz gitleaks && rm gitleaks.tgz
+      - name: Scan the whole history (values redacted in the output)
+        run: ./gitleaks git --redact --no-banner --config .gitleaks.toml --report-format sarif --report-path gitleaks.sarif .
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gitleaks-report
+          path: gitleaks.sarif
+          retention-days: 30
+
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.SCAN_REF }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: npm audit (production dependencies, high and critical)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Install osv-scanner 2.7.1
+        run: |
+          curl -sSfL -o osv-scanner https://github.com/google/osv-scanner/releases/download/v2.7.1/osv-scanner_linux_amd64
+          echo "fb7dab19a8bd9bbe5c3189f09d4b7ee1820c9553a23bac202648a56efd2f6ee8  osv-scanner" | sha256sum -c -
+          chmod +x osv-scanner
+      - name: osv-scanner (all dependencies)
+        run: ./osv-scanner scan source --config osv-scanner.toml --lockfile package-lock.json

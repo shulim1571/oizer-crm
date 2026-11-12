@@ -133,7 +133,8 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
   const framed = window.parent !== window;
   useEffect(() => {
     if (!framed) return;
-    const send = () => window.parent.postMessage({ type: 'oizer-give-height', height: document.documentElement.scrollHeight }, '*');
+    // Any site may embed the widget; the message carries only the page height.
+    const send = () => window.parent.postMessage({ type: 'oizer-give-height', height: document.documentElement.scrollHeight }, '*'); // nosemgrep: javascript.browser.security.wildcard-postmessage-configuration.wildcard-postmessage-configuration
     const watch = new ResizeObserver(send);
     watch.observe(document.body);
     send();

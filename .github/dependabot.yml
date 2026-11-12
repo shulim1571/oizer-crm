@@ -1,17 +1,25 @@
-# Dependency scanning (Shulim, 2026-11-11, before the Plaid production application).
-# Dependabot opens pull requests for outdated or vulnerable packages; security updates are also raised as alerts.
+# Dependency updates (Shulim, 2026-11-11; placement fixed 2026-11-12). GitHub reads this file from the default branch
+# (main), so it must be there to run. Version updates are opened against the branch where development happens;
+# security updates and alerts follow GitHub's default branch. A release must be a week old before it is proposed,
+# which keeps freshly published (possibly compromised) versions out.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    target-branch: docs/platform-roadmap
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       minor-and-patch:
         update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
+    target-branch: docs/platform-roadmap
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7

@@ -10,7 +10,8 @@ let db: { fail?: boolean; known: boolean; teams: { n: number; id: string; name: 
 function call(params: Record<string, string>, query = '') {
   const form = new URLSearchParams({ To: '+18456134272', From: '+17185550101', CallSid: 'CA123', ...params });
   const publicUrl = `${BASE}/functions/v1/voice${query}`;
-  const sig = createHmac('sha1', TOKEN).update(publicUrl + [...form.keys()].sort().map(k => k + form.get(k)).join('')).digest('base64');
+  // A test signature with a fake token.
+  const sig = createHmac('sha1', TOKEN).update(publicUrl + [...form.keys()].sort().map(k => k + form.get(k)).join('')).digest('base64'); // nosemgrep: javascript.lang.security.audit.hardcoded-hmac-key.hardcoded-hmac-key
   return handler(new Request(`http://localhost/voice${query}`, { method: 'POST', headers: { 'x-twilio-signature': sig }, body: form.toString() }))
     .then(r => r.text());
 }
