@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import RichTextEditor from '../components/RichTextEditor';
 import { createPortal } from 'react-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
@@ -285,7 +286,8 @@ function PageContentCard({ campaignId, current, onSaved }: { campaignId: string;
       <div className="fields">
         <label className="field"><span>Suggested amount</span><input type="number" min="0" step="0.01" value={v.suggested} onChange={e => setV({ ...v, suggested: e.target.value })} placeholder="One of the presets" /></label>
         <label className="field"><span>Banner image address</span><input value={v.banner_url} onChange={e => setV({ ...v, banner_url: e.target.value })} placeholder="https://… (1200×400)" /></label>
-        <label className="field wide"><span>Description or story</span><textarea rows={4} dir="auto" value={v.description} onChange={e => setV({ ...v, description: e.target.value })} /></label>
+        <div className="field wide"><span>Description or story</span>
+          <RichTextEditor label="Description or story" value={v.description} onChange={html => setV(prev => ({ ...prev, description: html }))} /></div>
         <label className="field wide"><span>Thank-you message</span><textarea rows={2} dir="auto" value={v.thank_you} onChange={e => setV({ ...v, thank_you: e.target.value })} /></label>
       </div>
       {message && <div className="notice">{message}</div>}

@@ -3,6 +3,7 @@
 // campaign's name, story and image into the page's preview tags; the app then loads as usual and shows the page.
 // Uses only the public payment page data, with the public (anon) key the web app already ships.
 import { DEFAULT_ORG, SUPABASE_ANON_KEY, SUPABASE_URL } from '../_config';
+import { plainText } from '../../src/lib/richText';
 
 interface Ctx { request: Request; params: { id: string | string[] }; env: { ASSETS: { fetch: (r: Request | URL) => Promise<Response> } } }
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -24,7 +25,8 @@ async function rpc(name: string, body: Json) {
 export function previewTags(page: Json, orgFallback: string, url: URL) {
   const name = String(page.campaign.name);
   const orgName = String(page.org?.name ?? orgFallback ?? '');
-  const story = String(page.page?.description ?? '').replace(/\s+/g, ' ').trim();
+  // Formatted descriptions are HTML: the preview uses their plain text.
+  const story = plainText(String(page.page?.description ?? '')).replace(/\s+/g, ' ').trim();
   const raised = Number(page.campaign.raised ?? 0), goal = Number(page.campaign.goal ?? 0);
   const progress = goal > 0 ? ` ${Math.min(100, Math.round((raised / goal) * 100))}% of the $${goal.toLocaleString('en-US')} goal raised.` : '';
   const description = story ? (story.length > 180 ? `${story.slice(0, 177)}…` : story) : `Support ${name}${orgName ? ` with ${orgName}` : ''}. Give securely online.${progress}`;

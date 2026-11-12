@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, Users } from 'lucide-react';
 import { resolveOrg } from '../lib/org';
 import { sharpLogoUrl } from '../lib/sharpLogo';
+import { isRichText, plainText, sanitizeHtml } from '../lib/richText';
 import { supabase, type Row } from '../lib/supabase';
 import { CardFields } from './Payments';
 import {
@@ -238,10 +239,14 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
 /** The campaign's story: a few lines, with the rest a click away. */
 function Story({ text, more }: { text: string; more: string }) {
   const [open, setOpen] = useState(false);
-  const long = text.length > 320;
+  const long = plainText(text).length > 320;
+  // Formatted descriptions (fonts, bold, lists...) show as formatted, cleaned again here (Moshe Henig, 2026-11-11).
+  const rich = isRichText(text);
   return (
     <section className="give-card give-story-card">
-      <p className={`give-story ${long && !open ? 'clamped' : ''}`} dir="auto">{text}</p>
+      {rich
+        ? <div className={`give-story rich ${long && !open ? 'clamped' : ''}`} dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />
+        : <p className={`give-story ${long && !open ? 'clamped' : ''}`} dir="auto">{text}</p>}
       {long && !open && <button type="button" className="give-more" onClick={() => setOpen(true)} dir="auto">{more}</button>}
     </section>
   );

@@ -25,6 +25,8 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
   receipts, donor wall, logo, color, custom fields) when it is made. **Change template** on an existing campaign
   copies the new template's page settings only; donations, payouts, names, fundraisers, goal, bank account, PIN
   and the page's own description, thank-you note and banner stay as they are.
+- **Payment page description**: on a campaign's Settings tab, "Description or story" can be formatted: font, size, bold,
+  italic, underline, bulleted and numbered lists, alignment and links. It shows that way on the payment page.
 - **Campaign Requests** (Campaigns > Requests): fundraisers request a new campaign; admins approve, ask for
   changes or reject. Pending requests also appear on the Task Sheet.
 - **Close campaign** locks it: no new transactions. Only the Super Admin can reopen.

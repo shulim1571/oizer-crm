@@ -1014,3 +1014,18 @@ tr.selected td { background: var(--accent-soft); }
 .menu-pop.row-menu-pop { z-index: 1000; min-width: 180px; }
 /* "Trust this device" on the sign-in code screen. */
 .trust-device { margin: 4px 0 10px; font-size: 13px; }
+
+/* Formatted campaign description: the editor's toolbar and area, and the same text on the payment page. */
+.rte { border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.rte-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.rte-bar select { height: 30px; padding: 0 6px; font-size: 13px; width: auto; }
+.rte-bar .icon-btn { width: 30px; height: 30px; }
+.rte-area { min-height: 140px; max-height: 420px; overflow-y: auto; padding: 10px 12px; outline: none; white-space: normal; }
+.rte-area:focus { box-shadow: inset 0 0 0 2px var(--accent-soft); }
+.give-story.rich { white-space: normal; }
+.give-story.rich p { margin: 0 0 .7em; }
+.give-story.rich ul, .give-story.rich ol { margin: 0 0 .7em; padding-inline-start: 1.4em; }
+.give-story.rich h3, .give-story.rich h4 { margin: .4em 0; }
+.give-story.rich a { color: var(--give-accent, var(--accent)); }
+.give-story.rich h3, .give-story.rich h4 { font-size: 18px; text-transform: none; letter-spacing: normal; color: inherit; font-weight: 700; }
+.give-story.rich h4 { font-size: 16px; }
