@@ -1044,3 +1044,6 @@ tr.selected td { background: var(--accent-soft); }
 .pie-legend td { padding: 5px 4px; }
 .pie-legend tr.on td { background: var(--surface-2); }
 .pie-legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: middle; }
+/* A list inside a page with more below it (the Check Register with its printing settings) takes its natural height,
+   so its rows never run over what follows (Moshe Henig, 2026-11-11). */
+.view > .view { flex: none; min-height: auto; }

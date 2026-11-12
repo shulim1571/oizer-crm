@@ -13,20 +13,10 @@ describe('Transactions search and totals', () => {
     expect(src).toContain('Searching all dates: the date range is set aside while you search.');
   });
 
-  it('works out the top summary from all transactions, not the range, type, filters or search', () => {
-    const all = src.slice(src.indexOf('const allTotals = useQuery('), src.indexOf('const searching ='));
-    expect(all).toContain("(filter ? q.eq(filter.column, filter.value) : q).in('status', ['completed', 'collect'])");
-    expect(all).not.toMatch(/conditions\(|range|kindFilter|debounced/);
-    expect(all).toContain("}, [filter?.column, filter?.value, version]);");
-    expect(src).toMatch(/<div className="totals-bar">\s*<span className="muted small"><b>All transactions<\/b><\/span>\s*<span>Gross <b>\{money\(allTotals\.data\?\.gross/);
-  });
-
-  it('shows the totals for the current filter under the page buttons', () => {
-    const foot = src.slice(src.indexOf('footer={'), src.indexOf('{editor}'));
-    expect(foot.indexOf('<Pager page={page} pages={pages} onPage={setPage} />')).toBeLessThan(foot.indexOf('<div className="filter-totals"'));
-    expect(foot).toContain('<span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>');
-    // Count and average over the same transactions the sums cover (review fix: the average used every listed row).
-    expect(src).toContain("select('gross:amount.sum(),net:net_donation.sum(),fees:fee.sum(),counted:id.count()')");
-    expect(foot).toContain('money(Number(totals.data?.gross ?? 0) / Number(totals.data?.counted))');
+  it('totals the current view at the top, with no second summary at the bottom (Moshe Henig, 2026-11-11)', () => {
+    expect(src).toContain('<div className="totals-bar" aria-label="Totals for this view">');
+    expect(src).toContain('<span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>');
+    expect(src).not.toContain('allTotals');
+    expect(src).not.toContain('filter-totals');
   });
 });

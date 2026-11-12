@@ -163,17 +163,6 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     return (data as Row[])?.[0] ?? null;
   }, [queryKey]);
 
-  // The summary at the top covers all transactions, whatever range, type, filters or search are picked (Moshe
-  // Henig, 2026-11-11); like the totals below, it counts completed and to-collect transactions.
-  const allTotals = useQuery(async () => {
-    const scope = (q: any) => (filter ? q.eq(filter.column, filter.value) : q).in('status', ['completed', 'collect']);   // eslint-disable-line @typescript-eslint/no-explicit-any
-    const [sums, count] = await Promise.all([
-      scope(supabase.from('transaction_list').select('gross:amount.sum(),net:net_donation.sum(),fees:fee.sum()')),
-      scope(supabase.from('transaction_list').select('id', { count: 'exact', head: true })),
-    ]);
-    if (sums.error) throw new Error(sums.error.message);
-    return { ...((sums.data as Row[])?.[0] ?? {}), count: count.count ?? 0 } as Row;
-  }, [filter?.column, filter?.value, version]);
   const searching = !!debounced.trim();
 
   const { open, editor } = useDonationEditor(row => {
@@ -221,13 +210,14 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
         dateRange={{ column: 'created_at', defaultPreset: filter ? 'all' : '7' }}
         summary={
           <>
-            <div className="totals-bar">
-              <span className="muted small"><b>All transactions</b></span>
-              <span>Gross <b>{money(allTotals.data?.gross ?? 0)}</b></span>
-              <span>Fees <b>{money(allTotals.data?.fees ?? 0)}</b></span>
-              <span>Net <b>{money(allTotals.data?.net ?? 0)}</b></span>
-              <span>{Number(allTotals.data?.count ?? 0).toLocaleString()} transaction{Number(allTotals.data?.count) === 1 ? '' : 's'}</span>
-              <span className="muted small">All dates. Leaves out voided, refunded and failed transactions. Totals for the list as filtered are below it.</span>
+            {/* The summary totals what's shown right now: date range, type, filters and search (Moshe Henig, 2026-11-11). */}
+            <div className="totals-bar" aria-label="Totals for this view">
+              <span className="muted small"><b>This view</b>{searching ? ' (all dates, search)' : ''}</span>
+              <span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>
+              <span>Fees <b>{money(totals.data?.fees ?? 0)}</b></span>
+              <span>Net <b>{money(totals.data?.net ?? 0)}</b></span>
+              <span>{Number(totals.data?.counted ?? 0).toLocaleString()} transaction{Number(totals.data?.counted) === 1 ? '' : 's'}{Number(totals.data?.counted) ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / Number(totals.data?.counted))}</b></> : null}</span>
+              {!kindFilter && !query?.filters.type?.trim() && <span className="muted small">Leaves out voided, refunded and failed transactions ({(data?.count ?? 0).toLocaleString()} listed in all).</span>}
             </div>
             {searching && <p className="muted small">Searching all dates: the date range is set aside while you search.</p>}
             {notice && <div className="notice">{notice}</div>}
@@ -258,15 +248,6 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
           <>
             <span>Page {page + 1} of {Math.max(pages, 1)}</span>
             <Pager page={page} pages={pages} onPage={setPage} />
-            {/* Totals for the list as it's filtered right now (range, type, filters and search), under the pages. */}
-            <div className="filter-totals" aria-label="Totals for this view">
-              <span className="muted small"><b>This view</b>{searching ? ' (all dates, search)' : ''}</span>
-              <span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>
-              <span>Fees <b>{money(totals.data?.fees ?? 0)}</b></span>
-              <span>Net <b>{money(totals.data?.net ?? 0)}</b></span>
-              <span>{Number(totals.data?.counted ?? 0).toLocaleString()} transaction{Number(totals.data?.counted) === 1 ? '' : 's'}{Number(totals.data?.counted) ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / Number(totals.data?.counted))}</b></> : null}</span>
-              {!kindFilter && !query?.filters.type?.trim() && <span className="muted small">Leaves out voided, refunded and failed transactions ({(data?.count ?? 0).toLocaleString()} listed in all).</span>}
-            </div>
           </>
         }
       />

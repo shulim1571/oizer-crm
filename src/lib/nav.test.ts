@@ -75,7 +75,7 @@ describe('Transactions group (Moshe Henig, 2026-11-11)', () => {
 
 describe('Campaigns menu (Moshe Henig, 2026-11-11)', () => {
   it('combines Campaigns and People in this order: Campaigns, Fundraisers, Donors, Payees, Machine Bookings', () => {
-    const group = navBlock.slice(navBlock.indexOf("title: 'Campaigns'"), navBlock.indexOf("title: 'Transactions'"));
+    const group = navBlock.slice(navBlock.indexOf("title: 'Campaigns & People'"), navBlock.indexOf("title: 'Transactions'"));
     expect([...group.matchAll(/\{ to: '([^']+)', label: '([^']+)', icon:/g)].map(m => m[2])).toEqual(['Campaigns', 'Fundraisers', 'Donors', 'Payees', 'Machine Bookings']);
     expect(navBlock).not.toContain("title: 'People'");
   });

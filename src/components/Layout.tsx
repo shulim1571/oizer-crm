@@ -50,9 +50,9 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    // Campaigns and People in one menu, in this order (Moshe Henig, 2026-11-11): Campaigns, Fundraisers, Donors,
-    // Payees, Machine Bookings.
-    title: 'Campaigns',
+    // Campaigns and People in one menu, named "Campaigns & People", in this order (Moshe Henig, 2026-11-11):
+    // Campaigns, Fundraisers, Donors, Payees, Machine Bookings.
+    title: 'Campaigns & People',
     items: [
       { to: '/campaigns/active', label: 'Campaigns', icon: <Landmark size={I} />,
         tabs: [{ to: '/campaigns/active', label: 'Active' }, { to: '/campaigns/all', label: 'All' }, { to: '/campaigns/archived', label: 'Archived' },
@@ -174,8 +174,8 @@ export default function Layout() {
     .sort((a, b) => b.p.length - a.p.length)[0];
   const tab = matches?.n.tabs?.find(t => t.to === matches.p);
   const current = matches ? { section: matches.n.section, label: tab && tab.label !== matches.n.label ? `${matches.n.label} · ${tab.label}` : matches.n.label, item: matches.n }
-    : loc.pathname.startsWith('/campaigns/') ? { section: 'Campaigns', label: 'Campaign', item: undefined }
-      : loc.pathname.startsWith('/donors/') ? { section: 'Campaigns', label: 'Donor', item: undefined } : undefined;
+    : loc.pathname.startsWith('/campaigns/') ? { section: 'Campaigns & People', label: 'Campaign', item: undefined }
+      : loc.pathname.startsWith('/donors/') ? { section: 'Campaigns & People', label: 'Donor', item: undefined } : undefined;
   const pageTabs = current?.item ? tabsOf(current.item) : [];
   const badge = (n: NavItem) => (n.badge === 'tasks' && isAdmin ? taskCount : n.badge === 'inbox' ? unread : 0);
   const email = profile?.email ?? '';
