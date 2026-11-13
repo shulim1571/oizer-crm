@@ -1,19 +1,28 @@
-// Plaid settings and transaction mapping for the plaid function. Sandbox only (Shulim, 2026-11-11).
+// Plaid settings and transaction mapping for the plaid function. Sandbox (Shulim, 2026-11-11), and production for real
+// bank connections since Shulim approved it for Oizer (2026-11-13).
 //
-// The keys come only from the environment: PLAID_CLIENT_ID and PLAID_SANDBOX_SECRET (Supabase secrets when
-// deployed, the shell's environment locally), with PLAID_ENV choosing the environment and defaulting to sandbox.
-// Nothing here prints, logs or returns a key; error messages name the setting, never its value.
+// The keys come only from the environment (Supabase secrets when deployed, the shell's environment locally):
+// PLAID_CLIENT_ID, and the secret for the environment PLAID_ENV names: PLAID_SANDBOX_SECRET for sandbox (the
+// default) or PLAID_PRODUCTION_SECRET for production. Anything else is refused. Nothing here prints, logs or returns a
+// key; error messages name the setting, never its value.
 
-export type PlaidConfig = { ok: true; clientId: string; secret: string; env: 'sandbox'; baseUrl: string } | { ok: false; error: string };
+export type PlaidEnv = 'sandbox' | 'production';
+export type PlaidConfig = { ok: true; clientId: string; secret: string; env: PlaidEnv; baseUrl: string } | { ok: false; error: string };
+
+const ENVS: Record<PlaidEnv, { secret: string; baseUrl: string }> = {
+  sandbox: { secret: 'PLAID_SANDBOX_SECRET', baseUrl: 'https://sandbox.plaid.com' },
+  production: { secret: 'PLAID_PRODUCTION_SECRET', baseUrl: 'https://production.plaid.com' },
+};
 
 export function plaidConfig(get: (name: string) => string | undefined): PlaidConfig {
-  const env = (get('PLAID_ENV') ?? '').trim().toLowerCase() || 'sandbox';
-  if (env !== 'sandbox') return { ok: false, error: `Only the Plaid sandbox is allowed here (PLAID_ENV is "${env === 'production' || env === 'development' ? env : 'not sandbox'}").` };
+  const asked = (get('PLAID_ENV') ?? '').trim().toLowerCase() || 'sandbox';
+  if (!(asked in ENVS)) return { ok: false, error: `PLAID_ENV has to be sandbox or production (it is "${asked === 'development' ? 'development' : 'something else'}").` };
+  const env = asked as PlaidEnv;
   const clientId = (get('PLAID_CLIENT_ID') ?? '').trim();
-  const secret = (get('PLAID_SANDBOX_SECRET') ?? '').trim();
-  const missing = [!clientId && 'PLAID_CLIENT_ID', !secret && 'PLAID_SANDBOX_SECRET'].filter(Boolean);
+  const secret = (get(ENVS[env].secret) ?? '').trim();
+  const missing = [!clientId && 'PLAID_CLIENT_ID', !secret && ENVS[env].secret].filter(Boolean);
   if (missing.length) return { ok: false, error: `Plaid isn't set up yet: ${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} missing.` };
-  return { ok: true, clientId, secret, env: 'sandbox', baseUrl: 'https://sandbox.plaid.com' };
+  return { ok: true, clientId, secret, env, baseUrl: ENVS[env].baseUrl };
 }
 
 /** A Plaid transaction as /transactions/sync returns it (the parts used here). */

@@ -1,4 +1,5 @@
-// Plaid, sandbox only (Shulim, 2026-11-11): Link, token exchange and transaction sync for a bank account on the
+// Plaid (Shulim: sandbox 2026-11-11; production for Oizer's real bank connections approved 2026-11-13; PLAID_ENV
+// chooses, see _shared/plaid.ts): Link, token exchange and transaction sync for a bank account on the
 // Reconciliation page. Called by a signed-in admin from the portal. The database checks the admin and the
 // account as them first (plaid_admin_check); then this function, which alone has the Plaid keys, talks to
 // Plaid and records the result with the service role. Keys are read from secrets only and never logged.
@@ -63,6 +64,9 @@ Deno.serve(async req => {
 
   try {
     switch (b.action) {
+      // Which Plaid environment is in use, for the panel's label (no keys, only the name).
+      case 'config':
+        return reply({ env: cfg.env });
       case 'link_token': {
         const r = await plaid('/link/token/create', {
           client_name: 'Oizer', language: 'en', country_codes: ['US'], products: ['transactions'],
@@ -78,13 +82,17 @@ Deno.serve(async req => {
           p_org: org, p_account: account, p_item_id: r.item_id, p_access_token: r.access_token,
           p_institution: typeof b.institution === 'string' ? b.institution : null, p_plaid_account: pick.id,
           p_name: typeof pick.name === 'string' ? pick.name : null, p_mask: typeof pick.mask === 'string' ? pick.mask : null,
-          p_by: typeof b.by === 'string' ? b.by : null,
+          p_by: typeof b.by === 'string' ? b.by : null, p_environment: cfg.env,
         }, null);
         return reply({ linked: true });
       }
       case 'sync': {
-        const [item] = await rpc('plaid_item_secret', { p_org: org, p_account: account }, null) as { access_token: string; plaid_account_id: string; cursor: string | null }[];
+        const [item] = await rpc('plaid_item_secret', { p_org: org, p_account: account }, null) as { access_token: string; plaid_account_id: string; cursor: string | null; environment: string }[];
         if (!item) return reply({ error: 'This bank account isn\'t linked to Plaid.' }, 400);
+        // A link made in the sandbox can't be used in production (or the other way round).
+        if (item.environment !== cfg.env) {
+          return reply({ error: `This account was linked in the Plaid ${item.environment}, but Plaid is now in ${cfg.env}. Disconnect it and connect the bank again.` }, 400);
+        }
         let cursor = item.cursor;
         const totals = { added: 0, updated: 0, removed: 0, pages: 0 };
         try {
@@ -109,8 +117,9 @@ Deno.serve(async req => {
         return reply(totals);
       }
       case 'unlink': {
-        const [item] = await rpc('plaid_item_secret', { p_org: org, p_account: account }, null) as { access_token: string }[];
-        if (item) await plaid('/item/remove', { access_token: item.access_token }).catch(() => null);
+        const [item] = await rpc('plaid_item_secret', { p_org: org, p_account: account }, null) as { access_token: string; environment: string }[];
+        // Plaid is asked to remove the link only in the environment it was made in.
+        if (item && item.environment === cfg.env) await plaid('/item/remove', { access_token: item.access_token }).catch(() => null);
         await rpc('plaid_forget', { p_org: org, p_account: account }, null);
         return reply({ unlinked: true });
       }

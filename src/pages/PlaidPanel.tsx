@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link2, RefreshCw, Unlink } from 'lucide-react';
 import { Pill } from '../components/Pill';
 import { dateTime } from '../lib/format';
 import { requestOrgId, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 
-// Plaid, sandbox only (Shulim, 2026-11-11): link this bank account with a Plaid test institution and pull its
-// transactions in as bank lines. The keys live only in the plaid function's secrets.
+// Plaid: link this bank account and pull its transactions in as bank lines. Sandbox (test institutions) since
+// 2026-11-11; production, real banks, approved for Oizer by Shulim 2026-11-13. Which one is in use is the plaid
+// function's PLAID_ENV setting; the keys live only in its secrets.
 
 const LINK_SCRIPT = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 
@@ -41,6 +42,11 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const s = status.data as Row | null | undefined;
+  // Which Plaid environment the function uses (sandbox or production); unknown until it answers.
+  const [env, setEnv] = useState<string | null>(null);
+  useEffect(() => { callPlaid({ action: 'config', account }).then(r => setEnv(String(r.env)), () => setEnv(null)); }, [account]);
+  const live = env === 'production';
+  const otherEnv = s && env && s.environment && s.environment !== env;
 
   async function run(what: string, fn: () => Promise<void>) {
     setBusy(what); setError(null); setMessage(null);
@@ -69,7 +75,7 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
 
   const sync = () => run('sync', async () => {
     const r = await callPlaid({ action: 'sync', account });
-    setMessage(`Synced: ${r.added} new line${r.added === 1 ? '' : 's'}, ${r.updated} updated, ${r.removed} removed.${r.added === 0 && !s?.last_synced_at ? ' A new sandbox link can take a minute before its transactions are ready.' : ''}`);
+    setMessage(`Synced: ${r.added} new line${r.added === 1 ? '' : 's'}, ${r.updated} updated, ${r.removed} removed.${r.added === 0 && !s?.last_synced_at ? ' A new link can take a minute before its transactions are ready.' : ''}`);
     status.reload();
     onSynced();
   });
@@ -81,21 +87,24 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
 
   return (
     <div className="panel-box plaid-panel">
-      <h3><Link2 size={15} /> Plaid <Pill tone="amber">Sandbox</Pill> {s && <Pill tone="green">Linked</Pill>}</h3>
+      <h3><Link2 size={15} /> Plaid {env && (live ? <Pill tone="green">Production</Pill> : <Pill tone="amber">Sandbox</Pill>)} {s && <Pill tone="green">Linked</Pill>}</h3>
       {s ? (
         <p className="muted small">
           {s.institution_name ?? 'Bank'} · {s.account_name ?? 'Account'}{s.account_mask ? ` ••${s.account_mask}` : ''} · linked {dateTime(s.linked_at)}
           {s.last_synced_at ? <> · last synced {dateTime(s.last_synced_at)}</> : <> · not synced yet</>}
         </p>
       ) : (
-        <p className="muted small">Test institutions only: in Plaid Link pick any bank and sign in with <code>user_good</code> / <code>pass_good</code>. No real bank is connected.</p>
+        live
+          ? <p className="muted small">Connects the real bank account: in Plaid Link find the bank and sign in with its online-banking login. Plaid passes the transactions on; the bank login is never seen or kept here.</p>
+          : <p className="muted small">Test institutions only: in Plaid Link pick any bank and sign in with <code>user_good</code> / <code>pass_good</code>. No real bank is connected.</p>
       )}
+      {otherEnv && <div className="error">This account was linked in the Plaid {s!.environment}, and Plaid is now in {env}. Disconnect it, then connect the bank again.</div>}
       {s?.last_error && <div className="error">Last sync failed: {s.last_error}</div>}
       {message && <p className="muted">{message}</p>}
       {error && <div className="error">{error}</div>}
       <div className="form-actions">
-        {!s && <button type="button" className="btn primary" disabled={!!busy} onClick={connect}><Link2 size={15} /> {busy === 'connect' ? 'Opening Plaid…' : 'Connect with Plaid (sandbox)'}</button>}
-        {s && <button type="button" className="btn primary" disabled={!!busy} onClick={sync}><RefreshCw size={15} /> {busy === 'sync' ? 'Syncing…' : 'Sync now'}</button>}
+        {!s && <button type="button" className="btn primary" disabled={!!busy} onClick={connect}><Link2 size={15} /> {busy === 'connect' ? 'Opening Plaid…' : live ? 'Connect the bank with Plaid' : 'Connect with Plaid (sandbox)'}</button>}
+        {s && !otherEnv && <button type="button" className="btn primary" disabled={!!busy} onClick={sync}><RefreshCw size={15} /> {busy === 'sync' ? 'Syncing…' : 'Sync now'}</button>}
         {s && <button type="button" className="btn" disabled={!!busy} onClick={unlink}><Unlink size={15} /> Disconnect</button>}
       </div>
     </div>

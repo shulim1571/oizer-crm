@@ -2,7 +2,7 @@ import type { PGlite } from '@electric-sql/pglite';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ADMIN, MANAGER_1, OIZER, as, rows, seededDb } from './harness';
 
-// Plaid, sandbox only (Shulim, 2026-11-11): linked items and synced transactions in the database.
+// Plaid (sandbox 2026-11-11; production approved for Oizer 2026-11-13): linked items and synced transactions in the database.
 const sql = (db: PGlite, q: string, params: unknown[] = [], user = ADMIN) => as(db, user, tx => tx.query(q, params));
 const svc = async (db: PGlite, q: string, params: unknown[] = []) => (await rows(db, 'service_role', q, params))[0];
 const ACCOUNT = 'testacct';
@@ -30,6 +30,16 @@ describe('Plaid sandbox', () => {
     // The service-role functions are out of reach from the app.
     await expect(sql(db, `select public.plaid_save_item($1, $2, 'i', 't', null, 'a', null, null, null)`, [OIZER, ACCOUNT])).rejects.toThrow();
     await expect(sql(db, `select * from public.plaid_item_secret($1, $2)`, [OIZER, ACCOUNT])).rejects.toThrow();
+  });
+
+  // Production approved for Oizer (Shulim, 2026-11-13): each link records the environment it was made in.
+  it('records whether a link was made in the sandbox or in production, and refuses anything else', async () => {
+    await link(db);
+    expect((await svc(db, `select environment from public.plaid_item_secret($1, $2)`, [OIZER, ACCOUNT])).environment).toBe('sandbox');
+    await svc(db, `select public.plaid_save_item($1, $2, 'item-sample-2', 'access-sample-token-2', 'Sample Bank', 'plaid-acc-2', 'Checking', '1234', 'office@example.org', 'production')`, [OIZER, ACCOUNT]);
+    expect((await svc(db, `select environment, access_token from public.plaid_item_secret($1, $2)`, [OIZER, ACCOUNT]))).toMatchObject({ environment: 'production', access_token: 'access-sample-token-2' });
+    expect((await rows(db, ADMIN, `select environment from public.plaid_status()`))[0].environment).toBe('production');
+    await expect(svc(db, `select public.plaid_save_item($1, $2, 'i', 't', null, 'a', null, null, null, 'development')`, [OIZER, ACCOUNT])).rejects.toThrow(/Unknown Plaid environment/);
   });
 
   it('keeps the access token encrypted and shows admins only the link details', async () => {

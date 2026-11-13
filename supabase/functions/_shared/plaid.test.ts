@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { plaidConfig, plaidError, toSyncLines } from './plaid';
 
-// Plaid, sandbox only (Shulim, 2026-11-11). Keys come only from settings and never appear in messages or code.
+// Plaid sandbox (Shulim, 2026-11-11) and production (approved 2026-11-13). Keys come only from settings and never appear in messages or code.
 const env = (vars: Record<string, string | undefined>) => (n: string) => vars[n];
 const FAKE_ID = 'test-client-id-not-real';
 const FAKE_SECRET = 'test-secret-not-real-0123456789';
@@ -14,12 +14,23 @@ describe('Plaid settings', () => {
     expect(plaidConfig(env({ PLAID_CLIENT_ID: FAKE_ID, PLAID_SANDBOX_SECRET: FAKE_SECRET, PLAID_ENV: 'Sandbox' })).ok).toBe(true);
   });
 
-  it('refuses anything but the sandbox', () => {
-    for (const e of ['production', 'development', 'live']) {
-      const c = plaidConfig(env({ PLAID_CLIENT_ID: FAKE_ID, PLAID_SANDBOX_SECRET: FAKE_SECRET, PLAID_ENV: e }));
+  it('uses the production secret and address when PLAID_ENV is production (Shulim, 2026-11-13)', () => {
+    const c = plaidConfig(env({ PLAID_CLIENT_ID: FAKE_ID, PLAID_SANDBOX_SECRET: 'sandbox-not-used', PLAID_PRODUCTION_SECRET: FAKE_SECRET, PLAID_ENV: 'production' }));
+    expect(c).toEqual({ ok: true, clientId: FAKE_ID, secret: FAKE_SECRET, env: 'production', baseUrl: 'https://production.plaid.com' });
+    // The sandbox keeps using its own secret.
+    const sb = plaidConfig(env({ PLAID_CLIENT_ID: FAKE_ID, PLAID_SANDBOX_SECRET: FAKE_SECRET, PLAID_PRODUCTION_SECRET: 'production-not-used' }));
+    expect(sb.ok && sb.secret).toBe(FAKE_SECRET);
+    expect(sb.ok && sb.baseUrl).toBe('https://sandbox.plaid.com');
+  });
+
+  it('refuses any other environment, and production without its own secret', () => {
+    for (const e of ['development', 'live']) {
+      const c = plaidConfig(env({ PLAID_CLIENT_ID: FAKE_ID, PLAID_SANDBOX_SECRET: FAKE_SECRET, PLAID_PRODUCTION_SECRET: FAKE_SECRET, PLAID_ENV: e }));
       expect(c.ok).toBe(false);
-      if (!c.ok) expect(c.error).toMatch(/Only the Plaid sandbox/);
+      if (!c.ok) expect(c.error).toMatch(/PLAID_ENV has to be sandbox or production/);
     }
+    const noProd = plaidConfig(env({ PLAID_CLIENT_ID: FAKE_ID, PLAID_SANDBOX_SECRET: FAKE_SECRET, PLAID_ENV: 'production' }));
+    expect(noProd).toEqual({ ok: false, error: "Plaid isn't set up yet: PLAID_PRODUCTION_SECRET is missing." });
   });
 
   it('names a missing setting without showing any value', () => {
@@ -28,9 +39,9 @@ describe('Plaid settings', () => {
     const none = plaidConfig(env({}));
     expect(none.ok).toBe(false);
     if (!none.ok) expect(none.error).toMatch(/PLAID_CLIENT_ID and PLAID_SANDBOX_SECRET are missing/);
-    const prod = plaidConfig(env({ PLAID_CLIENT_ID: FAKE_ID, PLAID_SANDBOX_SECRET: FAKE_SECRET, PLAID_ENV: 'production' }));
-    expect(JSON.stringify(prod)).not.toContain(FAKE_SECRET);
-    expect(JSON.stringify(prod)).not.toContain(FAKE_ID);
+    const bad = plaidConfig(env({ PLAID_CLIENT_ID: FAKE_ID, PLAID_SANDBOX_SECRET: FAKE_SECRET, PLAID_ENV: 'development' }));
+    expect(JSON.stringify(bad)).not.toContain(FAKE_SECRET);
+    expect(JSON.stringify(bad)).not.toContain(FAKE_ID);
   });
 
   it('shows Plaid’s own error words, never what was sent', () => {
