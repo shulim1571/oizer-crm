@@ -256,6 +256,9 @@ export default function CampaignDetail() {
           ? <Kpi label="Balance" value={<span className="muted">Shared</span>} icon={<Scale size={18} />} tone="blue" sub="Counted in the parent's balance" />
           : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} sub={Number(c.sub_count) > 0 ? "Includes its teams; sub-campaigns keep their own balance" : undefined} />}
         {Number(c.post_dated_amount) > 0 && <Kpi label="Post-dated checks" value={money(c.post_dated_amount)} icon={<Clock size={18} />} tone="blue" sub="Not in the balance yet" />}
+        {/* Checks recorded but not yet delivered stay out of the balance like post-dated ones (Moshe Henig, 2026-11-13). */}
+        {Number(c.undelivered_checks_count) > 0 && <Kpi label="Checks not delivered" value={money(c.undelivered_checks_amount)} icon={<Clock size={18} />} tone="amber"
+          sub={`${c.undelivered_checks_count} check${Number(c.undelivered_checks_count) === 1 ? '' : 's'} · not in the balance yet`} />}
         {Number(c.awaiting_approval) > 0 && <Kpi label="Awaiting approval" value={money(c.awaiting_approval)} icon={<Clock size={18} />} tone="amber" sub="Not in the balance yet" />}
         <Kpi label="Pledged (open)" value={money(c.pledged_open)} icon={<Handshake size={18} />} tone="blue"
              sub={Number(c.pledge_scheduled_90) > 0 ? `Recurring: ${money(c.pledge_scheduled_30)} next 30 days, ${money(c.pledge_scheduled_90)} next 90` : 'Not in the balance'} />
@@ -264,6 +267,8 @@ export default function CampaignDetail() {
         <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={18} />} tone="blue"
              sub={c.last_donation_at ? `last gift ${dateTime(c.last_donation_at)}` : undefined} />
       </div>
+
+      {Number(c.undelivered_checks_count) > 0 && <UndeliveredChecks campaignId={c.id} canMark={isAdmin} onChange={() => setVersion(v => v + 1)} />}
 
       {(c.email || c.phone || c.notes) && (
         <div className="info">
@@ -348,3 +353,38 @@ export default function CampaignDetail() {
   );
 }
 
+/**
+ * The campaign's checks that are recorded but not yet delivered (Moshe Henig, 2026-11-13). They aren't in the balance
+ * until delivered; an admin marks each one delivered when it arrives, and it counts from then on.
+ */
+function UndeliveredChecks({ campaignId, canMark, onChange }: { campaignId: string; canMark: boolean; onChange: () => void }) {
+  const [version, setVersion] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const q = useQuery(async () => (await supabase.from('transaction_list').select('id, amount, check_number, donor_name, name, created_at, payment_method')
+    .eq('campaign_id', campaignId).eq('status', 'completed').eq('delivered', false).ilike('payment_method', '%check%').order('created_at')).data as Row[] ?? [], [campaignId, version]);
+  async function delivered(r: Row) {
+    if (!confirm(`Mark the ${money(r.amount)} check${r.check_number ? ` #${r.check_number}` : ''} as delivered? It then counts in the balance.`)) return;
+    setError(null);
+    const { error: e } = await supabase.from('donations').update({ delivered: true }).eq('id', r.id);
+    if (e) return setError(e.message);
+    setVersion(v => v + 1);
+    onChange();
+  }
+  const rows = (q.data as Row[]) ?? [];
+  return (
+    <div className="panel-box">
+      <h2>Checks not delivered yet</h2>
+      <p className="muted small">Recorded on this campaign but not delivered, so they're left out of the balance, like post-dated checks.</p>
+      <table className="mini"><thead><tr><th>Date</th><th>From</th><th>Check #</th><th className="right">Amount</th>{canMark && <th />}</tr></thead><tbody>
+        {rows.map(r => (
+          <tr key={r.id}>
+            <td>{dateTime(r.created_at)}</td><td>{r.donor_name || r.name || '—'}</td><td>{r.check_number || '—'}</td>
+            <td className="right num">{money(r.amount)}</td>
+            {canMark && <td className="right"><button type="button" className="btn small" onClick={() => void delivered(r)}>Mark delivered</button></td>}
+          </tr>
+        ))}
+      </tbody></table>
+      {error && <div className="error">{error}</div>}
+    </div>
+  );
+}
