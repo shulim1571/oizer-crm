@@ -1,0 +1,604 @@
+import { bytesToBase64, fromHex } from '../lib/base64';
+import { STALE_MESSAGE, friendlyError, isStaleChunkError } from '../lib/staleChunk';
+import RowMenu from '../components/RowMenu';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Mail, Printer, TriangleAlert, X } from 'lucide-react';
+import DataTable, { type Column } from '../components/DataTable';
+import { Pill } from '../components/Pill';
+import { dateTime, money } from '../lib/format';
+import { accountOptions, type Option } from '../lib/lookups';
+import { fetchAll, supabase, type Row } from '../lib/supabase';
+import { useQuery } from '../lib/useQuery';
+import type { CheckData } from '../lib/checkPdf';
+import { trimSignature } from '../lib/signatureTrim';
+import { Overlay } from './Pledges';
+
+// The PDF library is large, so it loads only when a check is printed.
+const pdf = () => import('../lib/checkPdf');
+
+const STATUS: Record<string, { label: string; tone: 'green' | 'red' | 'amber' | 'blue' | '' }> = {
+  outstanding: { label: 'Outstanding', tone: 'blue' },
+  cleared: { label: 'Cleared', tone: 'green' },
+  voided: { label: 'Voided', tone: '' },
+  lost: { label: 'Lost', tone: 'red' },
+};
+const CheckPill = ({ status }: { status: string }) => <Pill tone={STATUS[status]?.tone ?? ''}>{STATUS[status]?.label ?? status}</Pill>;
+const usDate = (iso: string) => { const [y, m, d] = iso.split('-').map(Number); return `${m}/${d}/${y}`; };
+
+async function asset(kind: 'signature' | 'micr_font', account = '') {
+  const { data } = await supabase.rpc('check_asset', { p_kind: kind, p_account: account });
+  return ((data ?? []) as Row[])[0] ?? null;
+}
+
+async function settingsFor(account: string) {
+  const { data } = await supabase.from('account_check_settings').select('*').eq('account_id', account).maybeSingle();
+  return data as Row | null;
+}
+const ready = (s: Row | null) => !!(s?.routing_number && s?.account_number && s?.next_check_number);
+
+/** Everything printed on a check, from the account's settings and its files. */
+async function checkData(s: Row, account: string, c: { checkNumber: number; date: string; payee: string; amount: number; memo?: string | null; campaign?: string | null }, sample = false): Promise<CheckData> {
+  const [sig, font] = await Promise.all([asset('signature', account), asset('micr_font')]);
+  return {
+    ...c,
+    printName: s.print_name ?? '', printAddress: s.print_address, bankName: s.bank_name ?? '',
+    routing: s.routing_number ?? '000000000', account: s.account_number ?? '0000',
+    offsetX: Number(s.offset_x), offsetY: Number(s.offset_y),
+    micrOffsetX: Number(s.micr_offset_x ?? 0), micrOffsetY: Number(s.micr_offset_y ?? 0),
+    // Trimmed to the writing, so it sits on the signature line whatever margins the file has.
+    signature: sig ? await trimSignature({ bytes: fromHex(sig.data_hex, 'signature file'), mime: sig.mime }) : null,
+    micrFont: font ? { bytes: fromHex(font.data_hex, 'MICR font file'), transit: font.transit_char, onUs: font.onus_char } : null,
+    sample,
+  };
+}
+
+/**
+ * Checks open in the browser, never as a download (Moshe Henig, 2026-11-11). A new tab is opened at the click itself
+ * (later, browsers block it) and the PDF shows there in the browser's viewer, to print from. If the browser blocks
+ * the tab anyway, the print preview opens on this page instead.
+ */
+export function pdfTab(): Window | null {
+  const w = window.open('', '_blank');
+  if (w) {
+    try {
+      w.document.title = 'Check';
+      w.document.body.innerHTML = '<p style="font:16px system-ui,sans-serif;padding:24px;color:#555">Preparing the check…</p>';
+    } catch { /* still usable */ }
+  }
+  return w;
+}
+
+function printInPage(url: string) {
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  frame.src = url;
+  frame.onload = () => { try { frame.contentWindow?.focus(); frame.contentWindow?.print(); } catch { /* nothing else to try */ } };
+  document.body.appendChild(frame);
+  setTimeout(() => frame.remove(), 10 * 60000);
+}
+
+export async function openPdf(data: CheckData, tab: Window | null) {
+  try {
+    const { buildCheckPdf } = await pdf();
+    const bytes = await buildCheckPdf(data);
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
+    if (tab && !tab.closed) tab.location.href = url;
+    else printInPage(url);
+    setTimeout(() => URL.revokeObjectURL(url), 10 * 60000);
+  } catch (e) {
+    tab?.close();
+    throw e;
+  }
+}
+
+/** Prints a check again with the same number. Opens its tab first, so call it straight from a click. */
+export async function reprintCheck(checkId: string): Promise<{ id: string; number: number }> {
+  const tab = pdfTab();
+  try {
+    const { data: k } = await supabase.from('check_register').select('*').eq('id', checkId).single();
+    const s = await settingsFor(k.account_id);
+    if (!s) throw new Error('This account has no check settings');
+    await openPdf(await checkData(s, k.account_id, {
+      checkNumber: k.check_number, date: usDate(k.check_date), payee: k.payee, amount: Number(k.amount), memo: k.memo, campaign: k.campaign_name,
+    }), tab);
+    return { id: checkId, number: k.check_number };
+  } catch (e) {
+    tab?.close();
+    throw e;
+  }
+}
+
+/**
+ * Emails a check's PDF to its campaign's primary fundraiser (Moshe Henig, 2026-11-11). It completes the check like
+ * printing (clears its Task Sheet task); printing stays available afterwards, and emailing again after printing.
+ */
+export async function emailCheck(checkId: string): Promise<{ to: string; name: string; number: number }> {
+  const { data: k } = await supabase.from('check_register').select('*').eq('id', checkId).single();
+  const s = await settingsFor(k.account_id);
+  if (!s) throw new Error('This account has no check settings');
+  const { buildCheckPdf } = await pdf();
+  const bytes = await buildCheckPdf(await checkData(s, k.account_id, {
+    checkNumber: k.check_number, date: usDate(k.check_date), payee: k.payee, amount: Number(k.amount), memo: k.memo, campaign: k.campaign_name,
+  }));
+  const { data, error } = await supabase.rpc('email_check_to_fundraiser', { p_check: checkId, p_pdf_base64: bytesToBase64(bytes) });
+  if (error) throw new Error(error.message);
+  window.dispatchEvent(new Event('task-sheet-changed'));
+  return { ...(data as { to: string; name: string }), number: k.check_number };
+}
+
+/** The "Email to fundraiser" button, with what happened written beside it. */
+export function EmailCheckButton({ checkId, onSent, label = 'Email to fundraiser' }: { checkId: string; onSent?: () => void; label?: string }) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function send() {
+    setBusy(true); setNote(null); setError(null);
+    try {
+      const r = await emailCheck(checkId);
+      setNote(`Check #${r.number} emailed to ${r.name} (${r.to}).`);
+      onSent?.();
+    } catch (e) {
+      setError(friendlyError(e));
+    }
+    setBusy(false);
+  }
+  return (
+    <>
+      <button type="button" className="btn" disabled={busy} onClick={() => void send()}><Mail size={15} /> {busy ? 'Emailing…' : label}</button>
+      {note && <span className="notice small">{note}</span>}
+      {error && <span className="error small">{error}</span>}
+    </>
+  );
+}
+
+/**
+ * After a check opens to print: did it print? Yes marks it printed and takes it off the Task Sheet; no leaves it
+ * there as not printed (Moshe Henig, 2026-11-11).
+ */
+export function CheckPrintedQuestion({ check, onDone }: { check: { id: string; number: number }; onDone: (printed: boolean) => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const [no, setNo] = useState(false);
+  async function yes() {
+    const { error: e } = await supabase.rpc('mark_check_printed', { p_check: check.id });
+    if (e) return setError(e.message);
+    window.dispatchEvent(new Event('task-sheet-changed'));
+    onDone(true);
+  }
+  return (
+    <Overlay onClose={() => onDone(false)}>
+      <div className="form-head"><h2>Did check #{check.number} print correctly?</h2></div>
+      {no ? (
+        <>
+          <p>Check #{check.number} stays on the Task Sheet as not printed. Print it again from there, or from its payout.</p>
+          <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" autoFocus onClick={() => onDone(false)}>OK</button></div>
+        </>
+      ) : (
+        <>
+          <p className="muted small">The check opened in a new tab (or the print window). Print it and look it over first: until you
+            say yes, it stays on the Task Sheet as not printed. You can also answer later from the Task Sheet.</p>
+          {error && <div className="error">{error}</div>}
+          <div className="form-actions">
+            <button type="button" className="btn" onClick={() => setNo(true)}>Not yet / it didn't print right</button>
+            <div className="spacer" />
+            <button type="button" className="btn primary" onClick={yes}>Yes, it printed</button>
+          </div>
+        </>
+      )}
+    </Overlay>
+  );
+}
+
+/** "Print again" anywhere: prints, then asks whether it printed. */
+export function useCheckPrinter(onPrinted?: (printed: boolean) => void) {
+  const [asking, setAsking] = useState<{ id: string; number: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const print = (checkId: string) => { setError(null); reprintCheck(checkId).then(setAsking, e => setError(friendlyError(e))); };
+  const dialog = (
+    <>
+      {error && <div className="error">{error}</div>}
+      {asking && <CheckPrintedQuestion check={asking} onDone={printed => { setAsking(null); onPrinted?.(printed); }} />}
+    </>
+  );
+  return { print, dialog };
+}
+
+/** A payout paid by check with no check printed yet, on the Task Sheet: print it right there (Moshe Henig, 2026-11-11). */
+export function PayoutPrintTask({ payoutId, onDone }: { payoutId: string; onDone: () => void }) {
+  const [payout, setPayout] = useState<Row | null | undefined>(undefined);
+  useEffect(() => { supabase.from('expenses').select('*').eq('id', payoutId).maybeSingle().then(({ data }) => setPayout((data as Row | null) ?? null)); }, [payoutId]);
+  if (payout === undefined) return <p className="muted">Loading…</p>;
+  if (!payout) return <p className="muted">This payout is gone.</p>;
+  return <PayoutCheckActions record={payout} onDone={() => onDone()} />;
+}
+
+/** A check not yet confirmed printed, on the Task Sheet. */
+export function UnprintedCheckTask({ checkId, onDone }: { checkId: string; onDone: () => void }) {
+  const printer = useCheckPrinter(printed => { if (printed) onDone(); });
+  const [error, setError] = useState<string | null>(null);
+  async function markPrinted() {
+    if (!confirm('Mark this check as printed? Only do this if it printed correctly.')) return;
+    const { error: e } = await supabase.rpc('mark_check_printed', { p_check: checkId });
+    if (e) return setError(e.message);
+    onDone();
+  }
+  return (
+    <div className="donation-actions">
+      <button type="button" className="btn primary" onClick={() => printer.print(checkId)}><Printer size={15} /> Print check</button>
+      <EmailCheckButton checkId={checkId} onSent={onDone} />
+      <button type="button" className="btn" onClick={markPrinted}>It already printed</button>
+      <Link to="/checks" className="btn">Check register</Link>
+      {error && <div className="error">{error}</div>}
+      {printer.dialog}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// On a payout: print its check, or see the one already printed
+// ---------------------------------------------------------------------------
+export function PayoutCheckActions({ record, onDone }: { record: Row; onDone: (row: Row) => void }) {
+  const [checks, setChecks] = useState<Row[]>([]);
+  const [printing, setPrinting] = useState<boolean | 'email'>(false);
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    supabase.from('checks').select('*').eq('expense_id', record.id).order('issued_at', { ascending: false }).then(({ data }) => setChecks(data ?? []));
+  }, [record.id, version]);
+  const live = checks.find(k => k.status === 'outstanding' || k.status === 'cleared');
+  const printer = useCheckPrinter(() => setVersion(v => v + 1));
+  const [asking, setAsking] = useState<{ id: string; number: number } | null>(null);
+  return (
+    <div className="donation-actions">
+      {live ? (
+        <>
+          <span>Check #{live.check_number} <CheckPill status={live.status} /></span>
+          <button type="button" className="btn" onClick={() => printer.print(live.id)}><Printer size={15} /> Print again</button>
+          <EmailCheckButton checkId={live.id} onSent={() => setVersion(v => v + 1)} />
+          {live.emailed_at && <span className="muted small">Emailed to {live.emailed_to}</span>}
+          {!live.printed_at && !live.emailed_at && <span className="muted small">Not confirmed printed</span>}
+          <Link to="/checks" className="btn">Check register</Link>
+        </>
+      ) : (
+        <>
+          <button type="button" className="btn" onClick={() => setPrinting(true)}><Printer size={15} /> Print check</button>
+          {/* Or email it to the fundraiser instead (Moshe Henig, 2026-11-11); the window records it, then emails it. */}
+          <button type="button" className="btn" onClick={() => setPrinting('email')}><Mail size={15} /> Email to fundraiser</button>
+        </>
+      )}
+      {checks.filter(k => k !== live).map(k => <span key={k.id} className="muted small">#{k.check_number} {STATUS[k.status]?.label.toLowerCase()}{k.status_reason ? `: ${k.status_reason}` : ''}</span>)}
+      {printer.dialog}
+      {printing && <PrintCheckDialog payout={record} emailFirst={printing === 'email'} onClose={() => setPrinting(false)}
+        onIssued={check => { setPrinting(false); setAsking(check); setVersion(v => v + 1); }}
+        onEmailed={() => { setPrinting(false); setVersion(v => v + 1); onDone(record); }} />}
+      {/* Ask first, then let the payout or the task close: closing first took the question with it (Moshe Henig, 2026-11-11). */}
+      {asking && <CheckPrintedQuestion check={asking} onDone={() => { setAsking(null); setVersion(v => v + 1); onDone(record); }} />}
+    </div>
+  );
+}
+
+function PrintCheckDialog({ payout, emailFirst = false, onClose, onIssued, onEmailed }: { payout: Row; emailFirst?: boolean; onClose: () => void; onIssued: (check: { id: string; number: number }) => void; onEmailed?: () => void }) {
+  const [accounts, setAccounts] = useState<Option[]>([]);
+  const [account, setAccount] = useState<string>(payout.account_id ?? '');
+  const [settings, setSettings] = useState<Row | null>(null);
+  const [memo, setMemo] = useState(payout.memo ?? '');
+  const [hasFont, setHasFont] = useState<boolean | null>(null);
+  const [campaign, setCampaign] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // The check printer is loaded now, before anything is recorded: a page opened before a deploy can't load it,
+  // and then nothing should be recorded at all (Moshe Henig's "print check doesn't work").
+  const [printer, setPrinter] = useState<'loading' | 'ready' | 'stale'>('loading');
+  useEffect(() => { pdf().then(() => setPrinter('ready'), e => setPrinter(isStaleChunkError(e) ? 'stale' : 'ready')); }, []);
+  useEffect(() => {
+    accountOptions().then(setAccounts);
+    asset('micr_font').then(f => setHasFont(!!f));
+    supabase.from('campaigns').select('internal_name, external_name').eq('id', payout.campaign_id).maybeSingle()
+      // The memo defaults to the campaign ID (Moshe Henig, 2026-11-11); still editable, and a saved memo is kept.
+      .then(({ data }) => { const n = data?.external_name || data?.internal_name || ''; setCampaign(n); setMemo((m: string) => m || payout.campaign_id || ''); });
+  }, [payout.campaign_id]);
+  useEffect(() => { setSettings(null); if (account) settingsFor(account).then(setSettings); }, [account]);
+  const today = new Date();
+  const date = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+
+  async function preview() {
+    if (!settings) return;
+    const tab = pdfTab();
+    setError(null);
+    try {
+      await openPdf(await checkData(settings, account, { checkNumber: settings.next_check_number, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }, true), tab);
+    } catch (e) {
+      setError(friendlyError(e));
+    }
+  }
+  // Instead of printing: record the check and email its PDF to the campaign's fundraiser (Moshe Henig, 2026-11-11).
+  async function issueAndEmail() {
+    if (!settings) return;
+    setBusy(true);
+    setError(null);
+    const { data, error: e } = await supabase.rpc('issue_check', { p_payout: payout.id, p_account: account, p_memo: memo || null });
+    if (e) { setBusy(false); return setError(e.message); }
+    const issued = ((data ?? []) as Row[])[0];
+    try {
+      const r = await emailCheck(issued.check_id);
+      setBusy(false);
+      alert(`Check #${r.number} is recorded and was emailed to ${r.name} (${r.to}).`);
+      onEmailed?.();
+    } catch (err) {
+      setBusy(false);
+      setError(`Check #${issued.check_number} was recorded, but it couldn't be emailed: ${friendlyError(err)} It's on the Task Sheet; print or email it from there or from this payout.`);
+    }
+  }
+  async function issue() {
+    if (!settings) return;
+    const tab = pdfTab();
+    setBusy(true);
+    setError(null);
+    const { data, error: e } = await supabase.rpc('issue_check', { p_payout: payout.id, p_account: account, p_memo: memo || null });
+    if (e) { tab?.close(); setBusy(false); return setError(e.message); }
+    const issued = ((data ?? []) as Row[])[0];
+    const n = issued.check_number;
+    try {
+      await openPdf(await checkData(settings, account, { checkNumber: n, date, payee: payout.payee, amount: Number(payout.amount), memo, campaign }), tab);
+    } catch (e) {
+      // The check is recorded (and on the Task Sheet as not printed); only the PDF failed.
+      setBusy(false);
+      return setError(`Check #${n} was recorded, but its PDF couldn't be made: ${friendlyError(e)} It's on the Task Sheet as not printed; use "Print again" on this payout.`);
+    }
+    setBusy(false);
+    onIssued({ id: issued.check_id, number: n });
+  }
+
+  return (
+    // Laid out to breathe at any width (Moshe Henig, 2026-11-13: the window looked cramped and button labels wrapped).
+    <Overlay onClose={onClose} size="medium">
+      <div className="check-dialog">
+      <div className="form-head"><h2>{emailFirst ? "Email a check to the fundraiser" : "Print a check"}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="check-summary">
+        <div><span className="muted small">Pay to</span><b>{payout.payee || <span className="error">Choose a payee on the payout first</span>}</b></div>
+        <div className="check-amount"><span className="muted small">Amount</span><b>{money(payout.amount)}</b></div>
+      </div>
+      <label className="field"><span>Draw from</span>
+        <select value={account} onChange={e => setAccount(e.target.value)}>
+          <option value="">Choose a bank account…</option>
+          {accounts.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+        </select>
+      </label>
+      {account && settings !== null && !ready(settings) && (
+        <div className="error">Set this account's routing number, account number and starting check number first. <Link to={`/accounts/${encodeURIComponent(account)}`}>Open the account</Link></div>
+      )}
+      {account && settings === null && <p className="muted small">No check settings for this account yet. <Link to={`/accounts/${encodeURIComponent(account)}`}>Set them up</Link></p>}
+      {ready(settings) && <p className="muted small">This will be check #{settings!.next_check_number} on {settings!.bank_name}.</p>}
+      <label className="field"><span>Memo</span><input value={memo} onChange={e => setMemo(e.target.value)} /></label>
+      {hasFont === false && <p className="date-note"><TriangleAlert size={14} /> No MICR font is set up, so checks can't be printed yet. <Link to="/checks">Add it on the Checks page</Link>.</p>}
+      {printer === 'stale' && (
+        <div className="error">{STALE_MESSAGE} <button type="button" className="btn" onClick={() => window.location.reload()}>Reload</button></div>
+      )}
+      {error && <div className="error">{error}</div>}
+      <div className="form-actions check-actions">
+        <div className="check-actions-side">
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn" disabled={!ready(settings) || printer !== 'ready'} onClick={preview}>Preview (marked VOID)</button>
+        </div>
+        <div className="check-actions-main">
+          <button type="button" className={`btn ${emailFirst ? 'primary' : ''}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issueAndEmail}><Mail size={15} /> Record and email to fundraiser</button>
+          <button type="button" className={`btn ${emailFirst ? '' : 'primary'}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issue}><Printer size={15} /> Print and record check</button>
+        </div>
+      </div>
+      </div>
+    </Overlay>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The account's check settings, on its page
+// ---------------------------------------------------------------------------
+export function CheckSettingsCard({ accountId }: { accountId: string }) {
+  const [s, setS] = useState<Row>({});
+  const [sig, setSig] = useState<Row | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    settingsFor(accountId).then(r => setS(r ?? { offset_x: 0, offset_y: 0, micr_offset_x: 0, micr_offset_y: 0 }));
+    asset('signature', accountId).then(setSig);
+  }, [accountId, version]);
+  const set = (k: string, v: unknown) => { setSaved(false); setS(prev => ({ ...prev, [k]: v })); };
+
+  async function save() {
+    setError(null);
+    const { error: e } = await supabase.rpc('save_check_settings', {
+      p_account: accountId, p_print_name: s.print_name ?? null, p_print_address: s.print_address ?? null, p_bank_name: s.bank_name ?? null,
+      p_routing: s.routing_number ?? null, p_account_number: s.account_number ?? null,
+      p_next_number: s.next_check_number ? Number(s.next_check_number) : null, p_offset_x: Number(s.offset_x || 0), p_offset_y: Number(s.offset_y || 0),
+      p_micr_offset_x: Number(s.micr_offset_x || 0), p_micr_offset_y: Number(s.micr_offset_y || 0),
+    });
+    if (e) return setError(e.message);
+    setSaved(true);
+    setVersion(v => v + 1);
+  }
+  async function upload(file: File) {
+    setError(null);
+    const { toBase64 } = await pdf();
+    const { error: e } = await supabase.rpc('save_check_asset', { p_kind: 'signature', p_account: accountId, p_base64: await toBase64(file), p_mime: file.type, p_file_name: file.name });
+    if (e) return setError(e.message);
+    setVersion(v => v + 1);
+  }
+  async function testPrint() {
+    const tab = pdfTab();
+    await openPdf(await checkData(s, accountId, { checkNumber: Number(s.next_check_number || 1001), date: '1/1/2027', payee: 'Sample Payee', amount: 1234.56, memo: 'Alignment test', campaign: 'Sample' }, true), tab)
+      .catch(e => setError(friendlyError(e)));
+  }
+
+  return (
+    <div className="card">
+      <h3>Check printing</h3>
+      <p className="muted small">Printed on letter-size check stock with the check on top. Routing number, account number and the starting number are needed before the first check.</p>
+      <div className="fields">
+        <label className="field"><span>Name printed on checks</span><input value={s.print_name ?? ''} onChange={e => set('print_name', e.target.value)} placeholder="Like Cong Oizer" /></label>
+        <label className="field"><span>Bank name</span><input value={s.bank_name ?? ''} onChange={e => set('bank_name', e.target.value)} placeholder="Like JP Morgan Chase" /></label>
+        <label className="field"><span>Routing number</span><input inputMode="numeric" autoComplete="off" value={s.routing_number ?? ''} onChange={e => set('routing_number', e.target.value)} /></label>
+        <label className="field"><span>Account number</span><input inputMode="numeric" autoComplete="off" value={s.account_number ?? ''} onChange={e => set('account_number', e.target.value)} /></label>
+        <label className="field"><span>Next check number</span><input type="number" min="1" step="1" value={s.next_check_number ?? ''} onChange={e => set('next_check_number', e.target.value)} /></label>
+        <label className="field"><span>Nudge whole check right / up (mm)</span>
+          <span className="inline-pair">
+            <input type="number" step="0.5" aria-label="Nudge right" value={s.offset_x ?? 0} onChange={e => set('offset_x', e.target.value)} />
+            <input type="number" step="0.5" aria-label="Nudge up" value={s.offset_y ?? 0} onChange={e => set('offset_y', e.target.value)} />
+          </span>
+        </label>
+        {/* Only the MICR numbers, on top of the whole-check nudge (Moshe Henig, 2026-11-11). */}
+        <label className="field"><span>Nudge MICR line only right / up (mm)</span>
+          <span className="inline-pair">
+            <input type="number" step="0.5" min="-25" max="25" aria-label="Nudge MICR line right" value={s.micr_offset_x ?? 0} onChange={e => set('micr_offset_x', e.target.value)} />
+            <input type="number" step="0.5" min="-25" max="25" aria-label="Nudge MICR line up" value={s.micr_offset_y ?? 0} onChange={e => set('micr_offset_y', e.target.value)} />
+          </span>
+        </label>
+      </div>
+      <label className="field"><span>Address under the name</span><textarea rows={2} value={s.print_address ?? ''} onChange={e => set('print_address', e.target.value)} /></label>
+      <label className="field"><span>Signature image (PNG or JPG)</span>
+        <input type="file" accept="image/png,image/jpeg" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />
+        <small className="muted">{sig ? `${sig.file_name ?? 'Uploaded'} · ${dateTime(sig.updated_at)}` : 'None yet. Checks print with a blank signature line until one is added.'}</small>
+      </label>
+      {error && <div className="error">{error}</div>}
+      {saved && <div className="notice">Saved.</div>}
+      <div className="form-actions">
+        <button type="button" className="btn" onClick={testPrint}>Print test page (VOID)</button>
+        <div className="spacer" />
+        <button type="button" className="btn primary" onClick={save}>Save check settings</button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The register
+// ---------------------------------------------------------------------------
+function MicrFontCard() {
+  const [font, setFont] = useState<Row | null>(null);
+  const [transit, setTransit] = useState('A');
+  const [onUs, setOnUs] = useState('C');
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
+  useEffect(() => { asset('micr_font').then(f => { setFont(f); if (f) { setTransit(f.transit_char ?? 'A'); setOnUs(f.onus_char ?? 'C'); } }); }, [version]);
+  async function save() {
+    setError(null);
+    const { toBase64 } = await pdf();
+    const { error: e } = file
+      ? await supabase.rpc('save_check_asset', { p_kind: 'micr_font', p_account: null, p_base64: await toBase64(file), p_mime: file.type || 'font/ttf', p_file_name: file.name, p_transit_char: transit, p_onus_char: onUs })
+      : await supabase.rpc('save_check_asset', { p_kind: 'micr_font', p_account: null, p_base64: bytesToBase64(fromHex((await asset('micr_font'))!.data_hex, 'MICR font file')), p_mime: font!.mime, p_file_name: font!.file_name, p_transit_char: transit, p_onus_char: onUs });
+    if (e) return setError(e.message);
+    setFile(null);
+    setVersion(v => v + 1);
+  }
+  return (
+    <div className="card">
+      <h3>MICR font</h3>
+      <p className="muted small">The bank reads the line along the bottom of each check, printed in the E-13B MICR font. Upload the font file your organization is licensed to use (TTF or OTF), and say which keys type its transit and on-us symbols. Print with MICR toner for checks the bank will process.</p>
+      <div className="fields">
+        <label className="field"><span>Font file</span><input type="file" accept=".ttf,.otf" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+          <small className="muted">{font ? `${font.file_name} · ${dateTime(font.updated_at)}` : 'None yet. Checks can\'t be printed until one is added.'}</small>
+        </label>
+        <label className="field"><span>Transit symbol key</span><input maxLength={1} value={transit} onChange={e => setTransit(e.target.value)} /></label>
+        <label className="field"><span>On-us symbol key</span><input maxLength={1} value={onUs} onChange={e => setOnUs(e.target.value)} /></label>
+      </div>
+      {error && <div className="error">{error}</div>}
+      <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" disabled={!file && !font} onClick={save}>Save</button></div>
+    </div>
+  );
+}
+
+export function ChecksPage() {
+  const [version, setVersion] = useState(0);
+  const [status, setStatus] = useState('outstanding');
+  const [error, setError] = useState<string | null>(null);
+  const q = useQuery(
+    () => fetchAll((a, b) => supabase.from('check_register').select('*').order('account_name').order('check_number', { ascending: false }).range(a, b) as never),
+    [version],
+  );
+  const all = (q.data as Row[]) ?? [];
+  const rows = all.filter(r => !status || r.status === status);
+  const out = all.filter(r => r.status === 'outstanding');
+  const outstanding = out.reduce((s, r) => s + Number(r.amount), 0);
+  const [notice, setNotice] = useState<string | null>(null);
+  const printer = useCheckPrinter(() => setVersion(v => v + 1));
+
+  async function printedTo(r: Row, printed: boolean) {
+    if (!confirm(printed ? `Mark check #${r.check_number} as printed? It leaves the Task Sheet.` : `Mark check #${r.check_number} as not printed? It goes back on the Task Sheet.`)) return;
+    setError(null);
+    const { error: e } = await supabase.rpc(printed ? 'mark_check_printed' : 'mark_check_unprinted', { p_check: r.id });
+    if (e) return setError(e.message);
+    setVersion(v => v + 1);
+    window.dispatchEvent(new Event('task-sheet-changed'));
+  }
+
+  async function setTo(r: Row, to: string) {
+    const reason = to === 'voided' || to === 'lost' ? prompt(`Mark check #${r.check_number} ${to}? Its number is never used again. Reason:`) : '';
+    if (reason === null) return;
+    setError(null);
+    const { error: e } = await supabase.rpc('set_check_status', { p_check: r.id, p_status: to, p_reason: reason || null });
+    if (e) return setError(e.message);
+    setVersion(v => v + 1);
+    window.dispatchEvent(new Event('task-sheet-changed'));
+  }
+
+  const columns: Column[] = [
+    { key: 'account_name', label: 'Account' },
+    { key: 'check_number', label: 'Check #', align: 'right' },
+    { key: 'check_date', label: 'Date' },
+    { key: 'payee', label: 'Payee', width: 180 },
+    { key: 'amount', label: 'Amount', render: r => money(r.amount), align: 'right' },
+    { key: 'status', label: 'Status', value: r => STATUS[r.status]?.label, render: r => <CheckPill status={r.status} /> },
+    { key: 'days_outstanding', label: 'Days out', align: 'right' },
+    { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => (r.campaign_id ? `${r.campaign_name ?? ''} - ${r.campaign_id}` : '') },
+    { key: 'memo', label: 'Memo', long: true, optional: true },
+    { key: 'status_reason', label: 'Reason', optional: true },
+    { key: 'issued_by', label: 'Issued by', optional: true },
+    // Whether the check was confirmed printed, and by whom (Moshe Henig, 2026-11-11).
+    {
+      key: 'printed_at', label: 'Printed', value: r => (r.printed_at ? dateTime(r.printed_at) : 'Not printed'),
+      render: r => (r.printed_at ? <span title={r.printed_by ? `Confirmed by ${r.printed_by}` : undefined}>{dateTime(r.printed_at)}</span>
+        : r.status === 'outstanding' ? <Pill tone="amber">Not printed</Pill> : <span className="muted">—</span>),
+    },
+    {
+      key: 'actions', label: '', render: r => (
+        <RowMenu label="Check actions" items={[
+          { label: 'Print again', onClick: () => printer.print(r.id) },
+          { label: 'Email to fundraiser', onClick: () => { emailCheck(r.id).then(x => { setError(null); setNotice(`Check #${x.number} emailed to ${x.name} (${x.to}).`); setVersion(v => v + 1); }, e => setError(friendlyError(e))); }, hidden: !['outstanding', 'cleared'].includes(r.status) },
+          { label: 'Mark printed', onClick: () => printedTo(r, true), hidden: !!r.printed_at || r.status !== 'outstanding' },
+          { label: 'Mark not printed (back to the Task Sheet)', onClick: () => printedTo(r, false), hidden: !r.printed_at || r.status !== 'outstanding' },
+          { label: 'Mark cleared', onClick: () => setTo(r, 'cleared'), hidden: r.status !== 'outstanding' },
+          { label: 'Mark not cleared', onClick: () => setTo(r, 'outstanding'), hidden: r.status !== 'cleared' },
+          { label: 'Mark lost', onClick: () => setTo(r, 'lost'), hidden: r.status !== 'outstanding' },
+          { label: 'Void', onClick: () => setTo(r, 'voided'), hidden: r.status !== 'outstanding', danger: true },
+        ]} />
+      ),
+    },
+  ];
+
+  return (
+    <section className="view">
+      {error && <div className="error">{error}</div>}
+      {notice && <div className="notice">{notice}</div>}
+      {printer.dialog}
+      <DataTable
+        title="Check register"
+        subtitle={<>Outstanding: {money(outstanding)} on {out.length} check{out.length === 1 ? '' : 's'}. Print a check from a payout: open it under <Link to="/expenses">Payouts</Link>.</>}
+        rows={rows}
+        loading={q.loading}
+        error={q.error}
+        columns={columns}
+        exportName="check-register"
+        actions={
+          <select aria-label="Status" value={status} onChange={e => setStatus(e.target.value)}>
+            <option value="">All checks</option>
+            {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        }
+      />
+      <details className="help">
+        <summary>Check printing settings (MICR font)</summary>
+        <MicrFontCard />
+      </details>
+    </section>
+  );
+}

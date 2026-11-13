@@ -26,6 +26,8 @@ interface Props {
   view?: string;
   /** Click a row to open this path (e.g. a detail page) instead of the edit form. */
   openPath?: (row: Row) => string;
+  /** Records that are deactivated rather than deleted. */
+  noDelete?: boolean;
 }
 
 export default function CrudPage(p: Props) {
@@ -85,7 +87,7 @@ export default function CrudPage(p: Props) {
           defaults={p.defaults}
           onClose={() => setEditing(undefined)}
           onSaved={onSaved}
-          allowDelete={isAdmin}
+          allowDelete={isAdmin && !p.noDelete}
         />
       )}
     </>
@@ -93,4 +95,4 @@ export default function CrudPage(p: Props) {
 }
 
 export const campLabel = (c: Row | null | undefined) =>
-  c ? `${c.real_name || c.campaign_name || c.friendly_name || ''} - ${c.id}` : '';
+  c ? `${c.internal_name || c.campaign_name || c.external_name || ''} - ${c.id}` : '';

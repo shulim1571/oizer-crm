@@ -7,8 +7,11 @@ export interface Option {
 
 const cache = new Map<string, Promise<Option[]>>();
 
+import { byLabel } from './byLabel';
+export { byLabel };
+
 function cached(key: string, load: () => Promise<Option[]>) {
-  if (!cache.has(key)) cache.set(key, load().catch(e => (cache.delete(key), Promise.reject(e))));
+  if (!cache.has(key)) cache.set(key, load().then(list => [...list].sort(byLabel)).catch(e => (cache.delete(key), Promise.reject(e))));
   return cache.get(key)!;
 }
 
@@ -16,24 +19,20 @@ export const clearLookups = () => cache.clear();
 
 export const campaignOptions = () =>
   cached('campaigns', async () =>
-    (await fetchAll((a, b) => supabase.from('campaigns').select('id, campaign_name, friendly_name, real_name, archived_at').order('id').range(a, b)))
+    (await fetchAll((a, b) => supabase.from('campaigns').select('id, campaign_name, external_name, internal_name, status, parent_campaign_id').neq('status', 'closed').order('id').range(a, b)))
       .map(c => ({
         value: c.id,
-        label: `${c.id} - ${c.real_name || c.campaign_name || c.friendly_name || ''}${c.archived_at ? ' (archived)' : ''}`,
+        // Name first, so the list reads alphabetically; the ID still finds it when typed.
+        label: `${c.internal_name || c.campaign_name || c.external_name || c.id} - ${c.id}${c.parent_campaign_id ? ` (under ${c.parent_campaign_id})` : ''}${c.status === 'archived' ? ' (archived)' : c.status === 'draft' ? ' (draft)' : ''}`,
       })),
   );
 
 export const managerOptions = () =>
   cached('managers', async () =>
-    (await fetchAll((a, b) => supabase.from('managers').select('id, full_name').order('full_name').range(a, b)))
-      .map(m => ({ value: m.id, label: m.full_name || m.id })),
+    (await fetchAll((a, b) => supabase.from('managers').select('id, full_name, status').neq('status', 'deactivated').order('full_name').range(a, b)))
+      .map(m => ({ value: m.id, label: `${m.full_name || m.id}${m.status === 'suspended' ? ' (suspended)' : ''}` })),
   );
 
-export const collectorOptions = () =>
-  cached('collectors', async () =>
-    (await fetchAll((a, b) => supabase.from('collectors').select('id, full_name').order('full_name').range(a, b)))
-      .map(m => ({ value: m.id, label: m.full_name || m.id })),
-  );
 
 export const donorOptions = () =>
   cached('donors', async () =>
@@ -53,11 +52,42 @@ export const sourceOptions = () =>
       .map(s => ({ value: s.id, label: s.name })),
   );
 
-export const PAYMENT_METHODS = [
-  'Matbia', 'Credit Card', 'Credit Card VISA', 'Credit Card MASTERCARD', 'Credit Card AMEX', 'Credit Card DISCOVER',
-  'OJC', 'OJC Voucher', 'Pledger Voucher', 'Donors Fund Voucher', 'Pledger Pledger', 'Check', 'Cash', 'Zelle', 'Wire', 'usaepay', 'Other',
-].map(v => ({ value: v, label: v }));
+export const paymentMethodOptions = () =>
+  cached('paymentMethods', async () =>
+    (await fetchAll((a, b) => supabase.from('payment_methods').select('name').eq('active', true).neq('category', 'Voucher').order('name').range(a, b)))
+      .map(m => ({ value: m.name, label: m.name })),
+  );
+
+export const voucherIssuerOptions = () =>
+  cached('voucherIssuers', async () =>
+    (await fetchAll((a, b) => supabase.from('payment_methods').select('name').eq('active', true).eq('category', 'Voucher').order('name').range(a, b)))
+      .map(m => ({ value: m.name, label: m.name.replace(/^Voucher\s*—\s*/, '') })),
+  );
+
+export const paymentMethodIdOptions = () =>
+  cached('paymentMethodIds', async () =>
+    (await fetchAll((a, b) => supabase.from('payment_methods').select('id, name').order('name').range(a, b)))
+      .map(m => ({ value: m.id, label: m.name })),
+  );
+
+export const payoutMethodOptions = () =>
+  cached('payoutMethods', async () =>
+    (await fetchAll((a, b) => supabase.from('payout_methods').select('name').eq('active', true).order('name').range(a, b)))
+      .map(m => ({ value: m.name, label: m.name })),
+  );
+
+/** Admins only; fundraisers search with lookup_payees. */
+export const payeeOptions = () =>
+  cached('payees', async () =>
+    (await fetchAll((a, b) => supabase.from('payees').select('id, name, phone').is('merged_into', null).order('name').range(a, b)))
+      .map(p => ({ value: p.id, label: `${p.name}${p.phone ? ` · ${p.phone}` : ''}` })),
+  );
 
 export const EXPENSE_METHODS = ['Check', 'Zelle', 'Account Transfer', 'Credit Card', 'Cash', 'Wire', 'other'].map(v => ({ value: v, label: v }));
-export const DONATION_TYPES = ['Payment', 'Batch', 'Collect', 'Voided'].map(v => ({ value: v, label: v }));
+export const DONATION_TYPES = ['Payment', 'Batch'].map(v => ({ value: v, label: v }));
+export const DONATION_STATUSES = [
+  ['completed', 'Completed'], ['pending', 'Pending approval'], ['post_dated', 'Post-dated'], ['collect', 'To collect'], ['voided', 'Voided'],
+  ['refunded', 'Refunded'], ['returned', 'Returned'], ['failed', 'Failed'], ['rejected', 'Rejected'],
+].map(([value, label]) => ({ value, label }));
+export const CAMPAIGN_STATUSES = [['draft', 'Draft'], ['active', 'Active']].map(([value, label]) => ({ value, label }));
 export const TASK_STATUSES = ['Pending', 'In Progress', 'Done'].map(v => ({ value: v, label: v }));

@@ -1,18 +1,73 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import Layout from './components/Layout';
+import Layout, { PRODUCT_MARK } from './components/Layout';
 import { useAuth } from './lib/auth';
 import { supabase } from './lib/supabase';
-import Login, { AuthShell, SetNewPassword } from './pages/Login';
+import Login, { AuthShell, ConfirmEmailLink, SetNewPassword, readEmailLink } from './pages/Login';
 import Campaigns from './pages/Campaigns';
 import CampaignDetail from './pages/CampaignDetail';
-import { AllDonations, NewDonation, RecentDonations } from './pages/Donations';
+import { AllDonations, FundraiserNewDonation, NewDonation } from './pages/Donations';
 import { DonorDetail, DonorsPage } from './pages/Donors';
 import UsersPage from './pages/Users';
+import ActivityPage from './pages/Activity';
+import WebAddressesPage from './pages/WebAddresses';
+import ApiKeysPage from './pages/ApiKeys';
+import PhoneLookupPage from './pages/PhoneLookup';
+import DonaryPage from './pages/Donary';
+import OrganizationPage from './pages/Organization';
+import PlatformPage from './pages/Platform';
+import GuestPage from './pages/Guest';
+import BatchEntry from './pages/BatchEntry';
+import FeesPage from './pages/Fees';
+import { PledgesPage } from './pages/Pledges';
+import { VouchersPage } from './pages/Vouchers';
+import { TransfersPage } from './pages/Transfers';
+import TaskSheetPage from './pages/TaskSheet';
+import RequestsPage from './pages/Requests';
+import AccountSecurityPage, { VerifySession } from './pages/Security';
+import { useMfa } from './lib/mfa';
+import { TRUST_DAYS, trustThisDevice, checkTrustedSignIn } from './lib/trustedDevice';
+import TasksPage from './pages/Tasks';
+import { TemplatesPage } from './pages/Templates';
+import DashboardPage, { BalanceSummaryPage } from './pages/Dashboard';
+import { DuplicatesPage } from './pages/DonorExtras';
+import { PayoutMethodsPage, PayoutRequestsPage } from './pages/Payouts';
+import { PayeesPage } from './pages/Payees';
+import { ChecksPage } from './pages/Checks';
+import ReconciliationPage from './pages/Reconciliation';
+import { ReceiptTextPage, ReceiptsPage } from './pages/Receipts';
+import { MessagesPage, MessagingSettingsPage, SharedDocumentPage } from './pages/Messaging';
+import NotificationsPage from './pages/Notifications';
+import InboxPage from './pages/Inbox';
+import { PaymentsSettingsPage } from './pages/Payments';
+import GivePage from './pages/Give';
+import { RecurringPage } from './pages/Recurring';
+import { OutreachHistoryPage, OutreachPage, OutreachTemplatesPage, UnsubscribePage } from './pages/Outreach';
+import { FundraiserDirectoryPage, SourceReportPage } from './pages/Reports';
+import { DataImportPage } from './pages/Imports';
+import { MachineReportPage, MachinesPage } from './pages/Machines';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
-  AccountsPage, CollectorsPage, ExpensesPage, ManagersPage, SourcesPage, TasksPage, TransfersPage,
+  AccountsPage, ExpensesPage, ManagersPage, SourcesPage,
 } from './pages/SimplePages';
+
+// The Hebrew calendar is large, so it loads only for the people who open this page.
+const CalendarPage = lazy(() => import('./pages/Calendar'));
+
+// Read once at startup: reading it clears an error from the address bar.
+const arrivedWith = readEmailLink();
+
+// A receipt or statement opened from a link in a text: shown without signing in.
+const sharedToken = /^#\/d\/([0-9a-f]{20,})$/.exec(window.location.hash)?.[1] ?? null;
+// The unsubscribe link in a marketing email, also without signing in.
+const unsubscribeToken = /^#\/u\/([0-9a-f]{32})$/.exec(window.location.hash)?.[1] ?? null;
+// The page other websites may frame for the donate widget.
+const embedded = /\/embed(\.html)?$/.test(window.location.pathname);
+// A campaign's public payment page.
+// A campaign's public payment page: #/give/<campaign>, or /give/<campaign>, the address shared links use so
+// that link previews (served by functions/give/[id].ts) can show the campaign.
+const giveCampaign = /^#\/give\/([A-Za-z0-9-]{1,40})\/?$/.exec(window.location.hash)?.[1]
+  ?? (!window.location.hash || window.location.hash === '#' ? /^\/give\/([A-Za-z0-9-]{1,40})\/?$/.exec(window.location.pathname)?.[1] : undefined) ?? null;
 
 function AdminOnly({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();
@@ -20,8 +75,22 @@ function AdminOnly({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const { session, profile, loading, signOut, refresh } = useAuth();
+  const { session, role, memberStatus, org, orgs, isPlatformOwner, isAdmin, loading, signOut, refresh, accessError } = useAuth();
+  // After the password, anyone with two-step verification is asked for a code. "Not now" carries on without bank
+  // data for this tab, so a lost phone never locks anyone out of everything.
+  const mfa = useMfa();
+  const [codeSkipped, setCodeSkipped] = useState(() => { try { return sessionStorage.getItem('mfa-skip') === '1'; } catch { return false; } });
   const [recovering, setRecovering] = useState(false);
+  // A trusted device or recognized address skips the code (Moshe Henig, 2026-11-11); checked once per session.
+  const [trust, setTrust] = useState<'checking' | 'checked' | null>(null);
+  const [trustMe, setTrustMe] = useState(true);
+  const needsCode = !mfa.loading && mfa.enrolled && !mfa.verified && !codeSkipped;
+  useEffect(() => {
+    if (!needsCode || trust) return;
+    setTrust('checking');
+    void checkTrustedSignIn().then(how => { setTrust('checked'); if (how) void mfa.reload(); });
+  }, [needsCode, trust]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [emailLink, setEmailLink] = useState(arrivedWith);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange(event => {
@@ -30,15 +99,88 @@ export default function App() {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  if (loading) return <div className="splash"><div className="logo">O</div></div>;
+  if (sharedToken) return <SharedDocumentPage token={sharedToken} />;
+  if (unsubscribeToken) return <UnsubscribePage token={unsubscribeToken} />;
+  if (giveCampaign) return <GivePage campaignId={giveCampaign} />;
+  // The embeddable page can sit inside any website, so it shows donation forms and nothing else.
+  if (embedded) return <div className="shared-missing"><h1>Donation form not found</h1></div>;
+  if (loading) return <div className="splash"><img className="splash-mark" src={PRODUCT_MARK} alt="Donor Base" /></div>;
+  if (emailLink.tokenHash && emailLink.type) {
+    return (
+      <ConfirmEmailLink tokenHash={emailLink.tokenHash} type={emailLink.type} onDone={() => {
+        if (emailLink.type === 'recovery') setRecovering(true);
+        setEmailLink({ tokenHash: null, type: null, error: null });
+      }} />
+    );
+  }
   if (recovering) return <SetNewPassword onDone={() => setRecovering(false)} />;
-  if (!session) return <Login />;
-  if (!profile || profile.role === 'pending') {
+  if (!session) return <Login linkError={emailLink.error} />;
+  if (needsCode && trust !== 'checked') return <div className="splash"><img className="splash-mark" src={PRODUCT_MARK} alt="Donor Base" /></div>;
+  if (needsCode) {
     return (
       <AuthShell>
         <div className="auth-card">
-          <h1>Waiting for access</h1>
-          <p className="lead">You're signed in as <b>{session.user.email}</b>, but an admin hasn't given this login access yet.</p>
+          <h1>Enter your code</h1>
+          <p className="lead">Two-step verification is on for <b>{session.user.email}</b>.</p>
+          <label className="inline-check trust-device"><input type="checkbox" checked={trustMe} onChange={e => setTrustMe(e.target.checked)} />
+            Trust this device for {TRUST_DAYS} days (no code needed here, or from this network, after this)</label>
+          <VerifySession mfa={mfa} onDone={() => { void (trustMe ? trustThisDevice() : Promise.resolve()).finally(() => void mfa.reload()); }}
+            onSkip={() => { try { sessionStorage.setItem('mfa-skip', '1'); } catch { /* private window */ } setCodeSkipped(true); }} />
+          <p className="muted small">“Not now” lets you in without bank and reconciliation data.</p>
+        </div>
+      </AuthShell>
+    );
+  }
+  if (role === 'guest') {
+    return (
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="*" element={<GuestPage />} />
+        </Route>
+      </Routes>
+    );
+  }
+  if (accessError) {
+    // The check failed: say so, and offer to try again, rather than claiming this login has no access.
+    return (
+      <AuthShell>
+        <div className="auth-card">
+          <h1>Couldn't check your access</h1>
+          <p className="lead">You're signed in as <b>{session.user.email}</b>, but Oizer couldn't confirm your access just now ({accessError}).</p>
+          <div className="auth-links">
+            <button className="btn primary" onClick={refresh}>Try again</button>
+            <button className="btn" onClick={signOut}>Sign out</button>
+          </div>
+        </div>
+      </AuthShell>
+    );
+  }
+  if (!role || role === 'pending') {
+    if (isPlatformOwner) {
+      return (
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="platform" element={<PlatformPage />} />
+            <Route path="*" element={<Navigate to="/platform" replace />} />
+          </Route>
+        </Routes>
+      );
+    }
+    return (
+      <AuthShell>
+        <div className="auth-card">
+          <h1>{memberStatus === 'suspended' || memberStatus === 'deactivated' ? 'Access paused' : 'Waiting for access'}</h1>
+          <p className="lead">
+            You're signed in as <b>{session.user.email}</b>, but {memberStatus === 'suspended' ? 'this account is suspended'
+              : memberStatus === 'deactivated' ? 'this account has been deactivated'
+              : role ? 'an admin hasn\'t given this login access yet'
+              : org ? `this login isn't part of ${org.name}` : 'this web address doesn\'t lead to one of your organizations'}.
+          </p>
+          {orgs.length > 0 && (
+            <div className="auth-links">
+              {orgs.map(o => <a key={o.id} className="btn" href={`?org=${encodeURIComponent(o.slug)}`}>Go to {o.name}</a>)}
+            </div>
+          )}
           <p className="muted">Ask the office to link your login to your campaigns, then refresh.</p>
           <div className="auth-links">
             <button className="btn" onClick={refresh}>Refresh</button>
@@ -52,28 +194,87 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/campaigns/active" replace />} />
+        {/* Admins start on what's waiting for them, fundraisers on their own numbers. */}
+        <Route index element={<Navigate to={isAdmin ? '/task-sheet' : '/dashboard'} replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="balance-summary" element={<AdminOnly><BalanceSummaryPage /></AdminOnly>} />
+        {/* Fundraisers have the calendar too, with only their own bookings (Moshe Henig, 2026-11-11). */}
+        <Route path="calendar" element={<Suspense fallback={null}><CalendarPage /></Suspense>} />
+        <Route path="machines" element={<MachinesPage />} />
+        <Route path="machine-report" element={<AdminOnly><MachineReportPage /></AdminOnly>} />
+        {/* The machine list joined Sources (Shulim, 2026-11-13). */}
+        <Route path="machine-registry" element={<Navigate to="/sources" replace />} />
+        <Route path="donors/duplicates" element={<AdminOnly><DuplicatesPage /></AdminOnly>} />
         <Route path="campaigns/active" element={<Campaigns mode="active" />} />
         <Route path="campaigns/all" element={<Campaigns mode="all" />} />
-        <Route path="campaigns/exchange" element={<AdminOnly><Campaigns mode="exchange" /></AdminOnly>} />
+        <Route path="campaigns/archived" element={<Campaigns mode="archived" />} />
+        <Route path="campaigns/closed" element={<Campaigns mode="closed" />} />
+        <Route path="campaigns/requests" element={<RequestsPage />} />
         <Route path="campaigns/:id" element={<CampaignDetail />} />
-        <Route path="donations/new" element={<AdminOnly><NewDonation /></AdminOnly>} />
-        <Route path="donations/recent" element={<RecentDonations />} />
+        <Route path="campaigns/:id/batch" element={<BatchEntry />} />
+        <Route path="donations/batch" element={<AdminOnly><BatchEntry /></AdminOnly>} />
+        <Route path="templates" element={<AdminOnly><TemplatesPage /></AdminOnly>} />
+        <Route path="fees" element={<AdminOnly><FeesPage /></AdminOnly>} />
+        {/* Fundraisers get their own New Donation: card payments, and manual ones with the permission (Moshe Henig, 2026-11-12). */}
+        <Route path="donations/new" element={isAdmin ? <NewDonation /> : <FundraiserNewDonation />} />
+        {/* The Last 7 Days tab became a date range on the list; old links land there. */}
+        <Route path="donations/recent" element={<Navigate to="/donations/all" replace />} />
         <Route path="donations/all" element={<AllDonations />} />
+        <Route path="donations/pledges" element={<PledgesPage />} />
+        <Route path="donations/pledges/new" element={<AdminOnly><PledgesPage startNew /></AdminOnly>} />
+        <Route path="donations/vouchers" element={<AdminOnly><VouchersPage /></AdminOnly>} />
+        <Route path="donations/vouchers/new" element={<AdminOnly><VouchersPage startNew /></AdminOnly>} />
         <Route path="expenses" element={<ExpensesPage />} />
-        <Route path="transfers" element={<TransfersPage />} />
+        <Route path="payout-requests" element={<PayoutRequestsPage />} />
+        <Route path="payees" element={<PayeesPage />} />
+        <Route path="checks" element={<AdminOnly><ChecksPage /></AdminOnly>} />
+        <Route path="reconciliation" element={<AdminOnly><ReconciliationPage /></AdminOnly>} />
+        <Route path="donations/receipts" element={<AdminOnly><ReceiptsPage /></AdminOnly>} />
+        <Route path="source-report" element={<SourceReportPage />} />
+        <Route path="fundraiser-directory" element={<AdminOnly><FundraiserDirectoryPage /></AdminOnly>} />
+        <Route path="data-import" element={<AdminOnly><DataImportPage /></AdminOnly>} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="donations/recurring" element={<RecurringPage />} />
+        {/* Recurring, Pledges, Vouchers and Receipts moved under Transactions; old links (and emails) still land there. */}
+        <Route path="recurring" element={<Navigate to="/donations/recurring" replace />} />
+        <Route path="pledges" element={<Navigate to="/donations/pledges" replace />} />
+        <Route path="vouchers" element={<Navigate to="/donations/vouchers" replace />} />
+        <Route path="receipts" element={<Navigate to="/donations/receipts" replace />} />
+        <Route path="payments-settings" element={<AdminOnly><PaymentsSettingsPage /></AdminOnly>} />
+        <Route path="inbox" element={<InboxPage />} />
+        <Route path="inbox/:threadId" element={<InboxPage />} />
+        <Route path="outreach" element={<AdminOnly><OutreachPage /></AdminOnly>} />
+        <Route path="outreach/history" element={<AdminOnly><OutreachHistoryPage /></AdminOnly>} />
+        <Route path="outreach/templates" element={<AdminOnly><OutreachTemplatesPage /></AdminOnly>} />
+        <Route path="messages" element={<AdminOnly><MessagesPage /></AdminOnly>} />
+        <Route path="messaging-settings" element={<AdminOnly><MessagingSettingsPage /></AdminOnly>} />
+        <Route path="receipt-text"element={<AdminOnly><ReceiptTextPage /></AdminOnly>} />
+        <Route path="payout-methods" element={<AdminOnly><PayoutMethodsPage /></AdminOnly>} />
+        <Route path="transfers" element={<AdminOnly><TransfersPage /></AdminOnly>} />
         <Route path="sources" element={<AdminOnly><SourcesPage /></AdminOnly>} />
         <Route path="sources/:id" element={<AdminOnly><SourceDetail /></AdminOnly>} />
         <Route path="accounts" element={<AdminOnly><AccountsPage /></AdminOnly>} />
         <Route path="accounts/:id" element={<AdminOnly><AccountDetail /></AdminOnly>} />
         <Route path="managers" element={<AdminOnly><ManagersPage /></AdminOnly>} />
         <Route path="managers/:id" element={<AdminOnly><ManagerDetail /></AdminOnly>} />
-        <Route path="collectors" element={<AdminOnly><CollectorsPage /></AdminOnly>} />
+        {/* Collectors were removed from the app (Moshe Henig, 2026-11-11); their data stays in the database. */}
+        <Route path="collectors" element={<Navigate to="/dashboard" replace />} />
         <Route path="donors" element={<DonorsPage />} />
         <Route path="donors/:id" element={<DonorDetail />} />
         <Route path="tasks" element={<TasksPage />} />
+        <Route path="task-sheet" element={<AdminOnly><TaskSheetPage /></AdminOnly>} />
+        {/* Campaign Requests moved under Campaigns; old links (and notification emails) still land there. */}
+        <Route path="requests" element={<Navigate to="/campaigns/requests" replace />} />
+        <Route path="security" element={<AccountSecurityPage />} />
         <Route path="users" element={<AdminOnly><UsersPage /></AdminOnly>} />
-        <Route path="*" element={<Navigate to="/campaigns/active" replace />} />
+        <Route path="activity" element={<AdminOnly><ActivityPage /></AdminOnly>} />
+        <Route path="organization" element={<AdminOnly><OrganizationPage /></AdminOnly>} />
+        <Route path="web-addresses" element={<AdminOnly><WebAddressesPage /></AdminOnly>} />
+        <Route path="api-keys" element={<AdminOnly><ApiKeysPage /></AdminOnly>} />
+        <Route path="phone-lookup" element={<AdminOnly><PhoneLookupPage /></AdminOnly>} />
+        <Route path="donary" element={<AdminOnly><DonaryPage /></AdminOnly>} />
+        {isPlatformOwner && <Route path="platform" element={<PlatformPage />} />}
+        <Route path="*" element={<Navigate to={isAdmin ? '/task-sheet' : '/dashboard'} replace />} />
       </Route>
     </Routes>
   );

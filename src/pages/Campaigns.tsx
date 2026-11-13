@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Plus, Receipt, Scale, TrendingUp } from 'lucide-react';
+import { Clock, ExternalLink, Plus, Receipt, Scale, TrendingUp } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import Kpi from '../components/Kpi';
@@ -10,57 +10,65 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
 import { money, pct } from '../lib/format';
-import { campaignFields } from '../lib/schemas';
+import { newCampaignFields } from '../lib/schemas';
+import { TemplateStep } from './Templates';
+import CampaignName from '../components/CampaignName';
+import { paymentUrl } from './Outreach';
 
 export const campaignColumns: Column[] = [
   {
-    key: 'real_name', label: 'Campaign', width: 200,
-    render: r => (
-      <div>
-        <div>{r.real_name || r.campaign_name}</div>
-        {r.friendly_name && r.friendly_name !== r.real_name && <div className="muted small">{r.friendly_name}</div>}
-      </div>
-    ),
+    key: 'internal_name', label: 'Campaign', width: 200,
+    render: r => <CampaignName c={r} />,
   },
   { key: 'id', label: 'ID', value: r => Number(r.id) || r.id, render: r => <span className="id-tag">{r.id}</span> },
   {
-    key: 'manager_name', label: 'Manager', width: 140,
+    key: 'manager_name', label: 'Primary Fundraiser', width: 140,
     render: r => r.manager_id && <AdminLink to={`/managers/${encodeURIComponent(r.manager_id)}`}>{r.manager_name}</AdminLink>,
   },
   { key: 'raised', label: 'Raised', render: r => money(r.raised), align: 'right' },
-  { key: 'fees', label: 'Fees', render: r => money(r.fees), align: 'right' },
-  { key: 'fee_percent', label: 'Fee %', render: r => pct(r.fee_percent), align: 'right' },
+  { key: 'fees', label: 'Fees', optional: true, render: r => money(r.fees), align: 'right' },
+  { key: 'fee_percent', label: 'Fee %', optional: true, render: r => pct(r.fee_percent), align: 'right' },
   { key: 'expenses', label: 'Expenses', render: r => money(r.expenses), align: 'right' },
-  { key: 'balance', label: 'Balance', render: r => <Balance value={r.balance} />, align: 'right' },
+  { key: 'balance', label: 'Balance', render: r => (r.balance_mode === 'shared' ? <span className="muted">Shared</span> : <Balance value={r.balance} />), align: 'right' },
   { key: 'pending_balance', label: 'Pending', render: r => money(r.pending_balance), align: 'right' },
-  { key: 'pin', label: 'Pin' },
+  { key: 'parent_campaign_id', label: 'Under', optional: true, render: r => r.parent_campaign_id && <span className="id-tag">{r.parent_campaign_id}</span> },
 ];
 
-type Mode = 'active' | 'all' | 'exchange';
-const TITLES: Record<Mode, string> = { active: 'Active Campaigns', all: 'All Campaigns', exchange: 'Exchange' };
+export const STATUS_LABEL: Record<string, string> = { draft: 'Draft', active: 'Active', archived: 'Archived', closed: 'Closed' };
+
+type Mode = 'active' | 'all' | 'archived' | 'closed';
+const TITLES: Record<Mode, string> = { active: 'Active Campaigns', all: 'All Campaigns', archived: 'Archived Campaigns', closed: 'Closed Campaigns' };
 
 export default function Campaigns({ mode }: { mode: Mode }) {
   const { isAdmin } = useAuth();
   const nav = useNavigate();
   const [adding, setAdding] = useState(false);
+  const [choice, setChoice] = useState<{ template: Row | null; settings: Row | null } | null>(null);
 
   const { data, error, loading } = useQuery(
     () => fetchAll((a, b) => {
-      let q = supabase.from('campaign_summary').select('*').order('real_name');
-      if (mode === 'active') q = q.is('archived_at', null);
-      if (mode === 'exchange') q = q.eq('exchange', true);
+      let q = supabase.from('campaign_summary').select('*').order('featured', { ascending: false }).order('internal_name');
+      if (mode === 'active' || mode === 'archived' || mode === 'closed') q = q.eq('status', mode);
       return q.range(a, b);
     }),
     [mode],
   );
 
+  // Every campaign gets a button to its payment page (Moshe Henig). Closed campaigns take no gifts, so none there.
+  const payColumn: Column = {
+    key: 'payment_page', label: 'Payment page', value: () => '',
+    render: (r: Row) => r.status === 'closed' ? null : (
+      <a className="btn small" href={paymentUrl(r)} target="_blank" rel="noopener noreferrer" title="Open this campaign's payment page"
+        onClick={e => e.stopPropagation()}><ExternalLink size={14} /> Payment page</a>
+    ),
+  };
   const columns = mode === 'all'
     ? [...campaignColumns, {
         key: 'status', label: 'Status',
-        value: (r: Row) => (r.archived_at ? 'Archived' : 'Active'),
-        render: (r: Row) => <StatusPill value={r.archived_at ? 'Archived' : 'Active'} />,
-      }]
-    : campaignColumns;
+        value: (r: Row) => STATUS_LABEL[r.status],
+        render: (r: Row) => <StatusPill value={STATUS_LABEL[r.status]} />,
+      }, payColumn]
+    : [...campaignColumns, payColumn];
 
   return (
     <>
@@ -70,20 +78,26 @@ export default function Campaigns({ mode }: { mode: Mode }) {
         loading={loading}
         error={error}
         columns={columns}
-        groupBy={{ label: 'Manager', value: r => r.manager_name ?? '' }}
+        groupBy={{ label: 'Fundraiser', value: r => r.manager_name ?? '' }}
         onOpen={r => nav(`/campaigns/${encodeURIComponent(r.id)}`)}
         summary={data && <Totals rows={data} />}
         actions={isAdmin && (
           <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New campaign</button>
         )}
       />
-      {adding && (
+      {adding && !choice && <TemplateStep onClose={() => setAdding(false)} onNext={setChoice} />}
+      {adding && choice && (
         <RecordForm
           table="campaigns"
-          title="New Campaign"
-          fields={campaignFields}
-          onClose={() => setAdding(false)}
-          onSaved={r => nav(`/campaigns/${encodeURIComponent(r.id)}`)}
+          title={choice.template ? `New campaign from ${choice.template.name}` : 'New Campaign'}
+          fields={newCampaignFields}
+          defaults={{ status: 'active', account_id: choice.template?.account_id ?? undefined }}
+          onClose={() => { setAdding(false); setChoice(null); }}
+          onSaved={async r => {
+            const { error: e } = await supabase.rpc('save_campaign_settings', { p_campaign: r.id, p_settings: choice.settings, p_template: choice.template?.id ?? null });
+            if (e) alert(`The campaign was created, but its page settings weren't saved: ${e.message}`);
+            nav(`/campaigns/${encodeURIComponent(r.id)}`);
+          }}
         />
       )}
     </>

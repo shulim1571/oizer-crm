@@ -1,0 +1,29 @@
+# Rate-limiting gate in front of the public give function (Oizer payment pages). Free on the Workers Free plan:
+# the Workers rate-limit binding needs no add-on.
+#   npx wrangler secret put SUPABASE_ANON_KEY
+#   npx wrangler secret put GIVE_GATE_SECRET      (the same value as the give function's GIVE_GATE_SECRET)
+#   npx wrangler deploy
+name = "oizer-give-gate"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# Each donor connection: 8 payment attempts a minute.
+[[ratelimits]]
+name = "PER_IP"
+namespace_id = "41001"
+  [ratelimits.simple]
+  limit = 8
+  period = 60
+
+# Each campaign: 60 attempts a minute across everyone, against card testing spread over many connections.
+[[ratelimits]]
+name = "PER_CAMPAIGN"
+namespace_id = "41002"
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+
+[vars]
+SUPABASE_URL = "https://wwaknikpdquwnphhwzsm.supabase.co"
+ALLOWED_ORIGINS = "oizer.trubase.org,oizer-drm.pages.dev,*.oizer-drm.pages.dev,localhost"

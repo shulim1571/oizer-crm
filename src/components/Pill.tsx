@@ -10,8 +10,12 @@ export function Pill({ tone = '', children }: { tone?: Tone; children: ReactNode
 const TONES: Record<string, Tone> = {
   Payment: 'green', Batch: 'blue', Collect: 'amber', Voided: 'red',
   Pending: 'amber', 'In Progress': 'blue', Done: 'green',
-  Active: 'green', Archived: '',
-  admin: 'violet', manager: 'blue', pending: 'amber',
+  Active: 'green', Archived: '', Draft: 'amber', Closed: 'red', Suspended: 'amber', Deactivated: 'red',
+  Refunded: 'amber', Returned: 'red', Failed: 'red', Rejected: 'red', 'Post-dated': 'blue', 'Possible duplicate': 'amber', Split: 'violet',
+  'Changes requested': 'amber', Approved: 'green', Withdrawn: '',
+  Open: 'blue', 'Partially fulfilled': 'amber', Fulfilled: 'green', Overdue: 'red', Cancelled: '', Skipped: '',
+  'Pending funding': 'amber', 'Partially funded': 'blue', 'Fully funded': 'green', 'Overage review': 'red',
+  super_admin: 'violet', admin: 'violet', manager: 'blue', guest: '', pending: 'amber',
 };
 
 export const StatusPill = ({ value }: { value: string | null | undefined }) =>

@@ -8,15 +8,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Publishable key: safe in the browser; data is protected by row-level security. Set for the whole job:
+    # tests that load the Supabase client need them as much as the build does.
+    env:
+      VITE_SUPABASE_URL: https://wwaknikpdquwnphhwzsm.supabase.co
+      VITE_SUPABASE_ANON_KEY: sb_publishable_0hWyFay7_Y_HwXdZQ2GnlQ__Z3gX5GH
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test
       - run: npm run build
-        env:
-          # Publishable key: safe in the browser; data is protected by row-level security.
-          VITE_SUPABASE_URL: https://poymxghhjisendozqgkm.supabase.co
-          VITE_SUPABASE_ANON_KEY: sb_publishable_deHBO_6wJSzo2sAVwTU6AQ_p6XJoSIQ

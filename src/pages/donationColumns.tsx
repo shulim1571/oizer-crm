@@ -4,16 +4,39 @@ import { campLabel } from '../components/CrudPage';
 import { StatusPill } from '../components/Pill';
 import AdminLink from '../components/AdminLink';
 import { dateTime, money, yn } from '../lib/format';
-import type { Row } from '../lib/supabase';
+import { fetchAll, supabase, type Row } from '../lib/supabase';
 
 export const DONATION_SELECT =
-  '*, campaigns(id, real_name, campaign_name, friendly_name), donors(id, display_name), collectors(full_name), sources(name), accounts(name)';
+  '*, campaigns(id, internal_name, campaign_name, external_name), donors(id, display_name), sources(name), accounts(name)';
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending', post_dated: 'Post-dated', collect: 'Collect', voided: 'Voided', refunded: 'Refunded', returned: 'Returned', failed: 'Failed', rejected: 'Rejected',
+};
+
+/** One word for a donation: its type once completed, otherwise what happened to it. */
+export const donationKind = (r: Row): string => (r.status === 'completed' ? r.type : STATUS_LABELS[r.status] ?? r.status);
+
+/** The names a lookup column can be filtered to: every one in the organization, A to Z (for the filter panel). */
+const names = (table: string, column: string) => async () =>
+  (await fetchAll((a, b) => supabase.from(table).select(column).order(column).range(a, b) as never)).map(r => String(r[column] ?? '').trim()).filter(Boolean);
+
+/** The same words as filters. */
+export const DONATION_KINDS: Record<string, { type?: string; status: string }> = {
+  // The transaction lists open on this one (Moshe Henig, 2026-11-10); "All types" shows everything.
+  Successful: { status: 'completed' },
+  Payment: { type: 'Payment', status: 'completed' },
+  Batch: { type: 'Batch', status: 'completed' },
+  ...Object.fromEntries(Object.entries(STATUS_LABELS).map(([status, label]) => [label, { status }])),
+};
+
+/** Counts toward totals, as opposed to voided, refunded and the like. */
+export const isLive = (r: Row) => r.status === 'completed' || r.status === 'collect';
 
 export const donorName = (r: Row) => r.donors?.display_name ?? r.donor_label?.replace(/\s*-\s*$/, '') ?? '';
 
 export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[] => [
   {
-    key: 'donor', label: 'Donor', width: 180, value: r => donorName(r) || r.name,
+    key: 'donor', label: 'Donor', width: 180, value: r => donorName(r) || r.name, filter: { column: 'donor_name', type: 'text' }, filterOptions: names('donors', 'display_name'),
     render: r => {
       const main = donorName(r) || r.name || <span className="muted">Anonymous</span>;
       return (
@@ -24,24 +47,36 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
       );
     },
   },
-  { key: 'amount', label: 'Amount', render: r => <b className="num">{money(r.amount)}</b>, align: 'right' },
-  { key: 'type', label: 'Type', render: r => <StatusPill value={r.type} /> },
-  ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', width: 180, value: (r: Row) => campLabel(r.campaigns) }]),
-  { key: 'payment_method', label: 'Method' },
-  { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170 },
-  { key: 'fee', label: 'Fee', render: r => money(r.fee ?? r.manual_fee), value: r => r.fee ?? r.manual_fee, align: 'right' },
-  { key: 'net_donation', label: 'Net', render: r => money(r.net_donation), align: 'right' },
-  { key: 'collector', label: 'Collector', value: r => r.collectors?.full_name ?? r.collector_label },
+  { key: 'amount', label: 'Amount', render: r => <b className="num">{money(r.amount)}</b>, align: 'right', filter: { column: 'amount', type: 'number' } },
+  { key: 'type', label: 'Type', value: donationKind, filterOptions: async () => Object.keys(DONATION_KINDS), render: r => (
+    <>
+      <StatusPill value={donationKind(r)} />
+      {r.split_group_id && <> <StatusPill value="Split" /></>}
+      {r.possible_duplicate && <> <StatusPill value="Possible duplicate" /></>}
+    </>
+  ) },
+  ...(opts.hideCampaign ? [] : [{ key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, width: 180, value: (r: Row) => campLabel(r.campaigns), filter: { column: 'campaign_internal', type: 'text' as const }, filterOptions: names('campaigns', 'internal_name') }]),
+  { key: 'payment_method', label: 'Method', filter: { column: 'payment_method', type: 'text' }, filterOptions: names('payment_methods', 'name') },
+  // The voucher's Ref# (assigned when the voucher is logged) on transactions tied to one (Moshe Henig, 2026-11-12).
   {
-    key: 'source', label: 'Source', value: r => r.sources?.name ?? r.source,
+    key: 'voucher_id', label: 'Voucher Ref#', width: 150, filter: { column: 'voucher_id', type: 'text' },
+    render: r => r.voucher_id && <AdminLink to={`/donations/vouchers?open=${encodeURIComponent(r.voucher_id)}`}>{r.voucher_id}</AdminLink>,
+  },
+  { key: 'check_number', label: 'Check #', optional: true, filter: { column: 'check_number', type: 'text' } },
+  { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170, filter: { column: 'created_at', type: 'date' } },
+  // A failed charge took no money, so it shows no fee and no net (the database stores both as zero).
+  { key: 'fee', label: 'Fee', render: r => (r.status === 'failed' ? '' : money(r.fee ?? r.manual_fee)), value: r => (r.status === 'failed' ? null : r.fee ?? r.manual_fee), align: 'right', filter: { column: 'fee', type: 'number' } },
+  { key: 'net_donation', label: 'Net', render: r => (r.status === 'failed' ? '' : money(r.net_donation)), value: r => (r.status === 'failed' ? null : r.net_donation), align: 'right', filter: { column: 'net_donation', type: 'number' } },
+  {
+    key: 'source', label: 'Source', optional: true, value: r => r.sources?.name ?? r.source, filter: { column: 'source_name', type: 'text' }, filterOptions: names('sources', 'name'),
     render: r => r.source && <AdminLink to={`/sources/${encodeURIComponent(r.source)}`}>{r.sources?.name ?? r.source}</AdminLink>,
   },
   {
-    key: 'account', label: 'Account', value: r => r.accounts?.name,
+    key: 'account', label: 'Account', optional: true, value: r => r.accounts?.name, filter: { column: 'account_name', type: 'text' }, filterOptions: names('accounts', 'name'),
     render: r => r.account_id && <AdminLink to={`/accounts/${encodeURIComponent(r.account_id)}`}>{r.accounts?.name ?? r.account_id}</AdminLink>,
   },
-  { key: 'delivered', label: 'Delivered', render: r => yn(r.delivered) },
-  { key: 'batch_id', label: 'Batch ID' },
-  { key: 'notes', label: 'Notes' },
-  { key: 'updated_at', label: 'Last Update', render: r => dateTime(r.updated_at), width: 170 },
+  { key: 'delivered', label: 'Delivered', optional: true, render: r => yn(r.delivered) },
+  { key: 'batch_id', label: 'Batch ID', optional: true, filter: { column: 'batch_id', type: 'text' } },
+  { key: 'notes', label: 'Notes', long: true, optional: true, filter: { column: 'notes', type: 'text' } },
+  { key: 'updated_at', label: 'Last Update', optional: true, render: r => dateTime(r.updated_at), width: 170, filter: { column: 'updated_at', type: 'date' } },
 ];

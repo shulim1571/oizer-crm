@@ -1,0 +1,81 @@
+# Dependency vulnerability scanning (osv-scanner), run in .github/workflows/security.yml.
+# Every exception below was reviewed on 2026-11-12, says why, and expires: after ignoreUntil the finding fails the
+# build again. Anything not listed here fails immediately.
+
+# react-router 6.30.6 is the newest 6.x; the fixes are only in 7.x.
+[[IgnoredVulns]]
+id = "GHSA-337j-9hxr-rhxg"
+ignoreUntil = 2027-01-31
+reason = "Only affects server-side rendering/hydration (Framework or Data mode). The app is a browser-only HashRouter (declarative mode)."
+
+[[IgnoredVulns]]
+id = "GHSA-wrjc-x8rr-h8h6"
+ignoreUntil = 2027-01-31
+reason = "Open redirect needs attacker-supplied paths passed to Link/navigate; the app only navigates to its own fixed or encoded routes. Upgrade to react-router 7 planned."
+
+# vite 5 (dev server and its esbuild): development tooling, not shipped in the built site. Dependabot PR for vite 8 is open.
+[[IgnoredVulns]]
+id = "GHSA-4w7w-66w2-5vf9"
+ignoreUntil = 2027-01-31
+reason = "vite dev server only; not part of the deployed build."
+
+[[IgnoredVulns]]
+id = "GHSA-587h-7wmj-h5pm"
+ignoreUntil = 2027-01-31
+reason = "vite dev server only (launch-editor, Windows); not part of the deployed build."
+
+[[IgnoredVulns]]
+id = "GHSA-698v-4r3x-3vcv"
+ignoreUntil = 2027-01-31
+reason = "vite dev server only; not part of the deployed build."
+
+[[IgnoredVulns]]
+id = "GHSA-9jrq-w75r-8gcw"
+ignoreUntil = 2027-01-31
+reason = "vite dev server only; not part of the deployed build."
+
+[[IgnoredVulns]]
+id = "GHSA-fx2h-pf6j-xcff"
+ignoreUntil = 2027-01-31
+reason = "vite dev server only; not part of the deployed build."
+
+[[IgnoredVulns]]
+id = "GHSA-r825-w8mm-5pxw"
+ignoreUntil = 2027-01-31
+reason = "vite dev server only; not part of the deployed build."
+
+[[IgnoredVulns]]
+id = "GHSA-rq7h-c2jc-7f22"
+ignoreUntil = 2027-01-31
+reason = "vite dev server only; not part of the deployed build."
+
+[[IgnoredVulns]]
+id = "GHSA-v6wh-96g9-6wx3"
+ignoreUntil = 2027-01-31
+reason = "vite dev server only; not part of the deployed build."
+
+[[IgnoredVulns]]
+id = "GHSA-67mh-4wv8-2f99"
+ignoreUntil = 2027-01-31
+reason = "esbuild dev server (via vite 5) only; not part of the deployed build."
+
+# vitest 3 (test runner, its tinypool and mocker): runs only the repository's own tests in CI; never deployed.
+[[IgnoredVulns]]
+id = "GHSA-82fw-gwwq-j7x9"
+ignoreUntil = 2027-01-31
+reason = "Test runner only; needs a malicious test file in the repository. Upgrade to vitest 4+ planned."
+
+[[IgnoredVulns]]
+id = "GHSA-qxg6-89mg-rqv8"
+ignoreUntil = 2027-01-31
+reason = "Test runner only (@vitest/mocker); never deployed."
+
+[[IgnoredVulns]]
+id = "GHSA-5gmw-xhrv-c9v3"
+ignoreUntil = 2027-01-31
+reason = "tinypool via vitest 3: needs attacker-controlled worker options; only the repository's own tests run. Upgrade to vitest 4+ planned."
+
+[[IgnoredVulns]]
+id = "GHSA-85c8-ppgw-ccpr"
+ignoreUntil = 2027-01-31
+reason = "tinypool via vitest 3: needs attacker-controlled run() options; only the repository's own tests run. Upgrade to vitest 4+ planned."

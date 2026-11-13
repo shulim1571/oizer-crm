@@ -1,9 +1,19 @@
+import { createPortal } from 'react-dom';
+import CampaignBalanceNote from './CampaignBalanceNote';
+import AddressCheck from './AddressCheck';
+import { NewDonorDialog } from './DonorPicker';
 import { useEffect, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
 import { supabase, type Row } from '../lib/supabase';
-import { clearLookups, type Option } from '../lib/lookups';
+import { clearLookups, DONATION_STATUSES, type Option } from '../lib/lookups';
+import { allowedStatuses, PROCESSOR_FIELDS } from '../lib/donationRules';
 import { fromLocalInput, toLocalInput } from '../lib/format';
+import { useAuth } from '../lib/auth';
+import DateNote from './DateNote';
 import SearchSelect from './SearchSelect';
+import DonationActions from '../pages/DonationActions';
+import { PayoutCheckActions } from '../pages/Checks';
+import { ReceiptActions } from '../pages/Receipts';
 
 export interface Field {
   name: string;
@@ -14,6 +24,18 @@ export interface Field {
   /** Free-text select: allow values not in the list. */
   freeText?: boolean;
   help?: string;
+  /** Kept in a folded "Advanced / accounting" section (it opens when any of them has a value). */
+  advanced?: boolean;
+  /** Shown but can't be changed, and left out when saving. */
+  readOnly?: boolean;
+  /** Shown (and saved) only while this is true of what's typed in the form. */
+  showIf?: (values: Row) => boolean;
+  /** Groups the form into titled sections, in the order they first appear (layout only). */
+  section?: string;
+  /** A US address: offers "Check with USPS" under it once the organization has USPS keys (Shulim, 2026-11-12). */
+  uspsCheck?: boolean;
+  /** How to make a new one from right here, without leaving this form. */
+  create?: () => { noun: string; table: string; fields: Field[]; defaults?: Row; pk?: string };
 }
 
 interface Props {
@@ -29,35 +51,99 @@ interface Props {
   /** Render inline instead of as a modal dialog. */
   inline?: boolean;
   allowDelete?: boolean;
+  /** Bulk edit: hands back only the fields filled in, instead of saving a record. */
+  onBulk?: (patch: Row) => void;
+  bulkError?: string | null;
+  /** Says what the button saves, e.g. "Save branding". */
+  saveLabel?: string;
+  /** A line under the title. */
+  description?: string;
 }
 
+const NEW_OPTION = '__create_new__';
+
 export default function RecordForm(p: Props) {
+  const { isAdmin, canWork } = useAuth();
   const pk = p.pk ?? 'id';
   const isNew = !p.record;
+  const [creating, setCreating] = useState<Field | null>(null);
   const [values, setValues] = useState<Row>(() => ({ ...p.defaults, ...p.record }));
   const [opts, setOpts] = useState<Record<string, Option[]>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  // Editing a donation: statuses follow the allowed steps, and a card-processed one keeps the processor's fields.
+  const [processed, setProcessed] = useState(false);
+  const donationEdit = p.table === 'donations' && !isNew && !p.onBulk;
   useEffect(() => {
-    for (const f of p.fields) {
+    if (!donationEdit) return;
+    supabase.rpc('donation_gateway', { p_donation: p.record!.id }).then(({ data }) => setProcessed(((data ?? []) as Row[]).length > 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const fields: Field[] = !donationEdit ? p.fields : p.fields.map(f => {
+    if (processed && PROCESSOR_FIELDS.includes(f.name)) return { ...f, readOnly: true, help: 'From the card processor' };
+    if (f.name === 'status') {
+      const ok = allowedStatuses(p.record!.status);
+      return { ...f, options: DONATION_STATUSES.filter(o => ok.includes(o.value)) };
+    }
+    return f;
+  });
+  const shownFields = fields.filter(f => !f.showIf || f.showIf(values));
+
+  const loadOptions = (fields: Field[]) => {
+    for (const f of fields) {
       if (typeof f.options === 'function') {
         f.options().then(o => setOpts(prev => ({ ...prev, [f.name]: o }))).catch(e => setError(e.message));
       } else if (f.options) {
         setOpts(prev => ({ ...prev, [f.name]: f.options as Option[] }));
       }
     }
+  };
+
+  useEffect(() => {
+    loadOptions(p.fields);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Admins can add anything from here; fundraisers can add a donor (through their own donor form).
+  const createFor = (f: Field) => (f.create && (isAdmin || (canWork && f.create().table === 'donors')) ? { onCreate: () => setCreating(f), createLabel: f.create().noun } : {});
+
+  // The new record is selected, and everything already typed in this form stays as it was.
+  function created(f: Field, row: Row) {
+    setCreating(null);
+    clearLookups();
+    loadOptions(p.fields);
+    const id = row[f.create!().pk ?? 'id'];
+    if (f.type === 'multi') set(f.name, [...(values[f.name] ?? []), id]);
+    else set(f.name, id);
+  }
 
   const set = (k: string, v: unknown) => setValues(prev => ({ ...prev, [k]: v }));
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (p.onBulk) {
+      const patch: Row = {};
+      for (const f of p.fields) {
+        const v = values[f.name];
+        if (v !== '' && v != null) patch[f.name] = f.type === 'number' ? Number(v) : v;
+      }
+      return p.onBulk(patch);
+    }
+    const data = await persist();
+    if (data) {
+      // A save can add or clear Task Sheet tasks (a check payout, for one); the sheet and its count update now.
+      window.dispatchEvent(new Event('task-sheet-changed'));
+      p.onSaved(data);
+    }
+  }
+
+  /** Saves the form and returns the saved row (or null, with the error shown), without closing it. */
+  async function persist(): Promise<Row | null> {
     setSaving(true);
     setError(null);
-    const payload: Row = {};
-    for (const f of p.fields) {
+    const payload: Row = isNew ? { ...p.defaults } : {};
+    for (const f of fields) {
+      if (f.readOnly || (f.showIf && !f.showIf(values))) continue;
       let v = values[f.name];
       if (v === '' || v === undefined) v = null;
       if (f.type === 'number' && v != null) v = Number(v);
@@ -71,18 +157,34 @@ export default function RecordForm(p: Props) {
       : supabase.from(p.table).update(payload).eq(pk, p.record![pk]).select().single();
     const { data, error } = await q;
     setSaving(false);
-    if (error) return setError(error.message);
+    if (error) { setError(error.message); return null; }
     clearLookups();
-    p.onSaved(data);
+    return data as Row;
   }
 
   async function remove() {
-    if (!p.record || !confirm('Delete this record? This cannot be undone.')) return;
+    if (!p.record || !confirm('Delete this record? It will be hidden everywhere but kept on file.')) return;
     const { error } = await supabase.from(p.table).delete().eq(pk, p.record[pk]);
     if (error) return setError(error.message);
     clearLookups();
     p.onSaved({ ...p.record, _deleted: true });
   }
+
+  const nested = creating && (() => {
+    const spec = creating.create!();
+    if (spec.table === 'donors') return <NewDonorDialog onClose={() => setCreating(null)} onSaved={row => created(creating, row)} />;
+    return (
+      <RecordForm
+        table={spec.table}
+        pk={spec.pk}
+        title={`New ${spec.noun}`}
+        fields={spec.fields}
+        defaults={spec.defaults}
+        onClose={() => setCreating(null)}
+        onSaved={row => created(creating, row)}
+      />
+    );
+  })();
 
   const body = (
     <form className="record-form" onSubmit={submit}>
@@ -90,27 +192,71 @@ export default function RecordForm(p: Props) {
         <h2>{p.title}</h2>
         {!p.inline && <button type="button" className="icon-btn" onClick={p.onClose}><X size={20} /></button>}
       </div>
-      <div className="fields">
-        {p.fields.map(f => (
-          <label key={f.name} className={`field ${f.type === 'textarea' ? 'wide' : ''} ${f.type === 'checkbox' ? 'check' : ''}`}>
-            <span>{f.label}{f.required && ' *'}</span>
-            {renderInput(f)}
-            {f.help && <small className="muted">{f.help}</small>}
-          </label>
-        ))}
-      </div>
-      {error && <div className="error">{error}</div>}
+      {p.description && <p className="muted small form-desc">{p.description}</p>}
+      {donationEdit && processed && <p className="muted small">This payment went through the card processor, so its status, amount, method, fee and time can't be edited here. Use Refund or Void at Sola, or Retry for a failed charge.</p>}
+      {(() => {
+        const main = shownFields.filter(f => !f.advanced);
+        if (!main.some(f => f.section)) return <div className="fields">{main.map(fieldBox)}</div>;
+        // Sectioned layout: each section's inputs on a two-column grid, its checkboxes together on one line.
+        const titles = [...new Set(main.filter(f => f.section).map(f => f.section!))];
+        const loose = main.filter(f => !f.section);
+        return (
+          <>
+            {titles.map(t => {
+              const fs = main.filter(f => f.section === t);
+              const boxes = fs.filter(f => f.type === 'checkbox');
+              return (
+                <fieldset key={t} className="form-section">
+                  <legend>{t}</legend>
+                  <div className="fields two">{fs.filter(f => f.type !== 'checkbox').map(fieldBox)}</div>
+                  {boxes.length > 0 && <div className="form-checks">{boxes.map(fieldBox)}</div>}
+                </fieldset>
+              );
+            })}
+            {loose.length > 0 && <div className="fields">{loose.map(fieldBox)}</div>}
+          </>
+        );
+      })()}
+      {shownFields.some(f => f.advanced) && (
+        <details className="help advanced-fields" open={shownFields.some(f => f.advanced && !isNew && values[f.name] != null && values[f.name] !== '' && values[f.name] !== false)}>
+          <summary>Advanced / accounting</summary>
+          <div className="fields">{shownFields.filter(f => f.advanced).map(fieldBox)}</div>
+        </details>
+      )}
+      {p.table === 'expenses' && !p.onBulk && <CampaignBalanceNote campaignId={values.campaign_id} amount={values.amount} />}
+      {(error || p.bulkError) && <div className="error">{error ?? p.bulkError}</div>}
+      {p.onBulk && <p className="muted small">Only fields you fill in are changed. Everything else stays as it is on each transaction.</p>}
+      {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <DonationActions record={p.record!} onDone={p.onSaved} />}
+      {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <ReceiptActions donationId={p.record!.id} beforeIssue={async () => !!(await persist())} />}
+      {p.table === 'expenses' && !isNew && !p.onBulk && isAdmin && <PayoutCheckActions record={p.record!} onDone={() => {}} />}
       <div className="form-actions">
-        {!isNew && p.allowDelete && <button type="button" className="btn danger" onClick={remove}>Delete</button>}
+        {!isNew && p.allowDelete && p.table !== 'donations' && <button type="button" className="btn danger" onClick={remove}>Delete</button>}
         <div className="spacer" />
         {!p.inline && <button type="button" className="btn" onClick={p.onClose}>Cancel</button>}
-        <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+        <button className="btn primary" disabled={saving}>{saving ? 'Saving…' : p.onBulk ? 'Review changes' : p.saveLabel ?? 'Save'}</button>
       </div>
     </form>
   );
 
+  function fieldBox(f: Field) {
+    return (
+      <label key={f.name} className={`field ${f.type === 'textarea' ? 'wide' : ''} ${f.type === 'checkbox' ? 'check' : ''}`}>
+        <span>{f.label}{f.required && ' *'}</span>
+        {renderInput(f)}
+        {f.uspsCheck && !f.readOnly && <AddressCheck value={values[f.name]} oneLine={f.type !== 'textarea'} onUse={v => set(f.name, v)} />}
+        {f.help && <small className="muted">{f.help}</small>}
+      </label>
+    );
+  }
+
   function renderInput(f: Field) {
     const v = values[f.name];
+    if (f.readOnly) {
+      const shown = f.type === 'datetime' && v ? new Date(v).toLocaleString()
+        : f.options && Array.isArray(f.options) ? (f.options.find(o => o.value === v)?.label ?? v)
+        : (opts[f.name] ?? []).find(o => o.value === v)?.label ?? v;
+      return <input value={shown ?? ''} disabled readOnly />;
+    }
     switch (f.type) {
       case 'textarea':
         return <textarea rows={3} value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required} />;
@@ -121,9 +267,9 @@ export default function RecordForm(p: Props) {
       case 'datetime':
         return <input type="datetime-local" value={v ? toLocalInput(v) : ''} onChange={e => set(f.name, e.target.value ? fromLocalInput(e.target.value) : null)} required={f.required} />;
       case 'date':
-        return <input type="date" value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required} />;
+        return <><input type="date" value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required} /><DateNote date={v} /></>;
       case 'search':
-        return <SearchSelect value={v ?? null} options={opts[f.name] ?? []} onChange={x => set(f.name, x)} required={f.required} />;
+        return <SearchSelect value={v ?? null} options={opts[f.name] ?? []} onChange={x => set(f.name, x)} required={f.required} {...createFor(f)} />;
       case 'select':
         if (f.freeText) {
           return (
@@ -134,9 +280,11 @@ export default function RecordForm(p: Props) {
           );
         }
         return (
-          <select value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required}>
+          <select value={v ?? ''} required={f.required}
+                  onChange={e => (e.target.value === NEW_OPTION ? setCreating(f) : set(f.name, e.target.value))}>
             <option value="">—</option>
-            {(opts[f.name] ?? []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {((Array.isArray(f.options) ? f.options : opts[f.name]) ?? []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {f.create && isAdmin && <option value={NEW_OPTION}>+ Create new {f.create().noun}</option>}
           </select>
         );
       case 'multi': {
@@ -150,7 +298,7 @@ export default function RecordForm(p: Props) {
               </span>
             ))}
             <SearchSelect value={null} options={(opts[f.name] ?? []).filter(o => !arr.includes(o.value))}
-                          onChange={x => x && set(f.name, [...arr, x])} placeholder="Add…" />
+                          onChange={x => x && set(f.name, [...arr, x])} placeholder="Add…" {...createFor(f)} />
           </div>
         );
       }
@@ -159,10 +307,13 @@ export default function RecordForm(p: Props) {
     }
   }
 
-  if (p.inline) return <div className="card">{body}</div>;
-  return (
+  if (p.inline) return <div className="card">{body}{nested}</div>;
+  // Drawn at the end of the page, like the other dialogs, so a form opened from another window (editing a voucher
+  // from its details) lands on top of it instead of underneath (Moshe Henig, 2026-11-11).
+  return createPortal(
     <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && p.onClose()}>
-      <div className="modal">{body}</div>
-    </div>
+      <div className="modal">{body}{nested}</div>
+    </div>,
+    document.body,
   );
 }

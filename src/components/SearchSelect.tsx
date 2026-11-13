@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { byLabel } from '../lib/byLabel';
 import type { Option } from '../lib/lookups';
 
 interface Props {
@@ -7,10 +8,17 @@ interface Props {
   onChange: (v: string | null) => void;
   placeholder?: string;
   required?: boolean;
+  /** Adds a "+ Create new" line that opens the full form for this kind of record. */
+  onCreate?: () => void;
+  createLabel?: string;
+  /** Keep the list in the order given (e.g. payments by date) instead of alphabetical. */
+  keepOrder?: boolean;
 }
 
 /** Type-to-filter dropdown for long lists (campaigns, donors). */
-export default function SearchSelect({ value, options, onChange, placeholder, required }: Props) {
+export default function SearchSelect({ value, options: given, onChange, placeholder, required, onCreate, createLabel, keepOrder }: Props) {
+  // Always alphabetical by what's shown, never by ID (Moshe Henig, 2026-11-11).
+  const options = useMemo(() => (keepOrder ? given : [...given].sort(byLabel)), [given, keepOrder]);
   const selected = options.find(o => o.value === value);
   const [text, setText] = useState(selected?.label ?? '');
   const [open, setOpen] = useState(false);
@@ -46,6 +54,9 @@ export default function SearchSelect({ value, options, onChange, placeholder, re
       />
       {open && (
         <ul className="ss-list">
+          {onCreate && (
+            <li className="ss-create" onMouseDown={e => { e.preventDefault(); setOpen(false); onCreate(); }}>+ Create new {createLabel}</li>
+          )}
           {!required && <li onMouseDown={() => { onChange(null); setText(''); setOpen(false); }} className="muted">— none —</li>}
           {matches.map(o => (
             <li key={o.value} className={o.value === value ? 'sel' : ''}
