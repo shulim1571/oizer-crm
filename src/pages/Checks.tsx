@@ -349,12 +349,14 @@ function PrintCheckDialog({ payout, emailFirst = false, onClose, onIssued, onEma
   }
 
   return (
-    <Overlay onClose={onClose}>
+    // Laid out to breathe at any width (Moshe Henig, 2026-11-13: the window looked cramped and button labels wrapped).
+    <Overlay onClose={onClose} size="medium">
+      <div className="check-dialog">
       <div className="form-head"><h2>{emailFirst ? "Email a check to the fundraiser" : "Print a check"}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
-      <dl className="record-facts">
-        <dt>Pay to</dt><dd>{payout.payee || <span className="error">Choose a payee on the payout first</span>}</dd>
-        <dt>Amount</dt><dd>{money(payout.amount)}</dd>
-      </dl>
+      <div className="check-summary">
+        <div><span className="muted small">Pay to</span><b>{payout.payee || <span className="error">Choose a payee on the payout first</span>}</b></div>
+        <div className="check-amount"><span className="muted small">Amount</span><b>{money(payout.amount)}</b></div>
+      </div>
       <label className="field"><span>Draw from</span>
         <select value={account} onChange={e => setAccount(e.target.value)}>
           <option value="">Choose a bank account…</option>
@@ -372,12 +374,16 @@ function PrintCheckDialog({ payout, emailFirst = false, onClose, onIssued, onEma
         <div className="error">{STALE_MESSAGE} <button type="button" className="btn" onClick={() => window.location.reload()}>Reload</button></div>
       )}
       {error && <div className="error">{error}</div>}
-      <div className="form-actions">
-        <button type="button" className="btn" disabled={!ready(settings) || printer !== 'ready'} onClick={preview}>Preview (marked VOID)</button>
-        <div className="spacer" />
-        <button type="button" className="btn" onClick={onClose}>Cancel</button>
-        <button type="button" className={`btn ${emailFirst ? 'primary' : ''}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issueAndEmail}><Mail size={15} /> Record and email to fundraiser</button>
-        <button type="button" className={`btn ${emailFirst ? '' : 'primary'}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issue}>Print and record check</button>
+      <div className="form-actions check-actions">
+        <div className="check-actions-side">
+          <button type="button" className="btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn" disabled={!ready(settings) || printer !== 'ready'} onClick={preview}>Preview (marked VOID)</button>
+        </div>
+        <div className="check-actions-main">
+          <button type="button" className={`btn ${emailFirst ? 'primary' : ''}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issueAndEmail}><Mail size={15} /> Record and email to fundraiser</button>
+          <button type="button" className={`btn ${emailFirst ? '' : 'primary'}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issue}><Printer size={15} /> Print and record check</button>
+        </div>
+      </div>
       </div>
     </Overlay>
   );

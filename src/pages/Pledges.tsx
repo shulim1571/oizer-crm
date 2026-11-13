@@ -261,10 +261,11 @@ export function PledgeDialog({ id, onClose, onChanged }: { id: string; onClose: 
   );
 }
 
-export function Overlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+/** A dialog over the page. `size` narrows it for small forms (the default is wide). */
+export function Overlay({ onClose, children, size = 'wide' }: { onClose: () => void; children: ReactNode; size?: 'wide' | 'medium' }) {
   return createPortal(
     <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal modal-wide"><div className="record-form">{children}<div className="dialog-foot" /></div></div>
+      <div className={`modal modal-${size}`}><div className="record-form">{children}<div className="dialog-foot" /></div></div>
     </div>,
     document.body,
   );

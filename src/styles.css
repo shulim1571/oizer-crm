@@ -1117,3 +1117,25 @@ code.break { word-break: break-all; }
 .table-main > .table-card { flex: 1 1 auto; min-height: 260px; }
 .table-main > :not(.table-card) { flex: none; }
 @media (max-width: 600px) { .table-main > .table-card { min-height: 220px; } }
+
+/* Print a check (Moshe Henig, 2026-11-13): a check-sized window, payee and amount up top, and buttons whose labels
+   never wrap; they move to a new line whole, and on a phone they stack full width with the main action first. */
+.modal-medium { max-width: 600px; width: calc(100vw - 32px); }
+.check-summary { display: flex; justify-content: space-between; gap: 16px; padding: 14px 16px; margin-bottom: 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.check-summary > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.check-summary b { font-size: 16px; overflow-wrap: anywhere; }
+.check-summary .check-amount { text-align: right; flex: none; }
+.check-summary .check-amount b { font-size: 20px; font-variant-numeric: tabular-nums; }
+.check-dialog .field { margin-bottom: 12px; }
+.check-dialog .field select, .check-dialog .field input { width: 100%; }
+.check-actions { flex-wrap: wrap; gap: 10px; justify-content: space-between; }
+.check-actions .btn { white-space: nowrap; }
+.check-actions-side, .check-actions-main { display: flex; flex-wrap: wrap; gap: 8px; }
+.check-actions-main { margin-left: auto; justify-content: flex-end; }
+@media (max-width: 600px) {
+  .check-summary { flex-direction: column; }
+  .check-summary .check-amount { text-align: left; }
+  .check-actions { flex-direction: column-reverse; align-items: stretch; }
+  .check-actions-side, .check-actions-main { flex-direction: column-reverse; margin-left: 0; }
+  .check-actions .btn { width: 100%; justify-content: center; }
+}
