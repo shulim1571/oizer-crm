@@ -30,11 +30,13 @@ const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&a
 const money = (n: unknown) => `$${Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const usDate = (d: unknown) => (d ? new Date(`${String(d).slice(0, 10)}T12:00:00`).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '');
 
-/** Fills a line: the receipt's own placeholders, plus {hebrew_name} (the Hebrew name when on file, else the donor's name). */
+/** Fills a line: the receipt's own placeholders, plus {hebrew_name} (the donor's Hebrew name; never the English one). */
 export function fillLine(text: string, r: Row): string {
-  const name = [r.donor_title, r.donor_name].filter(Boolean).join(' ');
-  return fillText(text.replace(/\{hebrew_name\}/g, String(r.hebrew_name || name)), r);
+  return fillText(text.replace(/\{hebrew_name\}/g, String(r.hebrew_name ?? '').trim()), r);
 }
+
+/** No Hebrew name on file: a line that would show it is left out entirely (Shulim, 2026-11-13), not filled in English. */
+export const showsLine = (text: string, r: Row) => !text.includes('{hebrew_name}') || String(r.hebrew_name ?? '').trim() !== '';
 
 /** The styles for letterhead pages: no page margin, the organization's letterhead as each page's background. */
 export const letterheadStyle = (background: string) => `
@@ -62,7 +64,7 @@ export function letterheadPage(r: Row, o: OrgDetails, l: ReceiptLayout, signatur
   const size = l.font_size ?? 11;
   const pt = (n: number) => `${n}pt`;
   const he = l.hebrew;
-  const hebrew = he.lines.map(x =>
+  const hebrew = he.lines.filter(x => showsLine(x.text, r)).map(x =>
     `<div class="t he" style="top:${pt(x.top)};left:${pt(he.left)};width:${pt(he.right - he.left)};font-size:${pt(size + 1)}">${lineHtml(x.text, r)}</div>`).join('');
   const en = l.english;
   const english = en.lines.map(x => `<div class="t" style="top:${pt(x.top)};left:${pt(en.left)};font-size:${pt(size + 0.5)}">${lineHtml(x.text, r)}</div>`).join('');

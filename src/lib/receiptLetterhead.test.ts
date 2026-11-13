@@ -29,4 +29,14 @@ describe('receipt letterhead', () => {
     expect(isLetterhead({ style: 'letterhead' })).toBe(false);
     expect(isLetterhead(null)).toBe(false);
   });
+  it('leaves the Hebrew name line out when the donor has no Hebrew name, and never uses the English name there', () => {
+    const html = letterheadPage({ ...SAMPLE_RECEIPT, hebrew_name: null }, { name: 'Sample Org' }, layout, null);
+    expect(html).not.toContain('מו&quot;ה');
+    expect(html).not.toContain('top:202pt');
+    expect(html).toContain('<span class="fill">Mr. Sample Donor</span>');   // still in the English greeting
+    expect(html.match(/Sample Donor/g)?.length).toBe(1);
+    expect(html).toContain('עבור <span class="fill">Sample Campaign</span>');   // the other Hebrew lines stay
+    const blank = letterheadPage({ ...SAMPLE_RECEIPT, hebrew_name: '  ' }, { name: 'Sample Org' }, layout, null);
+    expect(blank).not.toContain('top:202pt');
+  });
 });
