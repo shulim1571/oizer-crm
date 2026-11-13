@@ -29,7 +29,7 @@ if [ "${1:-}" = "--env-only" ]; then
   tmp="$(mktemp)"
   trap 'rm -f "$tmp"' EXIT
   printf 'PLAID_ENV=%s\n' "$env_name" > "$tmp"
-  npx -y supabase@3.0.0 secrets set --env-file "$tmp" --project-ref "$PROJECT" > /dev/null
+  npx -y supabase@3.0.0 secrets set --env-file "$tmp" --remote="$PROJECT" --yes > /dev/null
   echo "Set on Supabase project $PROJECT: PLAID_ENV=$env_name (uses PLAID_CLIENT_ID and $secret_name, already set)"
   exit 0
 fi
@@ -42,5 +42,5 @@ umask 077
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 printf 'PLAID_CLIENT_ID=%s\n%s=%s\nPLAID_ENV=%s\n' "$PLAID_CLIENT_ID" "$secret_name" "${!secret_name}" "$env_name" > "$tmp"
-npx -y supabase@3.0.0 secrets set --env-file "$tmp" --project-ref "$PROJECT" > /dev/null
+npx -y supabase@3.0.0 secrets set --env-file "$tmp" --remote="$PROJECT" --yes > /dev/null
 echo "Set on Supabase project $PROJECT: PLAID_CLIENT_ID, $secret_name, PLAID_ENV=$env_name"
