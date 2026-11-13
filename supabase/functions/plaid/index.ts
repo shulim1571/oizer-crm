@@ -70,6 +70,9 @@ Deno.serve(async req => {
       case 'link_token': {
         const r = await plaid('/link/token/create', {
           client_name: 'Oizer', language: 'en', country_codes: ['US'], products: ['transactions'],
+          // A year of history (Shulim, 2026-11-13: only recent transactions came in). Applies to new links; Plaid sends
+          // the latest first and the rest over the next while, which the next syncs pick up.
+          transactions: { days_requested: 365 },
           user: { client_user_id: `${org}:${account}` },
         });
         return reply({ link_token: r.link_token, env: cfg.env });

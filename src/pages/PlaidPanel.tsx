@@ -11,6 +11,11 @@ import { useQuery } from '../lib/useQuery';
 
 const LINK_SCRIPT = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 
+// Plaid sends a new link's latest transactions first and up to a year of older ones over the following hours
+// (Shulim, 2026-11-13). There is no Plaid webhook here, so the panel says to sync again later.
+const HISTORY_NOTE = 'Plaid sends the most recent transactions first; older history (up to a year back) keeps arriving from Plaid for a while, so sync again later.';
+const RECENT_MS = 48 * 60 * 60 * 1000;
+
 type PlaidLinkMeta = { institution?: { name?: string } | null; accounts?: { id: string; name?: string; mask?: string }[] };
 declare global {
   interface Window {
@@ -70,12 +75,13 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
       }).open();
     });
     status.reload();
-    setMessage('Linked. Use Sync now to bring in its transactions.');
+    setMessage(`Linked. Use Sync now to bring in its transactions. ${HISTORY_NOTE}`);
   });
 
   const sync = () => run('sync', async () => {
     const r = await callPlaid({ action: 'sync', account });
-    setMessage(`Synced: ${r.added} new line${r.added === 1 ? '' : 's'}, ${r.updated} updated, ${r.removed} removed.${r.added === 0 && !s?.last_synced_at ? ' A new link can take a minute before its transactions are ready.' : ''}`);
+    const fresh = s?.linked_at && Date.now() - new Date(s.linked_at).getTime() < RECENT_MS;
+    setMessage(`Synced: ${r.added} new line${r.added === 1 ? '' : 's'}, ${r.updated} updated, ${r.removed} removed.${fresh ? ` ${HISTORY_NOTE}` : ''}`);
     status.reload();
     onSynced();
   });
@@ -92,6 +98,7 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
         <p className="muted small">
           {s.institution_name ?? 'Bank'} · {s.account_name ?? 'Account'}{s.account_mask ? ` ••${s.account_mask}` : ''} · linked {dateTime(s.linked_at)}
           {s.last_synced_at ? <> · last synced {dateTime(s.last_synced_at)}</> : <> · not synced yet</>}
+          {s.linked_at && Date.now() - new Date(s.linked_at).getTime() < RECENT_MS && <><br />{HISTORY_NOTE}</>}
         </p>
       ) : (
         live

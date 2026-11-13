@@ -79,3 +79,10 @@ describe('no Plaid key in the code', () => {
     expect(readFileSync('.gitignore', 'utf8')).toMatch(/^\.env$/m);
   });
 });
+
+describe('Plaid Link history (Shulim, 2026-11-13)', () => {
+  it('asks for a year of transactions on new links, and the panel says older ones keep arriving', () => {
+    expect(readFileSync('supabase/functions/plaid/index.ts', 'utf8')).toContain('transactions: { days_requested: 365 },');
+    expect(readFileSync('src/pages/PlaidPanel.tsx', 'utf8')).toContain('older history (up to a year back) keeps arriving from Plaid for a while, so sync again later.');
+  });
+});
