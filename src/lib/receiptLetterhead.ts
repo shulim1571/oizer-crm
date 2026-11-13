@@ -19,7 +19,8 @@ export interface ReceiptLayout {
   enabled?: boolean;
   hebrew: { right: number; left: number; lines: Line[] };
   english: { left: number; lines: Line[]; signature_top?: number; signer_title?: string; signer?: string };
-  stub: { amount: [number, number]; date: [number, number]; receipt_number?: [number, number] };
+  /** donor: where the donor's English name and mailing address go on the stub (Shulim, 2026-11-13). */
+  stub: { amount: [number, number]; date: [number, number]; receipt_number?: [number, number]; donor?: [number, number] };
   font_size?: number;
 }
 
@@ -78,8 +79,15 @@ export function letterheadPage(r: Row, o: OrgDetails, l: ReceiptLayout, signatur
     + (s.receipt_number && r.receipt_number
       ? `<div class="t" style="top:${pt(s.receipt_number[1])};left:${pt(s.receipt_number[0])};font-size:${pt(9)};color:#555">Receipt ${esc(r.receipt_number)}${r.corrects_number ? ` (corrects ${esc(r.corrects_number)})` : ''}</div>`
       : '');
+  // The donor's English name and mailing address on the stub, up to three address lines.
+  const donorName = [r.donor_title, r.donor_name].filter(Boolean).join(' ').trim();
+  const address = String(r.donor_address ?? '').split(/\n+/).map(t => t.trim()).filter(Boolean).slice(0, 3);
+  const donorBlock = s.donor && (donorName || address.length)
+    ? `<div class="t stub-donor" style="top:${pt(s.donor[1])};left:${pt(s.donor[0])};font-size:${pt(10)};line-height:1.25">`
+      + `${donorName ? `<div class="fill">${esc(donorName)}</div>` : ''}${address.map(t => `<div>${esc(t)}</div>`).join('')}</div>`
+    : '';
   const voided = r.status === 'voided' ? `<div class="void">VOID${r.void_reason ? ` · ${esc(r.void_reason)}` : ''}</div>` : '';
-  return `<section class="page letterhead">${voided}${hebrew}${english}${signer}${stub}</section>`;
+  return `<section class="page letterhead">${voided}${hebrew}${english}${signer}${stub}${donorBlock}</section>`;
 }
 
 /** The letterhead's fonts (loaded where the page is opened; printers and mail apps fall back to similar ones). */
@@ -89,4 +97,5 @@ export const LETTERHEAD_FONTS = '<link rel="stylesheet" href="https://fonts.goog
 export const SAMPLE_RECEIPT: Row = {
   receipt_number: 'SAMPLE-0001', donor_title: 'Mr.', donor_name: 'Sample Donor', hebrew_name: 'ר\' שמואל דוגמא',
   amount: 180, receipt_date: new Date().toISOString().slice(0, 10), campaign_name: 'Sample Campaign', status: 'issued',
+  donor_address: '123 Sample St Apt 4\nBrooklyn NY 11219',
 };
