@@ -212,65 +212,9 @@ export function MachinesPage() {
 // ---------------------------------------------------------------------------
 // The registry, in Settings
 // ---------------------------------------------------------------------------
-export function MachineRegistryPage() {
-  const [version, setVersion] = useState(0);
-  const [open, setOpen] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const q = useQuery(async () => {
-    const { data, error } = await supabase.from('machines').select('*, campaigns(internal_name, campaign_name, external_name)').order('active', { ascending: false }).order('nickname');
-    if (error) throw new Error(error.message);
-    return data as Row[];
-  }, [version]);
-  const name = (r: Row) => (r.campaign_id ? `${r.campaigns?.internal_name || r.campaigns?.campaign_name || r.campaigns?.external_name || ''} - ${r.campaign_id}` : '');
-  const refresh = () => { clearLookups(); setVersion(v => v + 1); };
-  return (
-    <section className="view">
-      <DataTable
-        title="Donary machines"
-        rows={q.data ?? []}
-        loading={q.loading}
-        error={q.error}
-        exportName="donary-machines"
-        onOpen={r => setOpen(r.id)}
-        columns={[
-          { key: 'nickname', label: 'Machine', value: r => `Machine ${r.nickname}` },
-          { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, value: r => name(r) || (r.active ? 'Unassigned' : ''), width: 240 },
-          { key: 'active', label: 'Status', value: r => (r.active ? 'Active' : 'Retired'), render: r => <Pill tone={r.active ? 'green' : ''}>{r.active ? 'Active' : 'Retired'}</Pill> },
-          { key: 'notes', label: 'Notes' },
-        ]}
-        actions={<button type="button" className="btn primary" onClick={() => setAdding(true)}><Plus size={15} /> Register machine</button>}
-      />
-      {adding && <RegisterDialog onClose={() => setAdding(false)} onSaved={id => { setAdding(false); refresh(); setOpen(id); }} />}
-      {open && <MachineDialog id={open} onClose={() => setOpen(null)} onChanged={refresh} />}
-    </section>
-  );
-}
+// The machine list joined Sources (Shulim, 2026-11-13): register a machine with Make Donary machine on a source.
 
-function RegisterDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (id: string) => void }) {
-  const [donaryId, setDonaryId] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [notes, setNotes] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  async function save() {
-    setError(null);
-    const { data, error: e } = await supabase.rpc('register_machine', { p_donary_id: donaryId, p_nickname: nickname === '' ? null : Number(nickname), p_notes: notes || null });
-    if (e) return setError(e.message);
-    onSaved(data as string);
-  }
-  return (
-    <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Register a machine</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
-      <label className="field"><span>Donary machine ID *</span><input value={donaryId} onChange={e => setDonaryId(e.target.value)} /></label>
-      <label className="field"><span>Number</span><input type="number" min="1" step="1" value={nickname} placeholder="Leave empty for the next unused number" onChange={e => setNickname(e.target.value)} /></label>
-      <label className="field"><span>Notes</span><input value={notes} onChange={e => setNotes(e.target.value)} /></label>
-      <p className="muted small">A number that any machine has had is never used for a different one.</p>
-      {error && <div className="error">{error}</div>}
-      <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="button" className="btn primary" disabled={!donaryId.trim()} onClick={save}>Register</button></div>
-    </Overlay>
-  );
-}
-
-function MachineDialog({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+export function MachineDialog({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
   const [version, setVersion] = useState(0);
   const [tab, setTab] = useState<'details' | 'assignments' | 'usage'>('details');
   const [options, setOptions] = useState<Option[]>([]);
