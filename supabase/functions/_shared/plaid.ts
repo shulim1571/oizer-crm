@@ -25,6 +25,16 @@ export function plaidConfig(get: (name: string) => string | undefined): PlaidCon
   return { ok: true, clientId, secret, env, baseUrl: ENVS[env].baseUrl };
 }
 
+/**
+ * How many days of transactions a new link asks Plaid for: the organization's plaid_days_requested setting (Shulim,
+ * 2026-11-13), a whole number from 30 to 730; 365 when it isn't set or isn't usable.
+ */
+export const PLAID_DAYS = { min: 30, max: 730, default: 365 } as const;
+export function plaidDays(value: unknown): number {
+  const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : typeof value === 'number' ? value : NaN;
+  return Number.isInteger(n) && n >= PLAID_DAYS.min && n <= PLAID_DAYS.max ? n : PLAID_DAYS.default;
+}
+
 /** A Plaid transaction as /transactions/sync returns it (the parts used here). */
 export interface PlaidTxn {
   transaction_id: string; account_id: string; amount: number; date: string; pending?: boolean;

@@ -13,7 +13,7 @@ const LINK_SCRIPT = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 
 // Plaid sends a new link's latest transactions first and up to a year of older ones over the following hours
 // (Shulim, 2026-11-13). There is no Plaid webhook here, so the panel says to sync again later.
-const HISTORY_NOTE = 'Plaid sends the most recent transactions first; older history (up to a year back) keeps arriving from Plaid for a while, so sync again later.';
+const HISTORY_NOTE = 'Plaid sends the most recent transactions first; older history keeps arriving from Plaid for a while, so sync again later.';
 const RECENT_MS = 48 * 60 * 60 * 1000;
 
 type PlaidLinkMeta = { institution?: { name?: string } | null; accounts?: { id: string; name?: string; mask?: string }[] };
@@ -51,6 +51,22 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
   const [env, setEnv] = useState<string | null>(null);
   useEffect(() => { callPlaid({ action: 'config', account }).then(r => setEnv(String(r.env)), () => setEnv(null)); }, [account]);
   const live = env === 'production';
+  // How much history a new link asks Plaid for: the organization's setting, 30 to 730 days, default 365 (Shulim, 2026-11-13).
+  const [days, setDays] = useState('');
+  const [daysSaved, setDaysSaved] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.from('settings').select('value').eq('key', 'plaid_days_requested').maybeSingle()
+      .then(({ data }) => { const v = String(data?.value ?? ''); setDays(v || '365'); setDaysSaved(v || null); });
+  }, []);
+  async function saveDays() {
+    setError(null); setMessage(null);
+    const n = Number(days.trim());
+    if (!Number.isInteger(n) || n < 30 || n > 730) return setError('Enter a whole number of days from 30 to 730.');
+    const { error: e } = await supabase.from('settings').upsert({ org_id: requestOrgId(), key: 'plaid_days_requested', value: n }, { onConflict: 'org_id,key' });
+    if (e) return setError(e.message);
+    setDaysSaved(String(n));
+    setMessage(`Saved: banks connected from now on ask Plaid for ${n} days of history.${s ? ' This account keeps its current link until it is disconnected and connected again.' : ''}`);
+  }
   const otherEnv = s && env && s.environment && s.environment !== env;
 
   async function run(what: string, fn: () => Promise<void>) {
@@ -109,6 +125,12 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
       {s?.last_error && <div className="error">Last sync failed: {s.last_error}</div>}
       {message && <p className="muted">{message}</p>}
       {error && <div className="error">{error}</div>}
+      <div className="plaid-days">
+        <label>History to request when connecting{' '}
+          <input type="number" min={30} max={730} step={1} value={days} onChange={e => setDays(e.target.value)} aria-label="Days of history to request from Plaid" /> days</label>
+        {days.trim() !== (daysSaved ?? '365') && <button type="button" className="btn small" onClick={() => void saveDays()}>Save</button>}
+        <span className="muted small">30 to 730; used when a bank is connected.{daysSaved ? '' : ' Default 365.'}</span>
+      </div>
       <div className="form-actions">
         {!s && <button type="button" className="btn primary" disabled={!!busy} onClick={connect}><Link2 size={15} /> {busy === 'connect' ? 'Opening Plaid…' : live ? 'Connect the bank with Plaid' : 'Connect with Plaid (sandbox)'}</button>}
         {s && !otherEnv && <button type="button" className="btn primary" disabled={!!busy} onClick={sync}><RefreshCw size={15} /> {busy === 'sync' ? 'Syncing…' : 'Sync now'}</button>}

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { plaidConfig, plaidError, toSyncLines } from './plaid';
+import { plaidConfig, plaidDays, plaidError, toSyncLines } from './plaid';
 
 // Plaid sandbox (Shulim, 2026-11-11) and production (approved 2026-11-13). Keys come only from settings and never appear in messages or code.
 const env = (vars: Record<string, string | undefined>) => (n: string) => vars[n];
@@ -82,7 +82,16 @@ describe('no Plaid key in the code', () => {
 
 describe('Plaid Link history (Shulim, 2026-11-13)', () => {
   it('asks for a year of transactions on new links, and the panel says older ones keep arriving', () => {
-    expect(readFileSync('supabase/functions/plaid/index.ts', 'utf8')).toContain('transactions: { days_requested: 365 },');
-    expect(readFileSync('src/pages/PlaidPanel.tsx', 'utf8')).toContain('older history (up to a year back) keeps arriving from Plaid for a while, so sync again later.');
+    expect(readFileSync('supabase/functions/plaid/index.ts', 'utf8')).toContain('transactions: { days_requested: days },');
+    expect(readFileSync('src/pages/PlaidPanel.tsx', 'utf8')).toContain('older history keeps arriving from Plaid for a while, so sync again later.');
+  });
+});
+
+describe('Plaid history setting (per organization)', () => {
+  it('uses the organization’s 30 to 730 days, else a year', () => {
+    expect(plaidDays(90)).toBe(90);
+    expect(plaidDays('730')).toBe(730);
+    expect(plaidDays(30)).toBe(30);
+    for (const bad of [null, undefined, '', 29, 731, 100.5, 'abc', {}]) expect(plaidDays(bad)).toBe(365);
   });
 });

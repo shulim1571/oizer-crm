@@ -4,7 +4,7 @@
 // account as them first (plaid_admin_check); then this function, which alone has the Plaid keys, talks to
 // Plaid and records the result with the service role. Keys are read from secrets only and never logged.
 
-import { plaidConfig, plaidError, toSyncLines, type PlaidTxn } from '../_shared/plaid.ts';
+import { plaidConfig, plaidDays, plaidError, toSyncLines, type PlaidTxn } from '../_shared/plaid.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
 const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -68,14 +68,19 @@ Deno.serve(async req => {
       case 'config':
         return reply({ env: cfg.env });
       case 'link_token': {
+        // The organization's own choice of history (plaid_days_requested, 30 to 730 days, default 365).
+        const setting = await fetch(`${url}/rest/v1/settings?select=value&org_id=eq.${encodeURIComponent(org)}&key=eq.plaid_days_requested`, {
+          headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+        }).then(r => (r.ok ? r.json() : [])).catch(() => []) as { value: unknown }[];
+        const days = plaidDays(setting[0]?.value);
         const r = await plaid('/link/token/create', {
           client_name: 'Oizer', language: 'en', country_codes: ['US'], products: ['transactions'],
-          // A year of history (Shulim, 2026-11-13: only recent transactions came in). Applies to new links; Plaid sends
-          // the latest first and the rest over the next while, which the next syncs pick up.
-          transactions: { days_requested: 365 },
+          // History to ask for (Shulim, 2026-11-13: only recent transactions came in), per organization. Applies to new
+          // links; Plaid sends the latest first and the rest over the next while, which the next syncs pick up.
+          transactions: { days_requested: days },
           user: { client_user_id: `${org}:${account}` },
         });
-        return reply({ link_token: r.link_token, env: cfg.env });
+        return reply({ link_token: r.link_token, env: cfg.env, days_requested: days });
       }
       case 'exchange': {
         const pick = b.account_pick ?? {};

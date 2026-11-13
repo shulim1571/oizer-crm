@@ -1139,3 +1139,7 @@ code.break { word-break: break-all; }
   .check-actions-side, .check-actions-main { flex-direction: column-reverse; margin-left: 0; }
   .check-actions .btn { width: 100%; justify-content: center; }
 }
+
+/* Plaid panel: how much history a new link asks for (Shulim, 2026-11-13). */
+.plaid-days { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 8px 0; font-size: 13px; }
+.plaid-days input { width: 90px; }
