@@ -10,6 +10,7 @@ import { dateTime, localToday, money } from '../lib/format';
 import { accountOptions, campaignOptions, clearLookups, payeeOptions, payoutMethodOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useLiveRefresh } from '../lib/live';
 import { Overlay } from './Pledges';
 
 type Act = (call: PromiseLike<{ error: { message: string } | null }>, action: string, note?: string | null) => void;
@@ -284,6 +285,7 @@ export function PayoutRequestsPage() {
     () => fetchAll((a, b) => supabase.from('payout_requests').select('*, campaigns(internal_name, external_name, campaign_name)').order('created_at', { ascending: false }).range(a, b) as never),
     [version],
   );
+  useLiveRefresh(['payouts'], () => void q.reload({ quiet: true }));
   const rows = ((q.data as Row[]) ?? []).filter(r => showAll || r.status === 'pending');
   const refresh = () => { setVersion(v => v + 1); clearLookups(); window.dispatchEvent(new Event('task-sheet-changed')); };
 

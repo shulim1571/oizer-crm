@@ -5,6 +5,7 @@ import DataTable, { type Column, type GroupBy } from './DataTable';
 import RecordForm, { type Field } from './RecordForm';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useLiveRefresh, type LiveTopic } from '../lib/live';
 import { useAuth } from '../lib/auth';
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
   /** Singular name for buttons and form titles; defaults to the title. */
   noun?: string;
   table: string;
+  /** Topics that make the list update on its own when they change (live refresh). */
+  live?: LiveTopic[];
   select?: string;
   order?: { column: string; ascending?: boolean };
   columns: Column[];
@@ -36,7 +39,7 @@ export default function CrudPage(p: Props) {
   const [editing, setEditing] = useState<Row | null | undefined>(undefined);
   const nav = useNavigate();
 
-  const { data, error, loading, setData } = useQuery(
+  const { data, error, loading, setData, reload } = useQuery(
     () => fetchAll((a, b) => {
       let q = supabase.from(p.view ?? p.table).select(p.select ?? '*');
       if (p.order) q = q.order(p.order.column, { ascending: p.order.ascending ?? true });
@@ -44,6 +47,7 @@ export default function CrudPage(p: Props) {
     }),
     [p.table, p.view, p.select],
   );
+  useLiveRefresh(p.live ?? [], () => void reload({ quiet: true }), !!p.live?.length);
 
   const pk = p.pk ?? 'id';
   const onSaved = async (row: Row) => {

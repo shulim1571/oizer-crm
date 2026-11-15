@@ -9,6 +9,7 @@ import { money, orgTimeZone } from '../lib/format';
 import MethodPie, { type MethodTotal } from '../components/MethodPie';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { ALL_TOPICS, useLiveRefresh } from '../lib/live';
 import { useTaskCount } from './TaskSheet';
 
 type Range = 'today' | 'yesterday' | 'week' | 'month' | 'year' | '30' | 'custom';
@@ -106,13 +107,9 @@ export default function DashboardPage() {
   // refreshed quietly every 2 minutes and whenever you come back to the tab, with the time it was last updated shown.
   const [updatedAt, setUpdatedAt] = useState(() => new Date());
   useEffect(() => { if (q.data) setUpdatedAt(new Date()); }, [q.data]);
-  useEffect(() => {
-    const refresh = () => { void q.reload({ quiet: true }); void recurring.reload({ quiet: true }); if (compare) void prior.reload({ quiet: true }); };
-    const back = () => { if (document.visibilityState === 'visible') refresh(); };
-    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 120_000);
-    document.addEventListener('visibilitychange', back);
-    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', back); };
-  }, [q.reload, recurring.reload, prior.reload, compare]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // Updates on its own when gifts, payouts, transfers, pledges or campaigns change (live refresh, Moshe Henig,
+  // 2026-11-15); without a live connection, every 2 minutes while the tab is open.
+  useLiveRefresh(ALL_TOPICS, () => { void q.reload({ quiet: true }); void recurring.reload({ quiet: true }); if (compare) void prior.reload({ quiet: true }); });
 
   // Any part missing reads as zero rather than breaking the page.
   const s = q.data as Row | undefined;
@@ -124,7 +121,7 @@ export default function DashboardPage() {
   return (
     <section className="view">
       <div className="view-head"><div className="view-title"><h1>Dashboard</h1>
-        <span className="count">Updated {updatedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: orgTimeZone() })} · refreshes on its own</span></div></div>
+        <span className="count">Updated {updatedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: orgTimeZone() })} · updates live</span></div></div>
       {q.error && <div className="error">{q.error}</div>}
 
       <div className="kpis">

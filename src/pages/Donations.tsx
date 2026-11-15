@@ -8,6 +8,7 @@ import Pager from '../components/Pager';
 import { useSearch } from '../components/Layout';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useLiveRefresh } from '../lib/live';
 import { useAuth } from '../lib/auth';
 import { addDays, dateTime, money, orgDayStart } from '../lib/format';
 import { editDonationFields, fundraiserDonationFields, newDonationFields } from '../lib/schemas';
@@ -263,7 +264,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
   useEffect(() => setPage(0), [queryKey]);
   useEffect(() => setSelected(new Map()), [queryKey]);
 
-  const { data, error, loading, setData } = useQuery(async () => {
+  const { data, error, loading, setData, reload } = useQuery(async () => {
     if (!query) return { rows: [], count: 0 };
     const sortColumn = query.sort && columns.find(c => c.key === query.sort!.key)?.filter?.column;
     const size = query.pageSize;
@@ -284,6 +285,8 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     if (error) throw new Error(error.message);
     return (data as Row[])?.[0] ?? null;
   }, [queryKey]);
+  // New and changed gifts show up on their own, keeping the page, sort and selection (live refresh, Moshe Henig, 2026-11-15).
+  useLiveRefresh(['gifts'], () => { void reload({ quiet: true }); void totals.reload({ quiet: true }); });
 
   const searching = !!debounced.trim() || cardIds !== null;
 

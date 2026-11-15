@@ -13,6 +13,7 @@ import AdminLink from '../components/AdminLink';
 import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { ALL_TOPICS, useLiveRefresh } from '../lib/live';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, pct, yn } from '../lib/format';
 import { campaignFields, editDonationFields, expenseFields, newDonationFields, fundraiserDonationFields, newPayoutDefaults, taskFields, transferEditFields } from '../lib/schemas';
@@ -116,6 +117,8 @@ export default function CampaignDetail() {
         return page((a, b) => supabase.from('voucher_list').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
     }
   }, [id, tab, version]);
+  // The summary (balances) and the open tab update on their own (live refresh, Moshe Henig, 2026-11-15).
+  useLiveRefresh(ALL_TOPICS, () => { void summary.reload({ quiet: true }); void rows.reload({ quiet: true }); });
 
   const c = summary.data;
   if (summary.loading && !c) return <div className="view"><p className="muted pad">Loading…</p></div>;

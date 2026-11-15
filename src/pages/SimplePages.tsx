@@ -28,6 +28,7 @@ export function ExpensesPage() {
     <CrudPage
       title="Payouts" noun="Payout"
       table="expenses"
+      live={['payouts']}
       select={`*, campaigns(${CAMP}), accounts(name)`}
       order={{ column: 'created_at', ascending: false }}
       columns={[

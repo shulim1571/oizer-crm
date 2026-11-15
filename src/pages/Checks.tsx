@@ -10,6 +10,7 @@ import { dateTime, money } from '../lib/format';
 import { accountOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useLiveRefresh } from '../lib/live';
 import type { CheckData } from '../lib/checkPdf';
 import { trimSignature } from '../lib/signatureTrim';
 import { Overlay } from './Pledges';
@@ -527,6 +528,7 @@ export function ChecksPage() {
     () => fetchAll((a, b) => supabase.from('check_register').select('*').order('account_name').order('check_number', { ascending: false }).range(a, b) as never),
     [version],
   );
+  useLiveRefresh(['payouts'], () => void q.reload({ quiet: true }));
   const all = (q.data as Row[]) ?? [];
   const rows = all.filter(r => !status || r.status === status);
   const out = all.filter(r => r.status === 'outstanding');

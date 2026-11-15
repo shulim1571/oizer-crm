@@ -11,6 +11,7 @@ import { clearLookups, type Option } from '../lib/lookups';
 import { transferEditFields } from '../lib/schemas';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useLiveRefresh } from '../lib/live';
 
 const CAMP = 'id, internal_name, campaign_name, external_name';
 export const TRANSFER_SELECT = `*, from:campaigns!transfers_from_campaign_id_fkey(${CAMP}), to:campaigns!transfers_to_campaign_id_fkey(${CAMP})`;
@@ -40,6 +41,7 @@ export function TransfersPage() {
     () => fetchAll((a, b) => supabase.from('transfers').select(TRANSFER_SELECT).order('created_at', { ascending: false }).range(a, b) as never),
     [version],
   );
+  useLiveRefresh(['transfers'], () => void q.reload({ quiet: true }));
   return (
     <section className="view">
       <DataTable

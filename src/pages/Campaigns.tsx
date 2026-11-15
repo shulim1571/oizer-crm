@@ -8,6 +8,7 @@ import AdminLink from '../components/AdminLink';
 import { Balance, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useLiveRefresh } from '../lib/live';
 import { useAuth } from '../lib/auth';
 import { money, pct } from '../lib/format';
 import { newCampaignFields } from '../lib/schemas';
@@ -51,7 +52,7 @@ export default function Campaigns({ mode }: { mode: Mode }) {
     supabase.rpc('next_campaign_id').then(({ data }) => setNextId((data as string | null) ?? null), () => setNextId(null));
   }, [choice]);
 
-  const { data, error, loading } = useQuery(
+  const { data, error, loading, reload } = useQuery(
     () => fetchAll((a, b) => {
       let q = supabase.from('campaign_summary').select('*').order('featured', { ascending: false }).order('internal_name');
       if (mode === 'active' || mode === 'archived' || mode === 'closed') q = q.eq('status', mode);
@@ -59,6 +60,8 @@ export default function Campaigns({ mode }: { mode: Mode }) {
     }),
     [mode],
   );
+  // Balances update on their own (live refresh, Moshe Henig, 2026-11-15).
+  useLiveRefresh(['gifts', 'payouts', 'transfers', 'pledges', 'campaigns'], () => void reload({ quiet: true }));
 
   // Every campaign gets a button to its payment page (Moshe Henig). Closed campaigns take no gifts, so none there.
   const payColumn: Column = {
