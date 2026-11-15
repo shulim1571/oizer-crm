@@ -3,11 +3,12 @@
  * view settings by preset, so "Last 30 days" keeps rolling forward and "Save as my default" keeps each person's
  * choice. Days are counted in this computer's time zone, from the start of the first day.
  */
-export type RangePreset = 'all' | '7' | '30' | '60' | '365' | 'custom';
+export type RangePreset = 'all' | 'today' | '7' | '30' | '60' | '365' | 'custom';
 export interface DateRange { preset: RangePreset; from?: string; to?: string }   // from/to: YYYY-MM-DD, custom only
 
 export const RANGE_PRESETS: { value: RangePreset; label: string }[] = [
   { value: 'all', label: 'All time' },
+  { value: 'today', label: 'Today' },   // Moshe Henig, 2026-11-15
   { value: '7', label: 'Last 7 days' },
   { value: '30', label: 'Last 30 days' },
   { value: '60', label: 'Last 60 days' },
@@ -32,8 +33,11 @@ export function rangeBounds(range: DateRange | undefined, now = new Date()): { f
       ...(to ? { to: new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1).toISOString() } : {}),
     };
   }
-  const days = Number(range.preset);
   const today = startOfLocalDay(now);
+  // Today: from the start of today, until the start of tomorrow.
+  if (range.preset === 'today') return { from: today.toISOString(), to: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString() };
+  const days = Number(range.preset);
+  if (!Number.isFinite(days) || days < 1) return {};   // an unknown saved preset shows everything
   // "Last 7 days" is today and the 6 days before it.
   return { from: new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1)).toISOString() };
 }

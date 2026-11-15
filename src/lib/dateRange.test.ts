@@ -9,10 +9,13 @@ const day = (y: number, m: number, d: number) => new Date(y, m - 1, d).toISOStri
 
 describe('date range', () => {
   it('offers the presets Moshe asked for', () => {
-    expect(RANGE_PRESETS.map(p => p.label)).toEqual(['All time', 'Last 7 days', 'Last 30 days', 'Last 60 days', 'Last year', 'Custom range…']);
+    expect(RANGE_PRESETS.map(p => p.label)).toEqual(['All time', 'Today', 'Last 7 days', 'Last 30 days', 'Last 60 days', 'Last year', 'Custom range…']);
   });
 
   it('counts whole days back from today, today included', () => {
+    // Today (Moshe Henig, 2026-11-15): from the start of today to the start of tomorrow.
+    expect(rangeBounds({ preset: 'today' }, now)).toEqual({ from: day(2026, 11, 11), to: day(2026, 11, 12) });
+    expect(rangeLabel({ preset: 'today' })).toBe('Today');
     expect(rangeBounds({ preset: '7' }, now)).toEqual({ from: day(2026, 11, 5) });
     expect(rangeBounds({ preset: '30' }, now)).toEqual({ from: day(2026, 10, 13) });
     expect(rangeBounds({ preset: '60' }, now)).toEqual({ from: day(2026, 9, 13) });
