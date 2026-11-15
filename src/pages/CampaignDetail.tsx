@@ -24,6 +24,7 @@ import { NewVoucherButton, VoucherDialog, voucherColumns } from './Vouchers';
 import { ChangeModeDialog, SubCampaignsTab, modeLabel } from './SubCampaigns';
 import { TRANSFER_SELECT, TransferDialog, transferColumns } from './Transfers';
 import { RequestForm, RequestTeamDialog } from './Requests';
+import { MyTransferRequests, RequestTransferDialog } from './TransferRequests';
 import { CampaignSettingsTab, SwitchTemplateDialog } from './Templates';
 import { PayoutStatusPill, RequestPayoutDialog, payoutStatus } from './Payouts';
 import { CampaignReportDialog, DonorListDialog } from './Reports';
@@ -47,6 +48,8 @@ export default function CampaignDetail() {
   const [changingMode, setChangingMode] = useState(false);
   const [requestingTeam, setRequestingTeam] = useState(false);
   const [requestingSub, setRequestingSub] = useState<'independent' | 'shared' | null>(null);
+  const [requestingTransfer, setRequestingTransfer] = useState(false);
+  const [transferRequestsVersion, setTransferRequestsVersion] = useState(0);
   const [sharing, setSharing] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [reporting, setReporting] = useState<'report' | 'donors' | 'contacts' | null>(null);
@@ -299,6 +302,7 @@ export default function CampaignDetail() {
         ))}
       </div>
 
+      {tab === 'transfers' && !isAdmin && <MyTransferRequests campaignId={id} version={transferRequestsVersion} />}
       {tab === 'settings' ? <CampaignSettingsTab key={settingsKey} campaignId={id} /> : tab === 'teams' || tab === 'sub-campaigns' ? <SubCampaignsTab key={tab} parent={c} kind={tab === 'teams' ? 'team' : 'sub'} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
         title={tab[0].toUpperCase() + tab.slice(1)}
         exportName={`${c.id}-${tab}`}
@@ -309,9 +313,10 @@ export default function CampaignDetail() {
         onOpen={tab === 'pledges' ? r => setOpenPledge(r.id) : tab === 'vouchers' ? r => setOpenVoucher(r.id)
           : tabConfig.edit ? r => setForm({ ...tabConfig.edit as { table: string; title: string; fields: Field[] }, record: r }) : undefined}
         actions={
-          tab === 'transfers' ? isAdmin && c.status === 'active' && c.balance_mode !== 'shared' && (
-            <button className="btn primary" onClick={() => setTransferStart({ from_campaign_id: id })}><Plus size={16} /> New transfer</button>
-          )
+          tab === 'transfers' ? c.status === 'active' && c.balance_mode !== 'shared' && (isAdmin
+            ? <button className="btn primary" onClick={() => setTransferStart({ from_campaign_id: id })}><Plus size={16} /> New transfer</button>
+            // Fundraisers ask; an admin approves on the Task Sheet (Moshe Henig, 2026-11-15).
+            : isPrimary && <button className="btn primary" onClick={() => setRequestingTransfer(true)}><Plus size={16} /> Request a transfer</button>)
           : tab === 'expenses' ? <>
               {canRequestPayout && <button type="button" className={isAdmin ? 'btn' : 'btn primary'} onClick={() => setRequesting(true)}>Request payout</button>}
               {tabConfig.add && c.status !== 'closed' && (
@@ -346,6 +351,8 @@ export default function CampaignDetail() {
       {reporting === 'donors' && <DonorListDialog campaign={c} onClose={() => setReporting(null)} />}
       {reporting === 'contacts' && <ContactImportDialog campaignId={id} onClose={() => setReporting(null)} />}
       {requestingTeam && <RequestTeamDialog campaignId={id} onClose={() => setRequestingTeam(false)} />}
+      {requestingTransfer && <RequestTransferDialog campaignId={id} onClose={() => setRequestingTransfer(false)}
+        onSent={() => { setRequestingTransfer(false); setTransferRequestsVersion(v => v + 1); alert('Your transfer request was sent to the office. Nothing moves until an admin approves it.'); }} />}
       {requestingSub && <RequestForm under={id} kind={requestingSub} onClose={() => setRequestingSub(null)}
         onDone={() => { setRequestingSub(null); alert(`Your ${requestingSub === 'shared' ? 'team' : 'sub-campaign'} request was sent to the office. You can follow it under Campaigns → Requests.`); }} />}
       {sharing && <ShareDialog campaign={c} onClose={() => setSharing(false)} />}

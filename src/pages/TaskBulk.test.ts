@@ -20,7 +20,7 @@ describe('Task Sheet bulk actions', () => {
     expect(keys(['stale_check'])).toEqual(['cleared', 'dismiss']);
   });
   it('leaves tasks that need a decision each to one at a time', () => {
-    for (const t of ['campaign_request', 'team_request', 'payout_request', 'check_to_print', 'receipt_requested', 'import_conflict']) {
+    for (const t of ['campaign_request', 'team_request', 'payout_request', 'transfer_request', 'check_to_print', 'receipt_requested', 'import_conflict']) {
       expect(keys([t])).toEqual([]);
     }
   });

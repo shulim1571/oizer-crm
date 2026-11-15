@@ -24,6 +24,7 @@ import { Overlay, PledgeDialog } from './Pledges';
 import { RequestDecision } from './Requests';
 import { VoucherDialog } from './Vouchers';
 import TaskBulk, { type BulkResult } from './TaskBulk';
+import { DecideTransferRequest } from './TransferRequests';
 
 type Tone = 'green' | 'red' | 'amber' | 'blue' | 'violet' | '';
 const TYPES: Record<string, { label: string; tone: Tone }> = {
@@ -49,6 +50,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   import_conflict: { label: 'Import Data Conflict', tone: 'amber' },
   delivery_failed: { label: 'Delivery Failed', tone: 'red' },
   receipt_requested: { label: 'Receipt Requested', tone: 'blue' },
+  transfer_request: { label: 'Transfer Request', tone: 'violet' },
   recurring_failed: { label: 'Recurring Charge Failed', tone: 'red' },
   ach_returned: { label: 'Bank Payment Returned', tone: 'red' },
   bank_move_needed: { label: 'Bank Transfer Needed', tone: 'amber' },
@@ -298,6 +300,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       )}
       {item.task_type === 'machine_booking' && <MachineRequest item={item} onAct={act} />}
       {item.task_type === 'payout_request' && <ApprovePayout requestId={item.record_id} onAct={act} />}
+      {item.task_type === 'transfer_request' && <DecideTransferRequest requestId={item.record_id} onDone={(action, note) => { void log(action, note).then(onDone); }} />}
       {item.task_type === 'receipt_text_missing' && <p><Link to="/receipt-text">Set up the receipt text</Link>. This leaves the sheet once it is saved.</p>}
       {item.task_type === 'import_conflict' && <ImportConflict conflictId={item.record_id} onAct={act} />}
       {item.task_type === 'receipt_reissue' && <ReissueReceipt receiptId={item.record_id} onAct={act} />}
