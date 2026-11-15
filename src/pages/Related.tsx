@@ -12,7 +12,6 @@ import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { CheckSettingsCard } from './Checks';
-import { ReceiptTextCard } from './Receipts';
 import { dateTime, money, yn } from '../lib/format';
 import { accountFields, personFields, sourceFields } from '../lib/schemas';
 import { STATUS_LABEL, campaignColumns } from './Campaigns';
@@ -183,7 +182,6 @@ export function ManagerDetail() {
         </div>
       )}
       <FundraiserPhones managerId={d.id} />
-      <ReceiptTextCard level="fundraiser" refId={d.id} title="Receipt text for this fundraiser's campaigns" />
       <DataTable
         title="Campaigns"
         exportName={`fundraiser-${d.full_name}-campaigns`}

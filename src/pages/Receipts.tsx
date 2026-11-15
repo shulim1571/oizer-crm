@@ -353,7 +353,7 @@ export function ReceiptTextCard({ level, refId, title }: { level: 'default' | 'f
     <div className="card">
       <h3>{title}</h3>
       <p className="muted small">{level === 'default'
-        ? 'Used on every receipt unless a fundraiser or campaign has its own. A section left empty is left off the receipt.'
+        ? 'Used on every receipt. A section left empty is left off the receipt.'
         : 'Leave a box empty to use the next level up. Campaign text wins over the fundraiser\'s, which wins over the default.'}
         {' '}You can write {'{amount}'}, {'{date}'}, {'{campaign}'} and {'{name}'} in the text.</p>
       <label className="field"><span>Hebrew salutation</span><input dir="rtl" value={v.hebrew_salutation ?? ''} onChange={e => set('hebrew_salutation', e.target.value)} placeholder="לכבוד ידידנו" /></label>
