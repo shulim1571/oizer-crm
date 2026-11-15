@@ -94,7 +94,7 @@ export async function openPdf(data: CheckData, tab: Window | null) {
 }
 
 /** Prints a check again with the same number. Opens its tab first, so call it straight from a click. */
-export async function reprintCheck(checkId: string): Promise<{ id: string; number: number }> {
+export async function reprintCheck(checkId: string): Promise<{ id: string; number: number; done: boolean }> {
   const tab = pdfTab();
   try {
     const { data: k } = await supabase.from('check_register').select('*').eq('id', checkId).single();
@@ -103,7 +103,8 @@ export async function reprintCheck(checkId: string): Promise<{ id: string; numbe
     await openPdf(await checkData(s, k.account_id, {
       checkNumber: k.check_number, date: usDate(k.check_date), payee: k.payee, amount: Number(k.amount), memo: k.memo, campaign: k.campaign_name,
     }), tab);
-    return { id: checkId, number: k.check_number };
+    // done: already confirmed printed, or emailed to the fundraiser, so it's no longer on the Task Sheet.
+    return { id: checkId, number: k.check_number, done: !!(k.printed_at || k.emailed_at) };
   } catch (e) {
     tab?.close();
     throw e;
@@ -190,11 +191,18 @@ export function CheckPrintedQuestion({ check, onDone }: { check: { id: string; n
   );
 }
 
-/** "Print again" anywhere: prints, then asks whether it printed. */
+/**
+ * "Print again" anywhere: opens the check, and asks whether it printed only while it's still unprinted (on the Task
+ * Sheet). The question is there to take it off the Task Sheet, so a check already printed or emailed just opens
+ * (Moshe Henig, 2026-11-15).
+ */
 export function useCheckPrinter(onPrinted?: (printed: boolean) => void) {
   const [asking, setAsking] = useState<{ id: string; number: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const print = (checkId: string) => { setError(null); reprintCheck(checkId).then(setAsking, e => setError(friendlyError(e))); };
+  const print = (checkId: string) => {
+    setError(null);
+    reprintCheck(checkId).then(k => { if (!k.done) setAsking(k); }, e => setError(friendlyError(e)));
+  };
   const dialog = (
     <>
       {error && <div className="error">{error}</div>}

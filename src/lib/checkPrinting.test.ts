@@ -11,7 +11,7 @@ describe('check printing', () => {
     expect(checks).toContain('else printInPage(url);');
     // Every print opens its tab before waiting on anything, so browsers don't block it.
     for (const fn of ['async function preview() {\n    if (!settings) return;\n    const tab = pdfTab();', 'async function issue() {\n    if (!settings) return;\n    const tab = pdfTab();',
-      'export async function reprintCheck(checkId: string): Promise<{ id: string; number: number }> {\n  const tab = pdfTab();', 'async function testPrint() {\n    const tab = pdfTab();']) {
+      'export async function reprintCheck(checkId: string): Promise<{ id: string; number: number; done: boolean }> {\n  const tab = pdfTab();', 'async function testPrint() {\n    const tab = pdfTab();']) {
       expect(checks).toContain(fn);
     }
   });
@@ -21,6 +21,11 @@ describe('check printing', () => {
     const sheet = readFileSync('src/pages/TaskSheet.tsx', 'utf8');
     expect(sheet).toContain("check_unprinted: { label: 'Check Not Printed', tone: 'amber' },");
     expect(sheet).toContain("{item.task_type === 'check_unprinted' && <UnprintedCheckTask checkId={item.record_id} onDone={onDone} />}");
+  });
+  // Moshe Henig, 2026-11-15: only while the check is unprinted (on the Task Sheet); reprinting a printed one just opens it.
+  it('asks on reprint only when the check is still unprinted', () => {
+    expect(checks).toContain("return { id: checkId, number: k.check_number, done: !!(k.printed_at || k.emailed_at) };");
+    expect(checks).toContain('reprintCheck(checkId).then(k => { if (!k.done) setAsking(k); }, e => setError(friendlyError(e)));');
   });
 });
 
