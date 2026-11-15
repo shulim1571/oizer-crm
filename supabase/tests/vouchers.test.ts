@@ -191,6 +191,20 @@ describe('pledges', () => {
     expect(Number((await summary(db, '1003')).pledged_open)).toBe(0);
   });
 
+  // Readiness #3 (2026-11-15): a gift that's voided, refunded, returned or deleted stops counting toward its pledge.
+  it('reopen when the paying gift is voided, refunded, returned or deleted', async () => {
+    for (const change of [`status = 'voided'`, `status = 'refunded'`, `status = 'returned'`, `deleted_at = now()`]) {
+      const fresh = await seededDb();
+      const id = await addPledge(fresh);
+      const d = await pay(fresh, { amount: 500 });
+      expect(await pledge(fresh, id)).toMatchObject({ status: 'fulfilled', balance: '0.00' });
+      await fresh.query(`update public.donations set ${change} where id = $1`, [d]);
+      expect(await pledge(fresh, id)).toMatchObject({ received: '0', balance: '500.00' });
+      expect((await pledge(fresh, id)).status).not.toBe('fulfilled');
+      expect((await fresh.query(`select count(*)::int n from public.pledge_payments where donation_id = $1`, [d])).rows[0]).toEqual({ n: 0 });
+    }
+  });
+
   it('go partial on a smaller payment, with the rest still open', async () => {
     const id = await addPledge(db);
     await pay(db, { amount: 200 });
@@ -230,11 +244,12 @@ describe('pledges', () => {
     expect((await pledge(db, id)).status).toBe('fulfilled');
   });
 
-  it('stay fulfilled when the payment is later refunded', async () => {
+  // Reversed by readiness #3 (Shulim, 2026-11-15): a refunded payment no longer fulfills its pledge.
+  it('reopen when the payment is later refunded through Refund', async () => {
     const id = await addPledge(db);
     const d = await pay(db, { amount: 500 });
     await as(db, ADMIN, tx => tx.query(`select public.refund_donation($1)`, [d]));
-    expect((await pledge(db, id)).status).toBe('fulfilled');
+    expect(await pledge(db, id)).toMatchObject({ received: '0', balance: '500.00' });
   });
 
   it('protect a matched payment from being split or shrunk until unmatched', async () => {
