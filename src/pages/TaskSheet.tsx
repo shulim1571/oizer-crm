@@ -77,10 +77,26 @@ async function withCampaigns(tasks: Row[]): Promise<Row[]> {
   return tasks.map(t => (t.campaign_id && byId.has(String(t.campaign_id)) ? { ...t, campaign: byId.get(String(t.campaign_id)) } : t));
 }
 
+/**
+ * Adds each donation task's source (Moshe Henig, 2026-11-15: Unattributed payments show where they came from): the
+ * source's name, else its key. Other kinds of task have no source.
+ */
+async function withSources(tasks: Row[]): Promise<Row[]> {
+  const ids = [...new Set(tasks.filter(t => TRANSACTION_TASKS.has(t.task_type) && t.record_id).map(t => String(t.record_id)))];
+  if (!ids.length) return tasks;
+  const found = await fetchAll((a, b) => supabase.from('transaction_list').select('id, source, source_name').in('id', ids).order('id').range(a, b) as never);
+  const byId = new Map(found.map(d => [String(d.id), d]));
+  return tasks.map(t => {
+    const d = TRANSACTION_TASKS.has(t.task_type) ? byId.get(String(t.record_id)) : undefined;
+    return d ? { ...t, source_label: d.source_name || d.source || null } : t;
+  });
+}
+
 const columns: Column[] = [
   { key: 'task_type', label: 'Type', value: r => TYPES[r.task_type]?.label, render: r => <><TypePill type={r.task_type} />{r.held && <> <Pill>Held</Pill></>}</>, width: 210 },
   { key: 'fundraiser', label: 'Fundraiser', width: 140 },
   // As in the Campaigns list: internal name, public name under it, and the ID (Moshe Henig, 2026-11-12).
+  { key: 'source_label', label: 'Source', width: 140 },
   { key: 'campaign', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, width: 200,
     value: r => (r.campaign_id ? `${campaignLabel(r)} - ${r.campaign_id}` : ''),
     render: r => r.campaign_id && (
@@ -122,7 +138,10 @@ export default function TaskSheetPage() {
   const [open, setOpen] = useState<Row | null>(null);
   const [version, setVersion] = useState(0);
   const q = useQuery(
-    async () => withCampaigns(await fetchAll((a, b) => supabase.from('admin_task_sheet').select('*').order('submitted_at').range(a, b) as never)),
+    async () => {
+      const tasks = await fetchAll((a, b) => supabase.from('admin_task_sheet').select('*').order('submitted_at').range(a, b) as never);
+      return withSources(await withCampaigns(tasks));
+    },
     [version],
   );
   // New tasks show without a refresh: reload when anything changes tasks (a payout saved, a check voided...) and when
