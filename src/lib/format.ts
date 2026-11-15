@@ -41,6 +41,21 @@ export function fromLocalInput(v: string): string {
   return new Date(guess.getTime() + (utc.getTime() - local.getTime())).toISOString();
 }
 
+/** Today's date in the organization's time zone, as YYYY-MM-DD (Moshe Henig, 2026-11-15). */
+export function orgToday(now = new Date()): string {
+  return toLocalInput(now).slice(0, 10);
+}
+/** The instant a YYYY-MM-DD day starts in the organization's time zone, as an ISO string. */
+export function orgDayStart(ymd: string): string {
+  return fromLocalInput(`${ymd}T00:00`);
+}
+/** A YYYY-MM-DD date moved by whole days (calendar arithmetic, no time zone involved). */
+export function addDays(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + days));
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
+}
+
 export function toCsv(rows: Record<string, unknown>[], cols: { key: string; label: string }[]): string {
   const esc = (v: unknown) => {
     const t = v == null ? '' : String(v);

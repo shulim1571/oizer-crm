@@ -125,7 +125,8 @@ describe('Donary Enterprise', () => {
       const d = (await db.query(`select campaign_id, donor_id, amount::text, status, payment_method, source, donary_id, gateway_id, created_at, notes from public.donations where id = $1`, [r.donation_id])).rows[0];
       expect(d).toMatchObject({ campaign_id: '1001', donor_id: 'd1', amount: '18.00', status: 'completed', payment_method: 'Credit Card',
         source: 's1', donary_id: '1238', gateway_id: 'ref_1238', notes: 'Donary · DNRY-77 · VISA 4242' });
-      expect(new Date(d.created_at as string).toISOString()).toBe('2026-11-08T21:01:14.440Z');
+      // Donary's time has no zone and is New York time (Moshe Henig, 2026-11-15): 9:01 pm Nov 8 in New York.
+      expect(new Date(d.created_at as string).toISOString()).toBe('2026-11-09T02:01:14.440Z');
       expect(await ingest(db, 'charge', charge())).toEqual({ status: 'duplicate' });
       expect((await db.query(`select count(*)::int n from public.donations where donary_id = '1238'`)).rows[0]).toEqual({ n: 1 });
     });

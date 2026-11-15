@@ -7,7 +7,7 @@ import { X } from 'lucide-react';
 import { supabase, type Row } from '../lib/supabase';
 import { clearLookups, DONATION_STATUSES, type Option } from '../lib/lookups';
 import { allowedStatuses, PROCESSOR_FIELDS } from '../lib/donationRules';
-import { fromLocalInput, toLocalInput } from '../lib/format';
+import { dateTime, fromLocalInput, toLocalInput } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import DateNote from './DateNote';
 import SearchSelect from './SearchSelect';
@@ -252,7 +252,7 @@ export default function RecordForm(p: Props) {
   function renderInput(f: Field) {
     const v = values[f.name];
     if (f.readOnly) {
-      const shown = f.type === 'datetime' && v ? new Date(v).toLocaleString()
+      const shown = f.type === 'datetime' && v ? dateTime(v)
         : f.options && Array.isArray(f.options) ? (f.options.find(o => o.value === v)?.label ?? v)
         : (opts[f.name] ?? []).find(o => o.value === v)?.label ?? v;
       return <input value={shown ?? ''} disabled readOnly />;

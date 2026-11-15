@@ -9,7 +9,7 @@ import { useSearch } from '../components/Layout';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
-import { money } from '../lib/format';
+import { addDays, dateTime, money, orgDayStart } from '../lib/format';
 import { editDonationFields, fundraiserDonationFields, newDonationFields } from '../lib/schemas';
 import { campaignOptions, type Option } from '../lib/lookups';
 import TransactionBulk from './TransactionBulk';
@@ -67,7 +67,7 @@ function RequestReceiptDialog({ row, onClose }: { row: Row; onClose: () => void 
           <dt>Amount</dt><dd>{money(row.amount)}</dd>
           <dt>Donor</dt><dd>{row.donors?.display_name || row.donor_name || row.name || '—'}</dd>
           <dt>Campaign</dt><dd>{row.campaign_internal || row.campaign_id}</dd>
-          <dt>Date</dt><dd>{new Date(row.created_at).toLocaleString()}</dd>
+          <dt>Date</dt><dd>{dateTime(row.created_at)}</dd>
         </dl>
         {done ? (
           <>
@@ -168,9 +168,11 @@ function applyColumnFilters<Q extends { ilike: Function; gte: Function; gt: Func
       const m = text.match(/^(\d{4})(?:-(\d{1,2}))?(?:-(\d{1,2}))?$/);
       if (!m) continue;
       const [y, mo, day] = [Number(m[1]), m[2] ? Number(m[2]) : null, m[3] ? Number(m[3]) : null];
-      const from = new Date(y, (mo ?? 1) - 1, day ?? 1);
-      const to = day ? new Date(y, mo! - 1, day + 1) : mo ? new Date(y, mo, 1) : new Date(y + 1, 0, 1);
-      q = q.gte(col, from.toISOString()).lt(col, to.toISOString());
+      // In the organization's time zone (Moshe Henig, 2026-11-15), like the dates shown.
+      const ymd = (yy: number, mm: number, dd: number) => `${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+      const start = ymd(y, mo ?? 1, day ?? 1);
+      const end = day ? addDays(start, 1) : mo ? (mo === 12 ? ymd(y + 1, 1, 1) : ymd(y, mo + 1, 1)) : ymd(y + 1, 1, 1);
+      q = q.gte(col, orgDayStart(start)).lt(col, orgDayStart(end));
     } else if (exact != null) {
       // Picked from the dropdown: that value exactly (case aside), not "contains".
       q = q.ilike(col, exact.replace(/[%_\\]/g, m => `\\${m}`));

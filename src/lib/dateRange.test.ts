@@ -4,8 +4,14 @@ import { dayOffset, inRange, rangeBounds, rangeLabel, RANGE_PRESETS } from './da
 
 // Moshe Henig, 2026-11-11: the Last 7 Days tab becomes a date range on the Transactions list, with presets and a
 // custom range, saved per person through "Save as my default".
-const now = new Date(2026, 10, 11, 15, 30);   // Nov 11 2026, 3:30 pm local
-const day = (y: number, m: number, d: number) => new Date(y, m - 1, d).toISOString();
+// Days are counted in the organization's time zone (New York, the default), whatever zone this computer is in
+// (Moshe Henig, 2026-11-15). Midnight in New York is 04:00 UTC in daylight time (to Nov 1 2026) and 05:00 UTC after.
+const now = new Date('2026-11-11T20:30:00Z');   // Nov 11 2026, 3:30 pm in New York
+const day = (y: number, m: number, d: number) => {
+  const ymd = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const daylight = ymd >= '2026-03-08' && ymd <= '2026-11-01';
+  return new Date(Date.UTC(y, m - 1, d, daylight ? 4 : 5)).toISOString();
+};
 
 describe('date range', () => {
   it('offers the presets Moshe asked for', () => {
@@ -28,9 +34,9 @@ describe('date range', () => {
     expect(rangeBounds({ preset: 'custom', from: '2026-10-01', to: '2026-10-31' }, now)).toEqual({ from: day(2026, 10, 1), to: day(2026, 11, 1) });
     expect(rangeBounds({ preset: 'custom', from: '2026-10-01' }, now)).toEqual({ from: day(2026, 10, 1) });
     const b = rangeBounds({ preset: 'custom', from: '2026-10-01', to: '2026-10-31' }, now);
-    expect(inRange(new Date(2026, 9, 31, 23, 59).toISOString(), b)).toBe(true);
-    expect(inRange(new Date(2026, 10, 1, 0, 1).toISOString(), b)).toBe(false);
-    expect(inRange(new Date(2026, 8, 30, 23, 59).toISOString(), b)).toBe(false);
+    expect(inRange('2026-11-01T03:59:00Z', b)).toBe(true);    // Oct 31, 11:59 pm in New York
+    expect(inRange('2026-11-01T04:01:00Z', b)).toBe(false);   // Nov 1, 12:01 am in New York
+    expect(inRange('2026-10-01T03:59:00Z', b)).toBe(false);   // Sep 30, 11:59 pm in New York
     expect(inRange(null, b)).toBe(false);
     expect(inRange(null, {})).toBe(true);
     expect(rangeLabel({ preset: '30' })).toBe('Last 30 days');
@@ -53,5 +59,14 @@ describe('date range', () => {
     expect(table).toContain('const setRange = (r: DateRange) => setConfig({ ...config, range: r });');
     expect(table).toContain("<select aria-label=\"Date\" value={range.preset}");
     expect(readFileSync('src/components/TableCustomize.tsx', 'utf8')).toMatch(/export interface TableConfig \{[^]*range\?: DateRange;/);
+  });
+});
+
+describe('date range in the organization\'s time zone (Moshe Henig, 2026-11-15)', () => {
+  it('starts Today at midnight New York time, not midnight on this computer', () => {
+    // 11:30 pm in New York is already the next day in UTC; it is still Nov 11 in New York.
+    const late = new Date('2026-11-12T04:30:00Z');
+    expect(rangeBounds({ preset: 'today' }, late)).toEqual({ from: '2026-11-11T05:00:00.000Z', to: '2026-11-12T05:00:00.000Z' });
+    expect(dayOffset(0, late)).toBe('2026-11-11');
   });
 });
