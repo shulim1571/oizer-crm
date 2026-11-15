@@ -555,6 +555,13 @@ ul.plain li { padding: 6px 0; }
 
 .ss { position: relative; }
 .ss input { width: 100%; }
+/* SearchSelect as a dropdown (Moshe Henig, 2026-11-15): an arrow on the right, and a list that can float over the page. */
+.ss-dropdown input { padding-right: 32px; cursor: pointer; }
+.ss-dropdown input:focus { cursor: text; }
+.ss-arrow { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px;
+  border: 0; background: transparent; color: var(--muted); cursor: pointer; border-radius: 6px; }
+.ss-arrow:hover { background: var(--surface-2); color: var(--text); }
+.ss-list.ss-floating { z-index: 1100; max-height: min(320px, 50vh); }
 .ss-list {
   position: absolute; z-index: 50; left: 0; right: 0; top: calc(100% + 4px); max-height: 260px; overflow: auto;
   list-style: none; margin: 0; padding: 6px; background: var(--surface); border: 1px solid var(--line);

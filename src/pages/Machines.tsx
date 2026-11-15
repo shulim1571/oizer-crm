@@ -496,7 +496,7 @@ export function DonaryMachinesPage() {
   const picker = (r: Row) => (r.active
     ? <span className="machine-assign-pick" onClick={e => e.stopPropagation()}>
         <SearchSelect key={`${r.id}:${r.campaign_id ?? ''}:${version}`} value={r.campaign_id ?? null} options={options}
-          onChange={v => void assign(r, v)} placeholder={busy === r.id ? 'Saving…' : 'Unassigned'} />
+          onChange={v => void assign(r, v)} placeholder={busy === r.id ? 'Saving…' : 'Choose a campaign'} dropdown floating />
       </span>
     : <span className="muted">{campName(r) || '—'}</span>);
   const campName = (m: Row) => (m.campaign_id ? `${m.campaigns?.internal_name || m.campaigns?.campaign_name || m.campaigns?.external_name || ''} - ${m.campaign_id}` : '');
