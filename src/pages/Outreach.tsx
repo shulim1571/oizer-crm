@@ -1,6 +1,6 @@
 import DonorPicker from '../components/DonorPicker';
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, Mail, MessageSquare, Paperclip, Send, Trash2, X } from 'lucide-react';
+import { Copy, Mail, MessageSquare, Paperclip, Phone, Send, Trash2, X } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import SearchSelect from '../components/SearchSelect';
 import { Pill } from '../components/Pill';
@@ -63,6 +63,12 @@ export function ShareDialog({ campaign, onClose }: { campaign: Row; onClose: () 
   const [org, setOrg] = useState<Row | null>(null);
   useEffect(() => { supabase.from('organizations').select('check_payee, zelle, ein').maybeSingle().then(({ data }) => setOrg(data)); }, []);
   const history = useQuery(async () => ((await supabase.rpc('campaign_shares', { p_campaign: campaign.id })).data ?? []) as Row[], [campaign.id, version]);
+  // The campaign's fundraiser, to copy their email or phone into the message (Moshe Henig, 2026-11-15).
+  const [fundraiser, setFundraiser] = useState<Row | null>(null);
+  useEffect(() => {
+    if (!campaign.manager_id) return setFundraiser(null);
+    supabase.from('managers').select('full_name, email, phone').eq('id', campaign.manager_id).maybeSingle().then(({ data }) => setFundraiser(data));
+  }, [campaign.manager_id]);
 
   const template = [
     channel === 'sms' ? link : `Donate here: ${link}`,
@@ -104,6 +110,15 @@ export function ShareDialog({ campaign, onClose }: { campaign: Row; onClose: () 
               <p className="muted small">Or the whole form placed right in the page:</p>
               <textarea className="snippet" readOnly rows={2} value={inline} onFocus={e => e.target.select()} />
               <button type="button" className="btn" onClick={() => copy(inline, setNote)}><Copy size={15} /> Copy form code</button></details>
+            {fundraiser && (fundraiser.email || fundraiser.phone) && (
+              <div className="share-contact">
+                <span className="muted small">Fundraiser{fundraiser.full_name ? ` · ${fundraiser.full_name}` : ''}</span>
+                {fundraiser.email && <span className="share-contact-item"><Mail size={14} /> {fundraiser.email}
+                  <button type="button" className="btn small" onClick={() => copy(fundraiser.email, setNote)}><Copy size={13} /> Copy</button></span>}
+                {fundraiser.phone && <span className="share-contact-item"><Phone size={14} /> {fundraiser.phone}
+                  <button type="button" className="btn small" onClick={() => copy(fundraiser.phone, setNote)}><Copy size={13} /> Copy</button></span>}
+              </div>
+            )}
             {note && <p className="muted small">{note}</p>}
           </div>
 

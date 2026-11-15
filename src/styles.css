@@ -1154,3 +1154,7 @@ code.break { word-break: break-all; }
 /* Donary machines list: the campaign picker in each row (Moshe Henig, 2026-11-15). */
 .machine-assign { display: flex; align-items: center; gap: 10px; min-width: 300px; }
 .machine-assign-pick { flex: 1; min-width: 240px; }
+
+/* Share box: the campaign fundraiser's email and phone, with copy buttons (Moshe Henig, 2026-11-15). */
+.share-contact { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.share-contact-item { display: inline-flex; align-items: center; gap: 6px; }
