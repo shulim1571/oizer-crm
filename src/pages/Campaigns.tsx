@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ExternalLink, Plus, Receipt, Scale, TrendingUp } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
@@ -44,6 +44,12 @@ export default function Campaigns({ mode }: { mode: Mode }) {
   const nav = useNavigate();
   const [adding, setAdding] = useState(false);
   const [choice, setChoice] = useState<{ template: Row | null; settings: Row | null } | null>(null);
+  // The next campaign number, asked for when the form opens; the admin may change it (Moshe Henig, 2026-11-15).
+  const [nextId, setNextId] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!choice) { setNextId(undefined); return; }
+    supabase.rpc('next_campaign_id').then(({ data }) => setNextId((data as string | null) ?? null), () => setNextId(null));
+  }, [choice]);
 
   const { data, error, loading } = useQuery(
     () => fetchAll((a, b) => {
@@ -86,12 +92,12 @@ export default function Campaigns({ mode }: { mode: Mode }) {
         )}
       />
       {adding && !choice && <TemplateStep onClose={() => setAdding(false)} onNext={setChoice} />}
-      {adding && choice && (
+      {adding && choice && nextId !== undefined && (
         <RecordForm
           table="campaigns"
           title={choice.template ? `New campaign from ${choice.template.name}` : 'New Campaign'}
           fields={newCampaignFields}
-          defaults={{ status: 'active', account_id: choice.template?.account_id ?? undefined }}
+          defaults={{ status: 'active', account_id: choice.template?.account_id ?? undefined, id: nextId ?? undefined }}
           onClose={() => { setAdding(false); setChoice(null); }}
           onSaved={async r => {
             const { error: e } = await supabase.rpc('save_campaign_settings', { p_campaign: r.id, p_settings: choice.settings, p_template: choice.template?.id ?? null });

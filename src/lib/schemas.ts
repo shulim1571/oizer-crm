@@ -33,6 +33,8 @@ export const campaignFields: Field[] = [
 ];
 
 export const newCampaignFields: Field[] = [
+  // Prefilled with the next number, and editable while creating; permanent after (Moshe Henig, 2026-11-15).
+  { name: 'id', label: 'Campaign ID', help: 'Suggested: the next number. You can change it: letters, numbers and dashes, not one already used. It can\'t be changed later. Leave it empty for the next number.' },
   ...campaignFields,
   { name: 'status', label: 'Status', type: 'select', options: CAMPAIGN_STATUSES, required: true },
 ];
