@@ -11,6 +11,7 @@ import { voucherFields } from '../lib/schemas';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { Overlay } from './Pledges';
+import { feeDown } from '../lib/feeMath';
 
 export const VOUCHER_STATUS: Record<string, string> = {
   pending: 'Pending funding', partial: 'Partially funded', funded: 'Fully funded', cancelled: 'Cancelled', overage_review: 'Overage review',
@@ -28,8 +29,9 @@ const feeOn = (r: Row, amount: number) => {
   const pctPart = amount * Number(r.fee_percent) / 100;
   switch (r.fee_type) {
     case 'flat': return Number(r.fee_flat);
-    case 'percent': return Math.round(pctPart * 100) / 100;
-    case 'percent_flat': return Math.round((pctPart + Number(r.fee_flat)) * 100) / 100;
+    // Rounded down to the cent, like the database (Moshe Henig, 2026-11-15).
+    case 'percent': return feeDown(pctPart);
+    case 'percent_flat': return feeDown(pctPart + Number(r.fee_flat));
     default: return 0;
   }
 };
