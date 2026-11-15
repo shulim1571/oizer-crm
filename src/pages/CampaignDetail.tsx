@@ -96,6 +96,8 @@ export default function CampaignDetail() {
         if (!isAdmin) return (await supabase.rpc('campaign_payouts', { p_campaign: id })).data ?? [];
         return page((a, b) => supabase.from('expenses').select('*, accounts(name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
       case 'transfers':
+        // Fundraisers: read-only, through campaign_transfers (Moshe Henig, 2026-11-15).
+        if (!isAdmin) return (await supabase.rpc('campaign_transfers', { p_campaign: id })).data ?? [];
         return page((a, b) => supabase.from('transfers')
           .select(TRANSFER_SELECT)
           .or(`from_campaign_id.eq.${id},to_campaign_id.eq.${id}`).order('created_at', { ascending: false }).range(a, b));
@@ -119,8 +121,8 @@ export default function CampaignDetail() {
   const saved = () => { setForm(null); setVersion(v => v + 1); };
   const combines = Number(c.combined_raised) !== Number(c.raised);
   const canAddSub = c.status !== 'closed' && isPrimary;
-  // Fundraisers have no view of transfers, and a sub-campaign fundraiser's page stays on their own numbers.
-  const tabs: Tab[] = ['donations', 'expenses', ...(isAdmin ? ['transfers' as Tab] : []), 'tasks', 'pledges', 'vouchers', 'teams', 'sub-campaigns', ...(isPrimary ? ['settings' as Tab] : [])];
+  // Fundraisers see transfers in and out of their campaign, read-only (Moshe Henig, 2026-11-15).
+  const tabs: Tab[] = ['donations', 'expenses', 'transfers', 'tasks', 'pledges', 'vouchers', 'teams', 'sub-campaigns', ...(isPrimary ? ['settings' as Tab] : [])];
   const canEditTasks = canWork;
   const setStatus = async (status: string, question: string) => {
     if (!confirm(question)) return;
@@ -154,9 +156,15 @@ export default function CampaignDetail() {
       edit: isAdmin && { table: 'expenses', title: 'Edit Payout', fields: expenseFields },
     },
     transfers: {
-      columns: [
+      columns: isAdmin ? [
         { key: 'direction', label: 'Direction', value: (r: Row) => (r.to_campaign_id === id ? 'Transfer In' : 'Transfer Out'), render: (r: Row) => (r.to_campaign_id === id ? <Pill tone="green">Transfer In</Pill> : <Pill tone="amber">Transfer Out</Pill>) },
         ...transferColumns(r => setTransferStart({ from_campaign_id: r.to_campaign_id, to_campaign_id: r.from_campaign_id, amount: r.amount, description: `Reverses transfer ${r.id}` })),
+      ] : [
+        { key: 'direction', label: 'Direction', value: (r: Row) => (r.direction === 'in' ? 'Transfer In' : 'Transfer Out'), render: (r: Row) => (r.direction === 'in' ? <Pill tone="green">Transfer In</Pill> : <Pill tone="amber">Transfer Out</Pill>) },
+        { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
+        { key: 'other', label: 'From / to', value: (r: Row) => (r.other_campaign_id ? `${r.other_campaign_name ?? ''} - ${r.other_campaign_id}` : r.other_campaign_name) },
+        { key: 'description', label: 'Memo' },
+        { key: 'created_at', label: 'Date', render: (r: Row) => dateTime(r.created_at) },
       ],
       add: false as const,
       edit: isAdmin && { table: 'transfers', title: 'Edit memo', fields: transferEditFields },
