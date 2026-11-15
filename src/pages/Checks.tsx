@@ -46,6 +46,7 @@ async function checkData(s: Row, account: string, c: { checkNumber: number; date
     routing: s.routing_number ?? '000000000', account: s.account_number ?? '0000',
     offsetX: Number(s.offset_x), offsetY: Number(s.offset_y),
     micrOffsetX: Number(s.micr_offset_x ?? 0), micrOffsetY: Number(s.micr_offset_y ?? 0),
+    stubs: s.print_stubs !== false,
     // Trimmed to the writing, so it sits on the signature line whatever margins the file has.
     signature: sig ? await trimSignature({ bytes: fromHex(sig.data_hex, 'signature file'), mime: sig.mime }) : null,
     micrFont: font ? { bytes: fromHex(font.data_hex, 'MICR font file'), transit: font.transit_char, onUs: font.onus_char } : null,
@@ -399,7 +400,7 @@ export function CheckSettingsCard({ accountId }: { accountId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   useEffect(() => {
-    settingsFor(accountId).then(r => setS(r ?? { offset_x: 0, offset_y: 0, micr_offset_x: 0, micr_offset_y: 0 }));
+    settingsFor(accountId).then(r => setS(r ?? { offset_x: 0, offset_y: 0, micr_offset_x: 0, micr_offset_y: 0, print_stubs: true }));
     asset('signature', accountId).then(setSig);
   }, [accountId, version]);
   const set = (k: string, v: unknown) => { setSaved(false); setS(prev => ({ ...prev, [k]: v })); };
@@ -410,7 +411,7 @@ export function CheckSettingsCard({ accountId }: { accountId: string }) {
       p_account: accountId, p_print_name: s.print_name ?? null, p_print_address: s.print_address ?? null, p_bank_name: s.bank_name ?? null,
       p_routing: s.routing_number ?? null, p_account_number: s.account_number ?? null,
       p_next_number: s.next_check_number ? Number(s.next_check_number) : null, p_offset_x: Number(s.offset_x || 0), p_offset_y: Number(s.offset_y || 0),
-      p_micr_offset_x: Number(s.micr_offset_x || 0), p_micr_offset_y: Number(s.micr_offset_y || 0),
+      p_micr_offset_x: Number(s.micr_offset_x || 0), p_micr_offset_y: Number(s.micr_offset_y || 0), p_print_stubs: s.print_stubs !== false,
     });
     if (e) return setError(e.message);
     setSaved(true);
@@ -453,6 +454,9 @@ export function CheckSettingsCard({ accountId }: { accountId: string }) {
           </span>
         </label>
       </div>
+      {/* Per account (Moshe Henig, 2026-11-15): the check with its two record stubs below, or the check alone. */}
+      <label className="inline-check"><input type="checkbox" checked={s.print_stubs !== false} onChange={e => set('print_stubs', e.target.checked)} />
+        Print checks from this account with stubs <span className="muted small">(two record stubs below the check; off prints the check alone)</span></label>
       <label className="field"><span>Address under the name</span><textarea rows={2} value={s.print_address ?? ''} onChange={e => set('print_address', e.target.value)} /></label>
       <label className="field"><span>Signature image (PNG or JPG)</span>
         <input type="file" accept="image/png,image/jpeg" onChange={e => e.target.files?.[0] && upload(e.target.files[0])} />

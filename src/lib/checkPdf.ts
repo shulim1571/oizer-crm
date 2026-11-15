@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, degrees, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
-// Check on top of a letter page, two stubs below. Points: 72 to the inch, origin at the bottom left.
+// Check on top of a letter page, two stubs below (or none, per account). Points: 72 to the inch, origin at the bottom left.
 const PAGE_W = 612;
 const PAGE_H = 792;
 const CHECK_BOTTOM = PAGE_H - 252;
@@ -109,6 +109,8 @@ export interface CheckData {
   bankName: string;
   routing: string;
   account: string;
+  /** The two record stubs below the check; false prints the check alone (per bank account, Moshe Henig, 2026-11-15). */
+  stubs?: boolean;
   offsetX?: number; // millimetres, to line up with the check stock
   offsetY?: number;
   /** The MICR line's own adjustment in millimetres, on top of offsetX/offsetY (Moshe Henig, 2026-11-11). */
@@ -191,8 +193,8 @@ export async function buildCheckPdf(c: CheckData): Promise<Uint8Array> {
     });
   }
 
-  // Two stubs for the records
-  for (const top of [500, 248]) {
+  // Two stubs for the records, unless the account prints checks without them.
+  for (const top of c.stubs === false ? [] : [500, 248]) {
     text(page, c.printName, 36, top, bold, 10);
     text(page, `Check ${c.checkNumber}`, 576, top, bold, 10, 'right');
     const rows: [string, string][] = [

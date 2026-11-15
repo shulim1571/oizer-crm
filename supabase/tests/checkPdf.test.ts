@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PDFDocument } from 'pdf-lib';
+import { PDFArray, PDFDocument, PDFName } from 'pdf-lib';
 import { amountInFigures, amountInWords, buildCheckPdf, micrLine } from '../../src/lib/checkPdf';
 
 describe('check amounts', () => {
@@ -51,5 +51,35 @@ describe('check PDF', () => {
     expect(doc.getPageCount()).toBe(1);
     expect(doc.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
     expect(doc.getTitle()).toBe('Check 1001');
+  });
+});
+
+// Moshe Henig, 2026-11-15: each bank account chooses whether its checks print with the two record stubs.
+describe('check stubs', () => {
+  const pageText = async (stubs?: boolean) => {
+    const { inflateSync } = await import('node:zlib');
+    const doc = await PDFDocument.load(await buildCheckPdf({
+      checkNumber: 1001, date: '11/2/2026', payee: 'Acme Roofing', amount: 1234.5, memo: 'Roof', campaign: 'Sample Fund',
+      printName: 'Cong Oizer', bankName: 'Sample Bank', routing: '021000021', account: '123456789', sample: true, stubs,
+    }));
+    // The page's content stream(s), inflated when compressed.
+    const ref = doc.getPage(0).node.get(PDFName.of('Contents'));
+    const found = doc.context.lookup(ref);
+    const streams = (found instanceof PDFArray ? found.asArray().map(r => doc.context.lookup(r)) : [found]) as unknown as { contents: Uint8Array; dict: { get(n: PDFName): unknown } }[];
+    return streams.map(st => {
+      const data = Buffer.from(st.contents);
+      return st.dict.get(PDFName.of('Filter')) ? inflateSync(data).toString('latin1') : data.toString('latin1');
+    }).join('\n');
+  };
+  const hex = (s: string) => Buffer.from(s, 'latin1').toString('hex').toUpperCase();
+  it('prints the stubs by default and when asked, and the check alone when not', async () => {
+    const withStubs = await pageText(true);
+    expect(withStubs).toContain(hex('Sample Fund'));               // the campaign is only on the stubs
+    expect(withStubs.split(hex('Check 1001')).length - 1).toBe(2);  // one heading per stub
+    expect(await pageText(undefined)).toContain(hex('Sample Fund'));
+    const alone = await pageText(false);
+    expect(alone).not.toContain(hex('Sample Fund'));
+    expect(alone).not.toContain(hex('Check 1001'));
+    expect(alone).toContain(hex('Acme Roofing'));                   // the check itself is still there
   });
 });
