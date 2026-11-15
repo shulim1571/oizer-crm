@@ -226,3 +226,43 @@ describe('dashboard numbers', () => {
 });
 
 type Row = Record<string, any>;
+
+// Moshe Henig, 2026-11-15: searching a last name showed only some of the matches, with no way to see the rest.
+describe('donor search shows every match', () => {
+  let db: PGlite;
+  beforeEach(async () => { db = await seededDb(); });
+
+  it('pages through every match of the organization lookup, with the total, and every word must match', async () => {
+    const ids: string[] = [];
+    for (let i = 0; i < 45; i++) ids.push(await donor(db, i % 2 ? 'Moshe' : 'Yosef', 'Horowitz'));
+    await donor(db, 'Moshe', 'Klein');
+    const page = (offset: number) => rows<Record<string, any>>(db, MANAGER_1, `select * from public.lookup_donors($1, 20, $2)`, ['horowitz', offset]);
+    const [a, b, c] = [await page(0), await page(20), await page(40)];
+    expect([a.length, b.length, c.length]).toEqual([20, 20, 5]);
+    expect(Number(a[0].total_count)).toBe(45);
+    expect(new Set([...a, ...b, ...c].map(r => r.id))).toEqual(new Set(ids));      // all 45, none twice
+    const both = await rows<Record<string, any>>(db, MANAGER_1, `select * from public.lookup_donors('Horowitz Moshe', 200)`);
+    expect(both.length).toBe(22);                                                    // the Moshes among them, either order
+    expect((await rows<Record<string, any>>(db, MANAGER_1, `select * from public.lookup_donors('moshe horowitz', 200)`)).length).toBe(22);
+  });
+
+  it("can leave out donors already on the fundraiser's list (they are in the Donors list itself)", async () => {
+    const mine = await donor(db, 'Chaim', 'Rubin');
+    const other = await donor(db, 'Dovid', 'Rubin');
+    await give(db, '1001', mine);   // a gift on MANAGER_1's campaign puts the donor on their list
+    const all = await rows<Record<string, any>>(db, MANAGER_1, `select id, on_my_list from public.lookup_donors('rubin')`);
+    expect(all.find(r => r.id === mine)?.on_my_list).toBe(true);
+    const notMine = await rows<Record<string, any>>(db, MANAGER_1, `select id, total_count from public.lookup_donors('rubin', 20, 0, true)`);
+    expect(notMine.map(r => r.id)).toEqual([other]);
+    expect(Number(notMine[0].total_count)).toBe(1);
+  });
+
+  it('finds donors by phone digits in any formatting, only among the donors the person may see', async () => {
+    const id = await donor(db, 'Shmuel', 'Weiss', '(718) 555-0100');
+    expect(await rows(db, ADMIN, `select * from public.donor_ids_by_phone('7185550100') x`)).toEqual([{ x: id }]);
+    expect(await rows(db, ADMIN, `select * from public.donor_ids_by_phone('555 0100') x`)).toEqual([{ x: id }]);
+    expect(await rows(db, ADMIN, `select * from public.donor_ids_by_phone('718') x`)).toEqual([]);   // too few digits
+    expect(await rows(db, MANAGER_2, `select * from public.donor_ids_by_phone('7185550100') x`)).toEqual([]);   // not on their list
+    await expect(rows(db, 'anon', `select * from public.donor_ids_by_phone('7185550100')`)).rejects.toThrow();
+  });
+});

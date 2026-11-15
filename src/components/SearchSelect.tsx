@@ -60,11 +60,21 @@ export default function SearchSelect({ value, options: given, onChange, placehol
 
   // In dropdown mode, a click on the box shows every option (not just the ones matching what's shown in it).
   const [showAll, setShowAll] = useState(false);
-  const matches = useMemo(() => {
-    const t = text.toLowerCase();
-    const list = showAll || !t || t === selected?.label.toLowerCase() ? options : options.filter(o => o.label.toLowerCase().includes(t));
-    return list.slice(0, dropdown ? 500 : 100);
-  }, [text, options, selected?.label, showAll, dropdown]);
+  // Every word typed must appear (so "Horowitz Moshe" finds "Moshe Horowitz"), or 4+ digits match the digits in the
+  // label (a phone, however it's written). Long lists show the first matches and say how many more there are, rather
+  // than leaving the rest out without a word (Moshe Henig, 2026-11-15).
+  const cap = dropdown ? 500 : 100;
+  const { matches, more } = useMemo(() => {
+    const t = text.toLowerCase().trim();
+    const words = t.split(/\s+/).filter(Boolean);
+    const digits = t.replace(/\D/g, '');
+    const hit = (label: string) => {
+      const l = label.toLowerCase();
+      return words.every(w => l.includes(w)) || (digits.length >= 4 && l.replace(/\D/g, '').includes(digits));
+    };
+    const list = showAll || !t || t === selected?.label.toLowerCase() ? options : options.filter(o => hit(o.label));
+    return { matches: list.slice(0, cap), more: Math.max(0, list.length - cap) };
+  }, [text, options, selected?.label, showAll, cap]);
   const openList = () => { setShowAll(true); setOpen(true); };
 
   const list = open && (
@@ -81,6 +91,7 @@ export default function SearchSelect({ value, options: given, onChange, placehol
         </li>
       ))}
       {matches.length === 0 && <li className="muted">No matches</li>}
+      {more > 0 && <li className="muted ss-more">{more.toLocaleString()} more match. Keep typing to narrow the list.</li>}
     </ul>
   );
   return (

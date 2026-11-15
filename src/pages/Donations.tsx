@@ -140,7 +140,7 @@ export function AllDonations() {
 }
 
 /** Applies the column filters typed into the table to a query on transaction_list. */
-function applyColumnFilters<Q extends { ilike: Function; gte: Function; gt: Function; lte: Function; lt: Function; eq: Function; or: Function }>(
+export function applyColumnFilters<Q extends { ilike: Function; gte: Function; gt: Function; lte: Function; lt: Function; eq: Function; or: Function }>(
   query: Q, columns: Column[], filters: Record<string, string>,
 ): Q {
   let q = query;

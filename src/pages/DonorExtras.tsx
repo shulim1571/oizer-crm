@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import { StatusPill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
@@ -13,57 +12,6 @@ import { PLEDGE_STATUS, PledgeDialog } from './Pledges';
 
 const METHODS = ['Call', 'Email', 'SMS', 'In Person'];
 const OUTCOMES = ['Reached', 'Voicemail', 'No Answer', 'Replied', 'Meeting Scheduled', 'Other'];
-
-/** Live search of the whole organization's donors. Choosing one adds them to a fundraiser's list. */
-export function DonorLookup() {
-  const nav = useNavigate();
-  const [q, setQ] = useState('');
-  const [results, setResults] = useState<Row[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (q.trim().length < 2) return setResults([]);
-    const timer = setTimeout(() => {
-      supabase.rpc('lookup_donors', { p_q: q }).then(({ data, error: e }) => {
-        if (e) return setError(e.message);
-        setError(null);
-        setResults((data ?? []) as Row[]);
-      });
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [q]);
-
-  async function open(d: Row) {
-    if (!d.on_my_list) {
-      const { error: e } = await supabase.rpc('link_donor', { p_donor: d.id });
-      if (e) return setError(e.message);
-    }
-    nav(`/donors/${encodeURIComponent(d.id)}`);
-  }
-
-  return (
-    <div className="lookup">
-      <label className="lookup-box">
-        <Search size={18} />
-        <input aria-label="Look up a donor" value={q} placeholder="Look up a donor by name, phone or ID…" onChange={e => setQ(e.target.value)} />
-      </label>
-      {error && <div className="error">{error}</div>}
-      {q.trim().length >= 2 && (
-        <div className="lookup-results">
-          {results.map(d => (
-            <button type="button" key={d.id} onClick={() => open(d)}>
-              <b>{d.display_name}</b>
-              {d.yiddish_name && d.yiddish_name !== d.display_name && <span className="hebrew"> {d.yiddish_name}</span>}
-              <span className="muted small"> {[d.phone, d.email].filter(Boolean).join(' · ') || `#${d.id}`}</span>
-              {!d.on_my_list && <span className="muted small"> · add to my list</span>}
-            </button>
-          ))}
-          {results.length === 0 && <p className="muted small">No donor found. Add them as new below if they aren't here.</p>}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function ContactLog({ donorId }: { donorId: string }) {
   const [version, setVersion] = useState(0);
