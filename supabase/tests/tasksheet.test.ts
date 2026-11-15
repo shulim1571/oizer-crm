@@ -63,6 +63,21 @@ describe('campaign requests', () => {
       .toEqual({ parent_campaign_id: '1001', balance_mode: 'independent', manager_id: 'm1' });
   });
 
+  // Moshe Henig, 2026-11-15: fundraisers request sub-campaigns and teams like campaigns; admins approve.
+  it('can ask for a team or a sub-campaign, shown on the Task Sheet as such, and approved as asked', async () => {
+    const team = (await one<{ id: string }>(db, `select public.submit_campaign_request('Sample Team', null, 500, null, '1001', 'shared') as id`, [], MANAGER_1)).id;
+    expect(await req(db, team)).toMatchObject({ status: 'pending', requested_mode: 'shared', parent_campaign_id: '1001' });
+    const sub = (await one<{ id: string }>(db, `select public.submit_campaign_request('Sample Sub', null, null, null, '1001', 'independent') as id`, [], MANAGER_1)).id;
+    const tasks = await sheet(db, 'campaign_request');
+    expect(tasks.map((t: { summary: string }) => t.summary).sort()).toEqual(['Sample Sub (sub-campaign of 1001)', 'Sample Team (team of 1001)']);
+    const [{ c }] = await rows<{ c: string }>(db, ADMIN, `select public.approve_campaign_request($1, null, null, null, '{}', null, 'shared') as c`, [team]);
+    expect(await one(db, `select parent_campaign_id, balance_mode from public.campaigns where id = $1`, [c])).toEqual({ parent_campaign_id: '1001', balance_mode: 'shared' });
+    expect((await req(db, sub)).status).toBe('pending');
+    await expect(one(db, `select public.submit_campaign_request('X', null, null, null, '1002', 'shared')`, [], MANAGER_1)).rejects.toThrow(/your own campaigns/);
+    await expect(one(db, `select public.submit_campaign_request('X', null, null, null, '1001', 'branch')`, [], MANAGER_1)).rejects.toThrow(/team or a sub-campaign/);
+    await expect(one(db, `select public.submit_campaign_request('X', null, null, null, null, 'shared')`, [], MANAGER_1)).rejects.toThrow(/campaign it goes under/);
+  });
+
   it('are handled once: the second admin to act is told', async () => {
     const id = await request(db);
     await sql(db, `select public.approve_campaign_request($1)`, [id]);

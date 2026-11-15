@@ -23,7 +23,7 @@ import { NewPledgeButtons, PledgeDialog, pledgeColumns } from './Pledges';
 import { NewVoucherButton, VoucherDialog, voucherColumns } from './Vouchers';
 import { ChangeModeDialog, SubCampaignsTab, modeLabel } from './SubCampaigns';
 import { TRANSFER_SELECT, TransferDialog, transferColumns } from './Transfers';
-import { RequestTeamDialog } from './Requests';
+import { RequestForm, RequestTeamDialog } from './Requests';
 import { CampaignSettingsTab, SwitchTemplateDialog } from './Templates';
 import { PayoutStatusPill, RequestPayoutDialog, payoutStatus } from './Payouts';
 import { CampaignReportDialog, DonorListDialog } from './Reports';
@@ -46,6 +46,7 @@ export default function CampaignDetail() {
   const [transferStart, setTransferStart] = useState<Row | null>(null);
   const [changingMode, setChangingMode] = useState(false);
   const [requestingTeam, setRequestingTeam] = useState(false);
+  const [requestingSub, setRequestingSub] = useState<'independent' | 'shared' | null>(null);
   const [sharing, setSharing] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [reporting, setReporting] = useState<'report' | 'donors' | 'contacts' | null>(null);
@@ -238,6 +239,9 @@ export default function CampaignDetail() {
           { label: 'Donor list', onClick: () => setReporting('donors'), hidden: !canWork },
           { label: 'Import contacts', onClick: () => setReporting('contacts'), hidden: !(canWork && c.status !== 'closed') },
           { label: 'Request a team member', onClick: () => setRequestingTeam(true), hidden: !(!isAdmin && isPrimary) },
+          // Fundraisers ask for a sub-campaign or team under this campaign; admins approve (Moshe Henig, 2026-11-15).
+          { label: 'Request a sub-campaign', onClick: () => setRequestingSub('independent'), hidden: !(!isAdmin && isPrimary && c.status === 'active') },
+          { label: 'Request a team', onClick: () => setRequestingSub('shared'), hidden: !(!isAdmin && isPrimary && c.status === 'active') },
           { label: c.balance_mode === 'shared' ? 'Change to a sub-campaign' : 'Change to a team', onClick: () => setChangingMode(true), hidden: !(isAdmin && c.parent_campaign_id) },
           { label: 'Publish', onClick: () => setStatus('active', 'Publish this campaign?'), hidden: !(isAdmin && c.status === 'draft') },
           { label: 'Archive', onClick: () => setStatus('archived', 'Archive this campaign? It leaves the active list, but a new donation brings it back.'), hidden: !(isAdmin && c.status === 'active') },
@@ -334,6 +338,8 @@ export default function CampaignDetail() {
       {reporting === 'donors' && <DonorListDialog campaign={c} onClose={() => setReporting(null)} />}
       {reporting === 'contacts' && <ContactImportDialog campaignId={id} onClose={() => setReporting(null)} />}
       {requestingTeam && <RequestTeamDialog campaignId={id} onClose={() => setRequestingTeam(false)} />}
+      {requestingSub && <RequestForm under={id} kind={requestingSub} onClose={() => setRequestingSub(null)}
+        onDone={() => { setRequestingSub(null); alert(`Your ${requestingSub === 'shared' ? 'team' : 'sub-campaign'} request was sent to the office. You can follow it under Campaigns → Requests.`); }} />}
       {sharing && <ShareDialog campaign={c} onClose={() => setSharing(false)} />}
       {changingMode && <ChangeModeDialog campaign={c} onClose={() => setChangingMode(false)} onDone={() => { setChangingMode(false); setVersion(v => v + 1); }} />}
       {openPledge && <PledgeDialog id={openPledge} onClose={() => setOpenPledge(null)} onChanged={() => setVersion(v => v + 1)} />}

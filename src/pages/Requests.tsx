@@ -54,12 +54,20 @@ export default function RequestsPage() {
 }
 
 /** New, or a resubmission when one comes back for changes. */
-function RequestForm({ record, onClose, onDone }: { record?: Row; onClose: () => void; onDone: () => void }) {
+/**
+ * `under` and `kind` start a sub-campaign or team request from a campaign's page (Moshe Henig, 2026-11-15): same
+ * request and approval as a new campaign, under that campaign.
+ */
+export function RequestForm({ record, onClose, onDone, under, kind }: {
+  record?: Row; onClose: () => void; onDone: () => void; under?: string; kind?: 'independent' | 'shared';
+}) {
   const [name, setName] = useState<string>(record?.name ?? '');
   const [description, setDescription] = useState<string>(record?.description ?? '');
   const [goal, setGoal] = useState(record?.goal != null ? String(record.goal) : '');
   const [notes, setNotes] = useState<string>(record?.notes ?? '');
-  const [parent, setParent] = useState<string | null>(record?.parent_campaign_id ?? null);
+  const [parent, setParent] = useState<string | null>(record?.parent_campaign_id ?? under ?? null);
+  // Under a campaign: its own balance (sub-campaign) or raising into the parent's (team).
+  const [mode, setMode] = useState<'independent' | 'shared'>(record?.requested_mode ?? kind ?? 'independent');
   const [options, setOptions] = useState<Option[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,7 +79,7 @@ function RequestForm({ record, onClose, onDone }: { record?: Row; onClose: () =>
     const goalValue = goal ? Number(goal) : null;
     const { error: e } = record
       ? await supabase.rpc('resubmit_campaign_request', { p_id: record.id, p_name: name, p_description: description, p_goal: goalValue, p_notes: notes })
-      : await supabase.rpc('submit_campaign_request', { p_name: name, p_description: description, p_goal: goalValue, p_notes: notes, p_parent: parent });
+      : await supabase.rpc('submit_campaign_request', { p_name: name, p_description: description, p_goal: goalValue, p_notes: notes, p_parent: parent, p_mode: parent ? mode : null });
     setBusy(false);
     if (e) return setError(e.message);
     onDone();
@@ -80,14 +88,22 @@ function RequestForm({ record, onClose, onDone }: { record?: Row; onClose: () =>
   return createPortal(
     <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="modal"><div className="record-form">
-        <div className="form-head"><h2>{record ? 'Change and resubmit' : 'Request a new campaign'}</h2></div>
+        <div className="form-head"><h2>{record ? 'Change and resubmit' : !parent ? 'Request a new campaign' : mode === 'shared' ? 'Request a team' : 'Request a sub-campaign'}</h2></div>
         {record?.admin_note && <div className="notice">Admin's note: {record.admin_note}</div>}
-        <label className="field"><span>Campaign name *</span><input value={name} onChange={e => setName(e.target.value)} /></label>
+        <label className="field"><span>{parent ? (mode === 'shared' ? 'Team name *' : 'Sub-campaign name *') : 'Campaign name *'}</span><input value={name} onChange={e => setName(e.target.value)} /></label>
         <label className="field"><span>Description</span><textarea rows={3} value={description} onChange={e => setDescription(e.target.value)} /></label>
         <label className="field"><span>Fundraising goal</span><input type="number" step="0.01" min="0" value={goal} onChange={e => setGoal(e.target.value)} /></label>
         {!record && (
-          <label className="field"><span>As a sub-campaign of</span>
+          <label className="field"><span>Under</span>
             <SearchSelect value={parent} options={options} onChange={setParent} placeholder="Optional, one of your campaigns…" />
+          </label>
+        )}
+        {!record && parent && (
+          <label className="field"><span>As</span>
+            <select value={mode} onChange={e => setMode(e.target.value as 'independent' | 'shared')}>
+              <option value="independent">Sub-campaign (its own balance)</option>
+              <option value="shared">Team (raises into the parent's balance)</option>
+            </select>
           </label>
         )}
         <label className="field"><span>Notes for the admin</span><textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} /></label>
@@ -148,7 +164,7 @@ function RequestFacts({ r }: { r: Row }) {
   return (
     <dl className="record-facts">
       <dt>Fundraiser</dt><dd>{r.managers?.full_name ?? r.requested_by_email}</dd>
-      {r.parent_campaign_id && <><dt>Sub-campaign of</dt><dd>#{r.parent_campaign_id}</dd></>}
+      {r.parent_campaign_id && <><dt>{r.requested_mode === 'shared' ? 'Team of' : 'Sub-campaign of'}</dt><dd>#{r.parent_campaign_id}</dd></>}
       {r.goal != null && <><dt>Goal</dt><dd>{money(r.goal)}</dd></>}
       {r.description && <><dt>Description</dt><dd className="pre-line">{r.description}</dd></>}
       {r.notes && <><dt>Notes</dt><dd className="pre-line">{r.notes}</dd></>}
@@ -178,6 +194,7 @@ export function RequestDecision({ id, onDone }: { id: string; onDone: (action: s
     if (!r) return;
     setName(r.name);
     setGoal(r.goal != null ? String(r.goal) : '');
+    if (r.requested_mode) setMode(r.requested_mode);   // what the fundraiser asked for; the admin can change it
     setPrimary(r.manager_id);
   }, [r]);
 
