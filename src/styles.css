@@ -1143,3 +1143,7 @@ code.break { word-break: break-all; }
 /* Plaid panel: how much history a new link asks for (Shulim, 2026-11-13). */
 .plaid-days { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 8px 0; font-size: 13px; }
 .plaid-days input { width: 90px; }
+
+/* Donary machines list: the campaign picker in each row (Moshe Henig, 2026-11-15). */
+.machine-assign { display: flex; align-items: center; gap: 10px; min-width: 300px; }
+.machine-assign-pick { flex: 1; min-width: 240px; }

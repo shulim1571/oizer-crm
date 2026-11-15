@@ -45,7 +45,7 @@ import { RecurringPage } from './pages/Recurring';
 import { OutreachHistoryPage, OutreachPage, OutreachTemplatesPage, UnsubscribePage } from './pages/Outreach';
 import { FundraiserDirectoryPage, SourceReportPage } from './pages/Reports';
 import { DataImportPage } from './pages/Imports';
-import { MachineReportPage, MachinesPage } from './pages/Machines';
+import { DonaryMachinesPage, MachineReportPage, MachinesPage } from './pages/Machines';
 import { AccountDetail, ManagerDetail, SourceDetail } from './pages/Related';
 import {
   AccountsPage, ExpensesPage, ManagersPage, SourcesPage,
@@ -201,9 +201,11 @@ export default function App() {
         {/* Fundraisers have the calendar too, with only their own bookings (Moshe Henig, 2026-11-11). */}
         <Route path="calendar" element={<Suspense fallback={null}><CalendarPage /></Suspense>} />
         <Route path="machines" element={<MachinesPage />} />
+        {/* Donary machines with their campaigns, admins (Moshe Henig, 2026-11-15). */}
+        <Route path="machines/donary" element={<AdminOnly><DonaryMachinesPage /></AdminOnly>} />
         <Route path="machine-report" element={<AdminOnly><MachineReportPage /></AdminOnly>} />
         {/* The machine list joined Sources (Shulim, 2026-11-13). */}
-        <Route path="machine-registry" element={<Navigate to="/sources" replace />} />
+        <Route path="machine-registry" element={<Navigate to="/machines/donary" replace />} />
         <Route path="donors/duplicates" element={<AdminOnly><DuplicatesPage /></AdminOnly>} />
         <Route path="campaigns/active" element={<Campaigns mode="active" />} />
         <Route path="campaigns/all" element={<Campaigns mode="all" />} />

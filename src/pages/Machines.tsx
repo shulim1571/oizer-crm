@@ -457,3 +457,70 @@ export function MachineReportPage() {
     </section>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Donary machines, with their campaigns (Moshe Henig, 2026-11-15)
+// ---------------------------------------------------------------------------
+/**
+ * Every Donary machine (a source marked as one): number, source and current campaign, which an admin assigns or
+ * changes right here, the same way as in the machine's own window (assign_machine, with its history). Machine opens
+ * that window for details, history and bookings. Machines are added on Sources & machines (Make Donary machine).
+ */
+export function DonaryMachinesPage() {
+  const [version, setVersion] = useState(0);
+  const [open, setOpen] = useState<string | null>(null);
+  const [options, setOptions] = useState<Option[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  useEffect(() => { campaignOptions().then(all => setOptions(all.filter(o => !/\((archived|draft)\)$/.test(o.label)))); }, [version]);
+  const q = useQuery(async () => {
+    const { data, error: e } = await supabase.from('machines')
+      .select('id, nickname, donary_id, active, campaign_id, source_id, campaigns(internal_name, campaign_name, external_name), sources(name)')
+      .order('active', { ascending: false }).order('nickname');
+    if (e) throw new Error(e.message);
+    return data as Row[];
+  }, [version]);
+  async function assign(m: Row, campaign: string | null) {
+    if (campaign === (m.campaign_id ?? null)) return;
+    const to = campaign ? options.find(o => o.value === campaign)?.label ?? campaign : null;
+    if (!confirm(to ? `Assign machine ${m.nickname} to ${to}? It takes effect right away.` : `Unassign machine ${m.nickname} from its campaign?`)) { setVersion(v => v + 1); return; }
+    setError(null);
+    setBusy(m.id);
+    const { error: e } = await supabase.rpc('assign_machine', { p_machine: m.id, p_campaign: campaign, p_note: null });
+    setBusy(null);
+    if (e) setError(e.message);
+    clearLookups();
+    setVersion(v => v + 1);
+  }
+  // The campaign picker for an active machine; a retired one just shows where it was.
+  const picker = (r: Row) => (r.active
+    ? <span className="machine-assign-pick" onClick={e => e.stopPropagation()}>
+        <SearchSelect key={`${r.id}:${r.campaign_id ?? ''}:${version}`} value={r.campaign_id ?? null} options={options}
+          onChange={v => void assign(r, v)} placeholder={busy === r.id ? 'Saving…' : 'Unassigned'} />
+      </span>
+    : <span className="muted">{campName(r) || '—'}</span>);
+  const campName = (m: Row) => (m.campaign_id ? `${m.campaigns?.internal_name || m.campaigns?.campaign_name || m.campaigns?.external_name || ''} - ${m.campaign_id}` : '');
+  return (
+    <section className="view">
+      {error && <div className="error">{error}</div>}
+      <DataTable
+        title="Donary machines"
+        subtitle="Each machine's campaign: change it here and it takes effect right away. Add machines on Sources & machines."
+        rows={q.data ?? []}
+        loading={q.loading}
+        error={q.error}
+        exportName="donary-machines"
+        columns={[
+          { key: 'nickname', label: 'Machine #', width: 110, value: r => `Machine ${r.nickname}`,
+            render: r => <button type="button" className="link" onClick={e => { e.stopPropagation(); setOpen(r.id); }}>Machine {r.nickname}</button> },
+          { key: 'source', label: 'Source', width: 180, value: r => r.sources?.name ?? r.source_id ?? '' },
+          { key: 'campaign', label: 'Campaign', width: 360, value: r => campName(r) || (r.active ? 'Unassigned' : ''), render: r => <div className="machine-assign">{picker(r)}{r.campaign_id && <Link className="small" to={`/campaigns/${encodeURIComponent(r.campaign_id)}`} onClick={e => e.stopPropagation()}>Open</Link>}</div> },
+          { key: 'active', label: 'Status', value: r => (r.active ? 'Active' : 'Retired'), render: r => <Pill tone={r.active ? 'green' : ''}>{r.active ? 'Active' : 'Retired'}</Pill> },
+          { key: 'donary_id', label: 'Donary ID', optional: true },
+        ]}
+        actions={<Link className="btn" to="/sources">Sources &amp; machines</Link>}
+      />
+      {open && <MachineDialog id={open} onClose={() => setOpen(null)} onChanged={() => { clearLookups(); setVersion(v => v + 1); }} />}
+    </section>
+  );
+}

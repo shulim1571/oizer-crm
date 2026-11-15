@@ -79,7 +79,7 @@ const NAV: NavSection[] = [
       { to: '/payees', label: 'Payees', icon: <BookUser size={I} /> },
       // Everyone opens the calendar, where bookings show on their day; fundraisers see only their own (Moshe Henig, 2026-11-11).
       { to: '/machines', label: 'Machine Bookings', icon: <CalendarDays size={I} />,
-        tabs: [{ to: '/calendar', label: 'Calendar' }, { to: '/machines', label: 'Bookings' }] },
+        tabs: [{ to: '/calendar', label: 'Calendar' }, { to: '/machines', label: 'Bookings' }, { to: '/machines/donary', label: 'Donary Machines', admin: true }] },
     ],
   },
   {
