@@ -5,7 +5,7 @@ import type { Org } from '../lib/org';
 import { useAuth } from '../lib/auth';
 import { useEffect, useState } from 'react';
 import { FooterSettings } from '../components/PoweredBy';
-import { parseStaleDays, STALE_CHECK_DEFAULT } from '../lib/staleCheck';
+import { CAMPAIGN_ID_START_DEFAULT, parseCampaignIdStart, parseStaleDays, STALE_CHECK_DEFAULT } from '../lib/staleCheck';
 import { IDLE_MINUTES_DEFAULT, parseIdleMinutes } from '../lib/idle';
 
 const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Asia/Jerusalem', 'Europe/London']
@@ -73,6 +73,11 @@ export default function OrganizationPage() {
         label="Stale check after (days)" unit="days" defaultValue={STALE_CHECK_DEFAULT} parse={parseStaleDays} saveLabel="Save Task Sheet settings"
         help="A check payout that hasn't cleared shows on the Task Sheet as a Stale Check this many days after it was entered. Voided and lost checks are skipped."
         onSaved={() => { window.dispatchEvent(new Event('task-sheet-changed')); setSaved('Task Sheet'); }} />
+      {/* Campaign numbering (Moshe Henig, 2026-11-15): auto IDs count up from here; IDs typed by hand don't affect it. */}
+      <NumberSetting orgId={String(org.id)} settingKey="campaign_id_start" title="Campaign IDs" intro="Where automatic campaign numbering starts."
+        label="Start numbering at" unit="" defaultValue={CAMPAIGN_ID_START_DEFAULT} parse={parseCampaignIdStart} saveLabel="Save campaign numbering"
+        help="New campaigns get the next number up from here, one at a time (numbers already used are skipped). An ID typed in by hand on the New Campaign form doesn't change the count. Changing this restarts the numbering at the new number."
+        onSaved={() => setSaved('Campaign IDs')} />
       {/* Idle sign-out (Moshe Henig, 2026-11-12): signed out only after this long with no activity. */}
       <NumberSetting orgId={String(org.id)} settingKey="idle_timeout_minutes" title="Security" intro="How long someone can leave Donor Base untouched before being signed out."
         label="Sign out after (minutes idle)" unit="minutes" defaultValue={IDLE_MINUTES_DEFAULT} parse={parseIdleMinutes} saveLabel="Save security settings"
@@ -180,7 +185,7 @@ function NumberSetting({ orgId, settingKey, title, intro, label, unit, help, def
         <div className="fields">
           <label className="field"><span>{label}</span>
             <input type="number" step={1} value={text} onChange={e => setText(e.target.value)} />
-            <small className="muted">{help} {stored == null ? `Not set yet, so the default of ${defaultValue} ${unit} applies.` : `Default ${defaultValue} ${unit}.`}</small>
+            <small className="muted">{help} {stored == null ? `Not set yet, so the default of ${defaultValue}${unit ? ` ${unit}` : ''} applies.` : `Default ${defaultValue}${unit ? ` ${unit}` : ''}.`}</small>
           </label>
         </div>
         {error && <div className="error">{error}</div>}
