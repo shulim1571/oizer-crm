@@ -1,8 +1,9 @@
 name: CI
 
+# Every push to any branch, including the working branch deploys are made from (readiness #7, 2026-11-15), and PRs.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
 
 jobs:
