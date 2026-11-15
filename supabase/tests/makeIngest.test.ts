@@ -65,6 +65,38 @@ describe('make ingest', () => {
     expect(JSON.stringify((await db.query(`select * from public.donations where id like 'MK-%'`)).rows)).not.toMatch(/tok2|key2/);
   });
 
+  // Readiness #4 (2026-11-15): refunds are refunds (fee kept, processor's date), partial refunds leave the rest counted.
+  it('records Sola and Elevon refunds as refunds, full or partial, and still voids a void', async () => {
+    const { db, ingest } = await setup();
+    const sale = (ref: string, amount: string) => ingest('sola', { xCustom02: '1001', xBillFirstName: 'A', xBillLastName: 'B', xAmount: amount, xCommand: 'cc:sale', xResponseResult: 'Approved', xRefNum: ref });
+    const row = async (id: string) => (await db.query<any>(`select status, amount::text, fee::text, reversal_date::text from public.donations where id = $1`, [id])).rows[0];
+    const raised = async (ids: string[]) => Number((await db.query<any>(`select coalesce(sum(amount), 0) s from public.donations where status = 'completed' and deleted_at is null and (id = any($1) or refund_of = any($1))`, [ids])).rows[0].s);
+
+    const full = await sale('R-F', '100');
+    const feeBefore = (await row(full.record_id)).fee;
+    expect(await ingest('sola', { xCommand: 'cc:refund', xRefNum: 'R-F', xAmount: '100', xEnteredDate: '2026-11-12 22:30:00' })).toMatchObject({ outcome: 'refunded', record_id: full.record_id });
+    const f = await row(full.record_id);
+    expect(f.status).toBe('refunded');
+    expect(f.reversal_date).toBe('2026-11-12');            // the processor's date, in New York time (not UTC's Nov 13)
+    expect(f.fee).toBe(feeBefore);                           // the fee stays (a void would drop it)
+
+    const part = await sale('R-P', '100');
+    expect(await ingest('sola', { xCommand: 'cc:refund', xRefNum: 'R-P', xAmount: '30' })).toMatchObject({ outcome: 'refunded' });
+    expect((await row(part.record_id)).status).toBe('completed');
+    expect(await raised([part.record_id])).toBe(70);       // $70 still counted
+    expect(await ingest('sola', { xCommand: 'cc:refund', xRefNum: 'R-P', xAmount: '70' })).toMatchObject({ outcome: 'refunded' });
+    expect((await row(part.record_id)).status).toBe('refunded');
+    expect(await raised([part.record_id])).toBe(0);
+
+    const v = await sale('R-V', '20');
+    expect(await ingest('sola', { xCommand: 'cc:void', xRefNum: 'R-V' })).toMatchObject({ outcome: 'voided' });
+    expect((await row(v.record_id)).status).toBe('voided');
+
+    const e = await ingest('elevon', { external_campaign_id: '1003', name: 'E', amount: 50, payment_method: 'Credit Card', payment_status: 'succeeded', payment_info: { referenceId: 'E-R' } });
+    expect(await ingest('elevon', { payment_status: 'refunded', refund_amount: 20, payment_info: { referenceId: 'E-R' } })).toMatchObject({ outcome: 'refunded' });
+    expect(await raised([e.record_id])).toBe(30);
+  });
+
   it('refuses a wrong key, a switched-off organization and an unknown source; a bad body is logged without its contents', async () => {
     const { db, ingest } = await setup();
     expect(await ingest('sola', { xAmount: 1 }, 'dbk_wrong')).toMatchObject({ ok: false, status: 401 });
