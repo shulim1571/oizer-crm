@@ -91,13 +91,14 @@ describe('campaign IDs and statuses', () => {
     `select status, archived_at, closed_at from public.campaigns where id = $1`, [id])).rows[0];
   const setStatus = (id: string, s: string, user = ADMIN) => as(db, user, tx => tx.query(`update public.campaigns set status = '${s}' where id = '${id}'`));
 
-  it('numbers new campaigns after the highest, and never reuses a number', async () => {
+  // Auto IDs come from the counter; IDs typed by hand (ABC, 20000) don't move it (Moshe Henig, 2026-11-15).
+  it('numbers new campaigns from the counter, and never reuses a number', async () => {
     const create = async () => (await rows<{ id: string }>(db, ADMIN, `insert into public.campaigns (internal_name) values ('New') returning id`))[0].id;
     expect(await create()).toBe('1004');
     await as(db, ADMIN, tx => tx.query(`delete from public.campaigns where id = '1004'`));
     expect(await create()).toBe('1005');
     await as(db, ADMIN, tx => tx.query(`insert into public.campaigns (id, internal_name) values ('ABC', 'Text id'), ('20000', 'Imported')`));
-    expect(await create()).toBe('20001');
+    expect(await create()).toBe('1006');
   });
 
   it('starts a new organization at 1000', async () => {

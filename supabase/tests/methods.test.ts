@@ -72,7 +72,7 @@ describe('bank accounts and DAF cards through Sola', () => {
   it('take DAF grants under their own method, void them, and never refund them', async () => {
     await sql(db, `select public.save_payment_options(false, '{OJC}', null)`);
     const v = await pay(db, 'daf', { program: 'OJC', ach: null, cover: true });
-    expect(Number(v.total)).toBe(105.26);
+    expect(Number(v.total)).toBe(105.27);   // fees round up to the cent (2026-11-15)
     const { claim, r } = await answer(db, v.id, { xResult: 'A', xRefNum: '4000001', xMaskedCardNumber: '6900xxxxxxxx2419', xCardType: 'OJC' });
     expect(claim).toMatchObject({ method: 'daf', daf_program: 'OJC' });
     const d = await one(db, `select payment_method, notes from public.donations where id = $1`, [r.donation_id]);
