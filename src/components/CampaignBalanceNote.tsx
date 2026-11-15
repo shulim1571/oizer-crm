@@ -8,7 +8,7 @@ export default function CampaignBalanceNote({ campaignId, amount }: { campaignId
     if (!campaignId) return null;
     const { data } = await supabase.from('campaign_summary').select('id, internal_name, balance, balance_mode, pending_balance').eq('id', campaignId).maybeSingle();
     return data as Row | null;
-  }, [campaignId]);
+  }, [campaignId], { live: ['gifts', 'payouts', 'transfers', 'campaigns'] });
   const c = q.data as Row | null | undefined;
   if (!campaignId || !c) return null;
   const balance = Number(c.balance ?? 0);

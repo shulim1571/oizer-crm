@@ -118,7 +118,7 @@ export function VouchersPage({ startNew = false }: { startNew?: boolean }) {
   const [version, setVersion] = useState(0);
   const q = useQuery(
     () => fetchAll((a, b) => supabase.from('voucher_list').select('*').order('created_at', { ascending: false }).range(a, b) as never),
-    [version],
+    [version], { live: ['gifts'] },
   );
   const rows = ((q.data as Row[]) ?? []).filter(r => (!status || r.status === status) && (!overdue || r.overdue));
   return (

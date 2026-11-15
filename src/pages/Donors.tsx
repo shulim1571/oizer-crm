@@ -26,7 +26,7 @@ export function DonorsPage() {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const { data, error, loading } = useQuery(() =>
-    fetchAll((a, b) => supabase.from('donor_summary').select('*').order('total_given', { ascending: false }).range(a, b)),
+    fetchAll((a, b) => supabase.from('donor_summary').select('*').order('total_given', { ascending: false }).range(a, b)), [], { live: ['gifts'] },
   );
 
   return (
@@ -145,11 +145,11 @@ export function DonorDetail() {
     const { data, error } = await supabase.from('donor_summary').select('*').eq('id', id).maybeSingle();
     if (error) throw new Error(error.message);
     return data;
-  }, [id, version]);
+  }, [id, version], { live: ['gifts', 'pledges'] });
 
   const gifts = useQuery(() =>
     fetchAll((a, b) => supabase.from('donations').select(DONATION_SELECT).eq('donor_id', id).order('created_at', { ascending: false }).range(a, b)),
-  [id, version]);
+  [id, version], { live: ['gifts'] });
 
   // Edit a donation straight from the giving history (Moshe Henig, 2026-11-12): the same editor and rules as the
   // Transactions list, so only those who can edit donations can, and the change log is the same.

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useLiveRefresh, type LiveTopic } from './live';
 
-/** Tiny async loader: returns data, error, loading and a reload function. */
-export function useQuery<T>(fn: () => Promise<T>, deps: unknown[] = []) {
+/**
+ * Tiny async loader: returns data, error, loading and a reload function.
+ * `live`: topics that make it reload quietly by itself when they change in the database (live refresh, see lib/live).
+ */
+export function useQuery<T>(fn: () => Promise<T>, deps: unknown[] = [], opts?: { live?: LiveTopic[] }) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,6 +32,8 @@ export function useQuery<T>(fn: () => Promise<T>, deps: unknown[] = []) {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useLiveRefresh(opts?.live ?? [], () => void reload({ quiet: true }), !!opts?.live?.length);
 
   return { data, error, loading, reload, setData };
 }

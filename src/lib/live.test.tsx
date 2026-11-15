@@ -27,6 +27,7 @@ vi.mock('./supabase', () => ({
   },
 }));
 import { ALL_TOPICS, LIVE_TIMING, useLiveRefresh, type LiveTopic } from './live';
+import { useQuery } from './useQuery';
 
 function Screen({ topics, refresh }: { topics: LiveTopic[]; refresh: () => void }) { useLiveRefresh(topics, refresh); return null; }
 const roots: { unmount(): void }[] = [];
@@ -114,5 +115,47 @@ describe('screens that update on their own', () => {
     expect(src('pages/Transfers.tsx')).toContain("useLiveRefresh(['transfers'], () => void q.reload({ quiet: true }));");
     expect(src('pages/SimplePages.tsx')).toMatch(/table="expenses"\n\s*live=\{\['payouts'\]\}/);
     expect(src('pages/Donations.tsx')).toContain("useLiveRefresh(['gifts'], () => { void reload({ quiet: true }); void totals.reload({ quiet: true }); });");
+  });
+});
+
+// Moshe Henig, 2026-11-15 (follow-up): "transactions and all where they're seen, like under campaigns".
+describe('lists and totals that opt in through useQuery', () => {
+  beforeEach(() => { vi.useFakeTimers(); Object.assign(fake, { handler: null, status: null, channels: 0, removed: 0 }); });
+  afterEach(() => { act(() => { while (roots.length) roots.pop()!.unmount(); }); vi.useRealTimers(); });
+
+  it('reloads quietly (no loading flash) when its topic changes', async () => {
+    const fn = vi.fn(async () => 'rows');
+    const loadingSeen: boolean[] = [];
+    function List() { const q = useQuery(fn, [], { live: ['gifts'] }); loadingSeen.push(q.loading); return null; }
+    const root = createRoot(document.createElement('div'));
+    await act(async () => root.render(<List />));
+    roots.push(root);
+    act(() => fake.status?.('SUBSCRIBED'));
+    expect(fn).toHaveBeenCalledTimes(1);
+    const before = loadingSeen.length;
+    ping('payouts');
+    await act(async () => { vi.advanceTimersByTime(LIVE_TIMING.gatherMs); });
+    expect(fn).toHaveBeenCalledTimes(1);
+    ping('gifts');
+    await act(async () => { vi.advanceTimersByTime(LIVE_TIMING.gatherMs); });
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(loadingSeen.slice(before)).not.toContain(true);
+  });
+
+  it('covers transactions and totals everywhere they show, campaign pages included', () => {
+    const src = (f: string) => readFileSync(`src/${f}`, 'utf8');
+    const has = (f: string, live: string) => expect(src(f), f).toContain(`{ live: ${live} }`);
+    has('pages/CampaignDetail.tsx', "['gifts']");                                              // undelivered checks on a campaign
+    has('pages/SubCampaigns.tsx', "['gifts', 'payouts', 'transfers', 'pledges', 'campaigns']");  // teams and sub-campaigns with their amounts
+    has('components/CampaignBalanceNote.tsx', "['gifts', 'payouts', 'transfers', 'campaigns']"); // the balance shown in forms
+    has('pages/Related.tsx', 'ALL_TOPICS');                                                     // source, account and fundraiser totals
+    has('pages/Donors.tsx', "['gifts']");                                                       // donors list totals and a donor's gifts
+    has('pages/DonorExtras.tsx', "['pledges', 'gifts']");
+    has('pages/Pledges.tsx', "['pledges', 'gifts']");
+    has('pages/Recurring.tsx', "['gifts']");
+    has('pages/Vouchers.tsx', "['gifts']");
+    has('pages/Reports.tsx', "['gifts', 'payouts', 'transfers', 'pledges']");
+    has('pages/TaskSheet.tsx', 'ALL_TOPICS');
+    has('pages/TransferRequests.tsx', "['transfers']");
   });
 });

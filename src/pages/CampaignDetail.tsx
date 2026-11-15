@@ -388,7 +388,7 @@ function UndeliveredChecks({ campaignId, canMark, onChange }: { campaignId: stri
   const [version, setVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const q = useQuery(async () => (await supabase.from('transaction_list').select('id, amount, check_number, donor_name, name, created_at, payment_method')
-    .eq('campaign_id', campaignId).eq('status', 'completed').eq('delivered', false).ilike('payment_method', '%check%').order('created_at')).data as Row[] ?? [], [campaignId, version]);
+    .eq('campaign_id', campaignId).eq('status', 'completed').eq('delivered', false).ilike('payment_method', '%check%').order('created_at')).data as Row[] ?? [], [campaignId, version], { live: ['gifts'] });
   async function delivered(r: Row) {
     if (!confirm(`Mark the ${money(r.amount)} check${r.check_number ? ` #${r.check_number}` : ''} as delivered? It then counts in the balance.`)) return;
     setError(null);

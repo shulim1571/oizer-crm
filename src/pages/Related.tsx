@@ -11,6 +11,7 @@ import { campLabel } from '../components/CrudPage';
 import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { ALL_TOPICS } from '../lib/live';
 import { CheckSettingsCard } from './Checks';
 import { dateTime, money, yn } from '../lib/format';
 import { accountFields, personFields, sourceFields } from '../lib/schemas';
@@ -24,7 +25,7 @@ function useSummary(view: string, id: string, version: number) {
     const { data, error } = await supabase.from(view).select('*').eq('id', id).maybeSingle();
     if (error) throw new Error(error.message);
     return data;
-  }, [view, id, version]);
+  }, [view, id, version], { live: ALL_TOPICS });
 }
 
 function DetailHead({ title, sub, initial, onEdit }: { title: string; sub?: ReactNode; initial: string; onEdit: () => void }) {
@@ -93,7 +94,7 @@ export function AccountDetail() {
   const expenses = useQuery(
     () => fetchAll((x, y) => supabase.from('expenses').select('*, campaigns(id, internal_name, campaign_name)')
       .eq('account_id', id).order('created_at', { ascending: false }).range(x, y)),
-    [id, version],
+    [id, version], { live: ['payouts'] },
   );
 
   if (a.loading && !a.data) return <Loading />;
@@ -157,7 +158,7 @@ export function ManagerDetail() {
   const campaigns = useQuery(
     () => fetchAll((x, y) => supabase.from('campaign_summary').select('*')
       .or(`manager_id.eq.${id},sub_manager_ids.cs.{${id}}`).order('internal_name').range(x, y)),
-    [id, version],
+    [id, version], { live: ['gifts', 'payouts', 'transfers', 'campaigns'] },
   );
 
   if (m.loading && !m.data) return <Loading />;

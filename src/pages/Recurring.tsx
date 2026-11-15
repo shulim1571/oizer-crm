@@ -247,7 +247,7 @@ export function RecurringPage() {
   const [version, setVersion] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const [show, setShow] = useState<'live' | 'all'>('live');
-  const q = useQuery(() => fetchAll((a, b) => supabase.from('recurring_list').select('*').order('next_charge', { ascending: true, nullsFirst: false }).range(a, b) as never), [version]);
+  const q = useQuery(() => fetchAll((a, b) => supabase.from('recurring_list').select('*').order('next_charge', { ascending: true, nullsFirst: false }).range(a, b) as never), [version], { live: ['gifts'] });
   const all = (q.data as Row[]) ?? [];
   const rows = show === 'live' ? all.filter(r => r.status === 'active' || r.status === 'paused') : all;
   const active = all.filter(r => r.status === 'active');

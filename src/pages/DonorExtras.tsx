@@ -128,7 +128,7 @@ export function DonorPledges({ donorId, onChanged }: { donorId: string; onChange
   const [version, setVersion] = useState(0);
   const q = useQuery(
     async () => (await supabase.from('pledge_list').select('*').eq('donor_id', donorId).order('date_pledged', { ascending: false })).data ?? [],
-    [donorId, version],
+    [donorId, version], { live: ['pledges', 'gifts'] },
   );
   const rows = (q.data as Row[]) ?? [];
   return (

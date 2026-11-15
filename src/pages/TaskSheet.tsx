@@ -10,6 +10,7 @@ import { dateTime, money } from '../lib/format';
 import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { ALL_TOPICS } from '../lib/live';
 import { editDonationFields } from '../lib/schemas';
 import { DONATION_SELECT } from './donationColumns';
 import { SplitDialog } from './DonationActions';
@@ -142,7 +143,7 @@ export default function TaskSheetPage() {
       const tasks = await fetchAll((a, b) => supabase.from('admin_task_sheet').select('*').order('submitted_at').range(a, b) as never);
       return withSources(await withCampaigns(tasks));
     },
-    [version],
+    [version], { live: ALL_TOPICS },
   );
   // New tasks show without a refresh: reload when anything changes tasks (a payout saved, a check voided...) and when
   // you come back to this tab (Moshe Henig, 2026-11-11).

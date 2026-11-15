@@ -66,7 +66,7 @@ const STATUS: Record<string, { label: string; tone: 'amber' | 'green' | 'red' | 
 export function MyTransferRequests({ campaignId, version }: { campaignId: string; version: number }) {
   const [v, setV] = useState(0);
   const q = useQuery(async () => (await supabase.from('transfer_requests').select('*')
-    .or(`from_campaign_id.eq.${campaignId},to_campaign_id.eq.${campaignId}`).order('created_at', { ascending: false }).limit(20)).data as Row[] ?? [], [campaignId, version, v]);
+    .or(`from_campaign_id.eq.${campaignId},to_campaign_id.eq.${campaignId}`).order('created_at', { ascending: false }).limit(20)).data as Row[] ?? [], [campaignId, version, v], { live: ['transfers'] });
   const rows = (q.data as Row[]) ?? [];
   if (!rows.length) return null;
   async function withdraw(r: Row) {

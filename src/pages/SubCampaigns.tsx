@@ -48,7 +48,7 @@ export function SubCampaignsTab({ parent, kind, canAdd, onChanged }: { parent: R
     const { data } = await supabase.from('campaigns').select('id, show_on_parent_page').in('id', list.map(r => r.id));
     const on = new Map(((data ?? []) as Row[]).map(r => [r.id, !!r.show_on_parent_page]));
     return list.map(r => ({ ...r, show_on_parent_page: on.get(r.id) ?? false }));
-  }, [parent.id, kind, version]);
+  }, [parent.id, kind, version], { live: ['gifts', 'payouts', 'transfers', 'pledges', 'campaigns'] });
   const toggle = async (r: Row, on: boolean) => {
     setError(null);
     const { error: e } = await supabase.rpc('set_team_on_parent_page', { p_campaign: r.id, p_on: on });

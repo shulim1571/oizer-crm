@@ -63,7 +63,7 @@ export function SourceReportPage() {
       if (campaign.trim()) s = s.eq('campaign_id', campaign.trim());
       return s.range(x, y) as never;
     }) as Promise<Row[]>;
-  }, [start, end, campaign]);
+  }, [start, end, campaign], { live: ['gifts'] });
   const lines = ((q.data as Row[]) ?? []).filter(l => !category || l.source_category === category);
   const bySource = useMemo(() => {
     const m = new Map<string, Row>();
@@ -179,7 +179,7 @@ export function CampaignReportDialog({ campaign, onClose }: { campaign: Row; onC
       return s as never;
     }) as Row[];
     return rows.map(r => ({ ...r, donor_name: r.donors?.display_name, source_name: r.sources?.name }));
-  }, [campaign.id, subs, all, start, end, status]);
+  }, [campaign.id, subs, all, start, end, status], { live: ['gifts', 'payouts', 'transfers', 'pledges'] });
   const rows = (q.data as Row[]) ?? [];
   const chosen = REPORT_COLUMNS.filter(c => cols.includes(c.key) || (c.key === 'campaign' && subs && cols.includes('campaign')));
   const data = rows.map(r => Object.fromEntries(chosen.map(c => [c.key, c.get(r)])));
@@ -260,7 +260,7 @@ export function DonorListDialog({ campaign, onClose }: { campaign: Row; onClose:
       if (d) d.pledge = d.pledge && d.pledge !== 'open' ? d.pledge : p.status;
     }
     return [...m.values()];
-  }, [campaign.id, subs]);
+  }, [campaign.id, subs], { live: ['gifts', 'pledges'] });
   const rows = ((q.data as Row[]) ?? [])
     .filter(d => !min || d.total >= Number(min))
     .sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : sort === 'last' ? String(b.last).localeCompare(String(a.last)) : b.total - a.total));

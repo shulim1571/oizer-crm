@@ -68,7 +68,7 @@ export function PledgesPage({ startNew = false }: { startNew?: boolean }) {
   const [version, setVersion] = useState(0);
   const q = useQuery(
     () => fetchAll((a, b) => supabase.from('pledge_list').select('*').order('date_pledged', { ascending: false }).range(a, b) as never),
-    [version],
+    [version], { live: ['pledges', 'gifts'] },
   );
   const rows = ((q.data as Row[]) ?? []).filter(r => !status || r.status === status);
   return (
