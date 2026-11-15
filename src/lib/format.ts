@@ -5,6 +5,9 @@ const timeFormat = () => new Intl.DateTimeFormat('en-US', { timeZone, hour: 'num
 let d = dateFormat();
 let t = timeFormat();
 
+/** The organization's time zone (IANA name), for showing clock times. */
+export const orgTimeZone = () => timeZone;
+
 /** Dates display in the organization's time zone. */
 export function setTimezone(zone: string) {
   timeZone = zone;

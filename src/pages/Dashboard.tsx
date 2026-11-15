@@ -5,7 +5,7 @@ import DataTable from '../components/DataTable';
 import Kpi from '../components/Kpi';
 import { Balance, Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { money } from '../lib/format';
+import { money, orgTimeZone } from '../lib/format';
 import MethodPie, { type MethodTotal } from '../components/MethodPie';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -102,6 +102,18 @@ export default function DashboardPage() {
   }, []);
   const myTasks = useQuery(async () => (isAdmin ? [] : (await supabase.from('tasks').select('id, status, due_date').neq('status', 'Done')).data ?? []) as Row[], [isAdmin]);
 
+  // Kept up to date (Moshe Henig, 2026-11-15: a dashboard left open since before new gifts came in looked wrong):
+  // refreshed quietly every 2 minutes and whenever you come back to the tab, with the time it was last updated shown.
+  const [updatedAt, setUpdatedAt] = useState(() => new Date());
+  useEffect(() => { if (q.data) setUpdatedAt(new Date()); }, [q.data]);
+  useEffect(() => {
+    const refresh = () => { void q.reload({ quiet: true }); void recurring.reload({ quiet: true }); if (compare) void prior.reload({ quiet: true }); };
+    const back = () => { if (document.visibilityState === 'visible') refresh(); };
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 120_000);
+    document.addEventListener('visibilitychange', back);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', back); };
+  }, [q.reload, recurring.reload, prior.reload, compare]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   // Any part missing reads as zero rather than breaking the page.
   const s = q.data as Row | undefined;
   const per = (k: string) => (s?.periods as Row | undefined)?.[k] as Row | undefined;
@@ -111,7 +123,8 @@ export default function DashboardPage() {
 
   return (
     <section className="view">
-      <div className="view-head"><div className="view-title"><h1>Dashboard</h1></div></div>
+      <div className="view-head"><div className="view-title"><h1>Dashboard</h1>
+        <span className="count">Updated {updatedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: orgTimeZone() })} · refreshes on its own</span></div></div>
       {q.error && <div className="error">{q.error}</div>}
 
       <div className="kpis">
