@@ -489,8 +489,14 @@ table.grid { border-collapse: separate; border-spacing: 0; width: 100%; }
 .kpi-icon.amber  { background: var(--warn-soft);  color: var(--warn); }
 .kpi-icon.blue   { background: var(--info-soft);  color: var(--info); }
 .kpi-label { font-size: 12.5px; color: var(--muted); font-weight: 500; }
-.kpi-value { font-size: 21px; font-weight: 650; letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
-.kpi-value.small { font-size: 15px; }
+/* Big amounts stay inside their box at every width (Moshe Henig, 2026-11-15: $4,549,228.19 ran out of the card).
+   The value scales with the card's own width (container units: about 8 characters of a 13-character amount fit),
+   from 21px down to 13px; if it still can't fit, it wraps instead of spilling out. */
+/* When there's less than 120px beside the icon, the text drops under it and gets the card's full width. */
+.kpi { min-width: 0; flex-wrap: wrap; align-content: flex-start; }
+.kpi-body { flex: 1 1 120px; align-self: stretch; min-width: 0; container-type: inline-size; overflow-wrap: anywhere; }
+.kpi-value { font-size: 21px; font-size: clamp(13px, 11.5cqi, 21px); font-weight: 650; letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.kpi-value.small { font-size: 15px; font-size: clamp(12px, 9cqi, 15px); }
 .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .info { display: flex; gap: 8px; flex-wrap: wrap; }
 .info > * {
@@ -620,9 +626,9 @@ ul.plain li { padding: 6px 0; }
   .content > .view { height: auto; }
   .table-wrap { max-height: 70vh; }
   .kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .kpi { padding: 12px; flex-direction: column; gap: 8px; }
+  .kpi { padding: 12px; gap: 8px; }
   .kpi-icon { width: 28px; height: 28px; }
-  .kpi-value { font-size: 17px; }
+  .kpi-value { font-size: 17px; font-size: clamp(13px, 11.5cqi, 17px); }
   .auth { grid-template-columns: 1fr; }
   .auth-art { padding: 28px 24px; min-height: 220px; }
   .auth-art h2 { font-size: 24px; }

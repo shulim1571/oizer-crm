@@ -19,6 +19,9 @@ export function pieSlices(rows: MethodTotal[]) {
 }
 
 const R = 80, INNER = 50, C = 100;
+/** Font size that keeps the centre text inside the hole of the ring (about 0.6 of the size per character, with a
+ *  little room to spare): $219,387.61 ran over the ring (Moshe Henig, 2026-11-15). */
+export const fitCenter = (text: string, max: number) => Math.min(max, Math.floor((INNER * 2 - 14) / (Math.max(text.length, 1) * 0.6) * 10) / 10);
 function arc(start: number, end: number) {
   const p = (a: number, r: number) => [C + r * Math.sin(a), C - r * Math.cos(a)];
   if (end - start >= Math.PI * 2 - 1e-6) end = start + Math.PI * 2 - 1e-4;   // a single method: a full ring
@@ -46,8 +49,8 @@ export default function MethodPie({ methods }: { methods: MethodTotal[] }) {
                 <title>{`${s.name}: ${money(s.total)} (${pct(s.share)})`}</title>
               </path>
             ))}
-            <text x={C} y={C - 4} textAnchor="middle" className="pie-center-value">{h ? pct(h.share) : money(sum)}</text>
-            <text x={C} y={C + 14} textAnchor="middle" className="pie-center-label">{h ? h.name : 'total'}</text>
+            <text x={C} y={C - 4} textAnchor="middle" className="pie-center-value" style={{ fontSize: fitCenter(h ? pct(h.share) : money(sum), 17) }}>{h ? pct(h.share) : money(sum)}</text>
+            <text x={C} y={C + 14} textAnchor="middle" className="pie-center-label" style={{ fontSize: fitCenter(h ? h.name : 'total', 11) }}>{h ? h.name : 'total'}</text>
           </svg>
           <table className="mini pie-legend"><tbody>
             {slices.map((s, i) => (
