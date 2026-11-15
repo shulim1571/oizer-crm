@@ -686,6 +686,8 @@ ul.plain li { padding: 6px 0; }
 .composer .quick-replies { width: 100%; max-width: 260px; }
 .mic.on { background: #dc2626; color: #fff; border-color: #dc2626; }
 .recording { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #dc2626; }
+.voice-ready { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.voice-ready audio { height: 34px; max-width: 240px; min-width: 0; flex: 1 1 160px; }
 .recording .dot { width: 8px; height: 8px; border-radius: 50%; background: #dc2626; animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity: .3; } }
 .plain-list { list-style: none; padding: 0; margin: 8px 0; }

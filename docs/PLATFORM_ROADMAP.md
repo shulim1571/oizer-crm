@@ -257,7 +257,7 @@ Part 4, internal messaging, is built. Under Messages:
 - **Conversations:** each fundraiser has one conversation with the office, which all admins share. Fundraisers can't
   write to each other, except in a campaign group chat that an admin turns on; turning it off hides it but keeps the
   history.
-- **Voice messages:** hold to record, up to 2 minutes, stored apart from the text. Admins can download them.
+- **Voice messages:** tap to record, tap Stop, listen, then Send or Discard (nothing is sent until Send; Moshe Henig, 2026-11-15); up to 2 minutes, stored apart from the text. Admins can download them.
 - **Read receipts:** come from when each side last opened the conversation.
 - **For admins:** quick replies (only the Super Admin edits them), one pinned announcement (emailed when posted,
   can't be dismissed), and broadcasts to all fundraisers, primaries or chosen ones. A broadcast lands in each

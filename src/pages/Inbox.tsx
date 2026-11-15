@@ -157,10 +157,11 @@ function Conversation({ threadId, thread, onChanged }: { threadId: string; threa
       p_thread: threadId, p_body: body || null, p_voice: voice?.data ?? null, p_voice_mime: voice?.mime ?? null, p_voice_seconds: voice?.seconds ?? null,
     });
     setBusy(false);
-    if (e) return setError(e.message);
+    if (e) { setError(e.message); return false; }
     setText('');
     await load();
     onChanged();
+    return true;
   }
   async function toggleGroup() {
     if (!thread?.campaign_id) return;
@@ -202,7 +203,7 @@ function Conversation({ threadId, thread, onChanged }: { threadId: string; threa
           )}
           <textarea rows={2} value={text} placeholder="Write a message" onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && text.trim()) { e.preventDefault(); void send(text.trim()); } }} />
-          <Recorder disabled={busy} onRecorded={v => send(text.trim(), v)} onError={setError} />
+          <Recorder disabled={busy} onSend={v => send(text.trim(), v)} onError={setError} />
           <button type="button" className="btn primary" disabled={busy || !text.trim()} onClick={() => send(text.trim())}><Send size={15} /> Send</button>
         </div>
       )}
@@ -229,14 +230,25 @@ function VoicePlayer({ messageId, seconds, downloadable }: { messageId: string; 
   ) : <button type="button" className="btn voice" onClick={fetchIt}><Play size={15} /> Voice message · {len}</button>;
 }
 
-/** Hold to record, release to send. Stops by itself at two minutes. */
-function Recorder({ disabled, onRecorded, onError }: { disabled: boolean; onRecorded: (v: { data: string; mime: string; seconds: number }) => void; onError: (m: string) => void }) {
+type Voice = { data: string; mime: string; seconds: number };
+
+/**
+ * Voice notes (Moshe Henig, 2026-11-15): tap the mic to record, tap Stop, listen to it, then Send or Discard. Nothing
+ * is sent until Send is tapped; it used to go out the moment the button was released. Recording stops by itself at
+ * two minutes, into the same ready-to-send preview.
+ */
+export function Recorder({ disabled, onSend, onError }: { disabled: boolean; onSend: (v: Voice) => Promise<boolean>; onError: (m: string) => void }) {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [ready, setReady] = useState<{ blob: Blob; url: string; seconds: number } | null>(null);
+  const [sending, setSending] = useState(false);
   const rec = useRef<{ recorder: MediaRecorder; chunks: Blob[]; started: number; timer: number; cancelled: boolean } | null>(null);
+  useEffect(() => () => { if (ready) URL.revokeObjectURL(ready.url); }, [ready]);
+  // Leaving the chat mid-recording turns the microphone off and keeps nothing.
+  useEffect(() => () => { if (rec.current) { rec.current.cancelled = true; rec.current.recorder.stop(); } }, []);
 
   async function start() {
-    if (disabled || rec.current) return;
+    if (disabled || rec.current || ready) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') return onError('This browser can\'t record. Try Chrome or Safari.');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -252,9 +264,7 @@ function Recorder({ disabled, onRecorded, onError }: { disabled: boolean; onReco
         const seconds = Math.min(120, Math.round((Date.now() - state.started) / 1000));
         if (state.cancelled || seconds < 1) return;
         const blob = new Blob(state.chunks, { type: (recorder.mimeType || 'audio/webm').split(';')[0] });
-        const reader = new FileReader();
-        reader.onload = () => onRecorded({ data: String(reader.result).split(',')[1] ?? '', mime: blob.type, seconds });
-        reader.readAsDataURL(blob);
+        setReady({ blob, url: URL.createObjectURL(blob), seconds });   // ready to listen to; not sent
       };
       state.timer = window.setInterval(() => {
         const s = Math.round((Date.now() - state.started) / 1000);
@@ -269,14 +279,33 @@ function Recorder({ disabled, onRecorded, onError }: { disabled: boolean; onReco
       onError('Allow the microphone to record a voice message.');
     }
   }
-  const stop = () => rec.current?.recorder.state === 'recording' && rec.current.recorder.stop();
+  const stop = () => { if (rec.current?.recorder.state === 'recording') rec.current.recorder.stop(); };
   const cancel = () => { if (rec.current) { rec.current.cancelled = true; stop(); } };
+  const discard = () => setReady(null);
+  async function sendIt() {
+    if (!ready || sending) return;
+    setSending(true);
+    const data = await new Promise<string>(res => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1] ?? ''); r.readAsDataURL(ready.blob); });
+    const ok = await onSend({ data, mime: ready.blob.type, seconds: ready.seconds });
+    setSending(false);
+    if (ok) setReady(null);   // if sending failed, the note stays here to try again
+  }
+  const len = (n: number) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
 
+  if (ready) return (
+    <div className="voice-ready" role="group" aria-label="Voice message ready to send">
+      <audio src={ready.url} controls />
+      <span className="muted small">{len(ready.seconds)}</span>
+      <button type="button" className="btn" onClick={discard} disabled={sending} title="Discard this voice message"><Trash2 size={15} /> Discard</button>
+      <button type="button" className="btn primary" onClick={sendIt} disabled={sending || disabled}><Send size={15} /> {sending ? 'Sending…' : 'Send voice message'}</button>
+    </div>
+  );
   return (
     <>
-      {recording && <span className="recording"><span className="dot" /> {elapsed}s · release to send <button type="button" className="link" onPointerDown={e => e.stopPropagation()} onClick={cancel}>cancel</button></span>}
-      <button type="button" className={`icon-btn outlined mic ${recording ? 'on' : ''}`} title="Hold to record a voice message" disabled={disabled}
-        onPointerDown={e => { e.preventDefault(); void start(); }} onPointerUp={stop} onPointerLeave={stop} onContextMenu={e => e.preventDefault()}>
+      {recording && <span className="recording"><span className="dot" /> {len(elapsed)} · recording <button type="button" className="link" onClick={cancel}>Discard</button></span>}
+      <button type="button" className={`icon-btn outlined mic ${recording ? 'on' : ''}`} disabled={disabled && !recording}
+        title={recording ? 'Stop recording' : 'Record a voice message'} aria-label={recording ? 'Stop recording' : 'Record a voice message'}
+        onClick={() => (recording ? stop() : void start())}>
         {recording ? <Square size={16} /> : <Mic size={16} />}
       </button>
     </>
