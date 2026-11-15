@@ -20,7 +20,7 @@ const trackStop = vi.fn();
 const mounted: { unmount(): void }[] = [];
 let now = 1_000_000;
 
-function mount(onSend = vi.fn(async () => true)) {
+function mount(onSend = vi.fn(async (_v: { mime: string; seconds: number }) => true)) {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const root = createRoot(host);
@@ -67,7 +67,7 @@ describe('voice notes in the chat', () => {
   });
 
   it('keeps the note to try again if sending fails', async () => {
-    const onSend = vi.fn(async () => false);
+    const onSend = vi.fn(async (_v: { mime: string; seconds: number }) => false);
     const { host } = mount(onSend);
     await record(host, 4);
     await act(async () => { btn(host, 'Send voice message').click(); });
