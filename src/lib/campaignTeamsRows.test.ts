@@ -14,7 +14,7 @@ describe('a campaign with shared teams', () => {
   });
   it('labels the figures that include teams', () => {
     expect(c).toContain("label={withTeams ? 'Fees, with teams' : 'Fees'}");
-    expect(c).toContain("label={withTeams ? 'Expenses, with teams' : 'Expenses'}");
+    expect(c).toContain("label={withTeams ? 'Expenses (payouts), with teams' : 'Expenses (payouts)'}");   // renamed in #43
     expect(c).toContain("donations${withTeams ? ' incl. teams' : ''}");
   });
 });
