@@ -295,6 +295,15 @@ function MatchedDialog({ account, onClose, onChanged }: { account: string; onClo
     setVersion(v => v + 1);
     onChanged();
   };
+  // Readiness #30: put the processor's real fee on the gifts of a deposit that came in short by it.
+  const applyFee = async (m: Row) => {
+    if (!confirm(`Put the processor's real fee of ${money(-Number(m.difference))} on the ${m.items.length > 1 ? `${m.items.length} items'` : "item's"} gifts, shared by amount? Their campaigns' fees and balances change to match.`)) return;
+    setError(null);
+    const { error: e } = await supabase.rpc('apply_fee_difference', { p_match: m.id });
+    if (e) return setError(e.message);
+    setVersion(v => v + 1);
+    onChanged();
+  };
   return (
     <Overlay onClose={onClose}>
       <div className="form-head"><h2>Matched (latest 200)</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
@@ -306,7 +315,10 @@ function MatchedDialog({ account, onClose, onChanged }: { account: string; onClo
             <tr key={m.id}>
               <td>{m.lines.map((l: Row, n: number) => <div key={n}>{usDate(l.posted_date)} · {l.description} · {money(l.amount)}</div>)}</td>
               <td>{m.items.length ? `${m.items.length} item${m.items.length > 1 ? 's' : ''} · ${money(m.items_total)}` : <span className="muted">Bank only</span>}</td>
-              <td className="right">{Number(m.difference) !== 0 && <>{money(m.difference)}<div className="muted small">{DIFF_TYPES[m.difference_type]?.replace(' (add a note)', '')}{m.note ? `: ${m.note}` : ''}</div></>}</td>
+              <td className="right">{Number(m.difference) !== 0 && <>{money(m.difference)}<div className="muted small">{DIFF_TYPES[m.difference_type]?.replace(' (add a note)', '')}{m.note ? `: ${m.note}` : ''}</div>
+                {m.difference_type === 'processor_fees' && Number(m.difference) < 0 && !m.fee_applied_at && m.items.length > 0 &&
+                  <button type="button" className="link small" onClick={() => applyFee(m)}>Apply fee difference</button>}
+                {m.fee_applied_at && <div className="muted small">Fee applied by {m.fee_applied_by}</div>}</>}</td>
               <td className="small">{m.kind === 'auto' ? 'Automatic' : m.created_by}<div className="muted">{dateTime(m.created_at)}</div></td>
               <td><button type="button" className="link" onClick={() => unmatch(m.id)}><Undo2 size={13} /> Unmatch</button></td>
             </tr>

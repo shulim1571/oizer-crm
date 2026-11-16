@@ -417,3 +417,40 @@ describe('signing off a period', () => {
     expect(await rows(db, MANAGER_1, `select * from public.bank_periods`)).toEqual([]);
   });
 });
+
+// Readiness #30 (2026-11-15): a deposit short by the processor's real fees puts those fees on its gifts.
+describe('applying the real processor fee', () => {
+  let db: PGlite;
+  beforeEach(async () => { db = await seededDb(); });
+
+  it('shares the fee out by amount so the fees add up to it, moves the campaign, and is done once', async () => {
+    const ids = [await giftOn(db, 100, '2026-10-01'), await giftOn(db, 50, '2026-10-01'), await giftOn(db, 30, '2026-10-01')];
+    const feesBefore = Number((await one(db, `select fees from public.campaign_summary where id = '1001'`)).fees);
+    const presetBefore = Number((await one(db, `select coalesce(sum(fee), 0) s from public.donations where id = any($1)`, [ids])).s);
+    await importLines(db, [{ date: '2026-10-02', amount: 174.5 }]);
+    const m = (await one<{ id: string }>(db, `select public.match_bank('a1', array[$1], $2, 'processor_fees', 'Card batch') id`,
+      [await lineId(db, 174.5), JSON.stringify(ids.map(id => ({ type: 'donation', id })))])).id;
+    const n = (await one<{ n: number }>(db, `select public.apply_fee_difference($1) n`, [m])).n;
+    expect(n).toBe(3);
+    const fees = (await db.query<{ id: string; fee: string; manual_fee: string; net_donation: string; amount: string }>(
+      `select id, fee, manual_fee, net_donation, amount from public.donations where id = any($1) order by amount`, [ids])).rows;
+    expect(fees.reduce((s, f) => s + Number(f.fee), 0)).toBeCloseTo(5.5, 2);
+    expect(fees.map(f => f.fee)).toEqual(['0.92', '1.53', '3.05']);   // 30, 50: rounded-up shares; 100 takes the rest
+    for (const f of fees) {
+      expect(f.manual_fee).toBe(f.fee);
+      expect(Number(f.net_donation)).toBeCloseTo(Number(f.amount) - Number(f.fee), 2);
+    }
+    const feesAfter = Number((await one(db, `select fees from public.campaign_summary where id = '1001'`)).fees);
+    expect(feesAfter - feesBefore).toBeCloseTo(5.5 - presetBefore, 2);
+    await expect(sql(db, `select public.apply_fee_difference($1)`, [m])).rejects.toThrow(/already applied/);
+    const log = await rows(db, ADMIN, `select action from public.activity_log where action = 'fee_difference_applied'`);
+    expect(log).toHaveLength(3);
+  });
+
+  it('only applies to a match short by processor fees', async () => {
+    const g = await giftOn(db, 100, '2026-10-01');
+    await importLines(db, [{ date: '2026-10-02', amount: 99 }]);
+    const m = (await one<{ id: string }>(db, `select public.match_bank('a1', array[$1], $2, 'bank_fee') id`, [await lineId(db, 99), JSON.stringify([{ type: 'donation', id: g }])])).id;
+    await expect(sql(db, `select public.apply_fee_difference($1)`, [m])).rejects.toThrow(/short by processor fees/);
+  });
+});
