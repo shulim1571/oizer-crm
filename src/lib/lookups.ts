@@ -28,6 +28,12 @@ export const campaignOptions = () =>
       })),
   );
 
+/**
+ * Campaigns a new gift can go to: not archived, not closed (readiness #39: typing "3056" quickly on New Donation picked
+ * an archived campaign). Editing a gift still offers every campaign but closed ones.
+ */
+export const activeCampaignOptions = async () => (await campaignOptions()).filter(o => !/\(archived\)$/.test(o.label));
+
 export const managerOptions = () =>
   cached('managers', async () =>
     (await fetchAll((a, b) => supabase.from('managers').select('id, full_name, status').neq('status', 'deactivated').order('full_name').range(a, b)))

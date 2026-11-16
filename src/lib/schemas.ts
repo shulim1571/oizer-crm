@@ -2,7 +2,7 @@ import type { Field } from '../components/RecordForm';
 import type { Row } from './supabase';
 import { localToday } from './format';
 import {
-  CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, payeeOptions, payoutMethodOptions, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
+  activeCampaignOptions, CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, payeeOptions, payoutMethodOptions, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
   donorOptions, managerOptions, sourceOptions,
 } from './lookups';
 
@@ -122,7 +122,7 @@ const newDonationRules: Field[] = donationFields
     return f;
   });
 
-export const newDonationFields: Field[] = [
+const donationFormFields: Field[] = [
   ...NEW_DONATION_LAYOUT.flatMap(([section, names]) => names.map(n => ({ ...newDonationRules.find(f => f.name === n)!, section }))),
   ...newDonationRules.filter(f => !f.advanced && !NEW_DONATION_LAST.includes(f.name) && !NEW_DONATION_LAYOUT.some(([, names]) => names.includes(f.name))),
   ...NEW_DONATION_LAST.map(n => newDonationRules.find(f => f.name === n)!),
@@ -134,7 +134,10 @@ export const newDonationFields: Field[] = [
  * unnecessary fields that we took out shouldn't be found anywhere else either"). Type, Fee, Collector and the batch
  * fields are gone from every form; what older rows already have stays stored and unchanged.
  */
-export const editDonationFields: Field[] = newDonationFields;
+export const editDonationFields: Field[] = donationFormFields;
+
+/** New Donation: the same fields, offering only campaigns a new gift can go to (readiness #39). */
+export const newDonationFields: Field[] = donationFormFields.map(f => (f.name === 'campaign_id' ? { ...f, options: activeCampaignOptions } : f));
 
 /** What a fundraiser with the override fills in. It always waits for an admin. */
 export const fundraiserDonationFields: Field[] = [

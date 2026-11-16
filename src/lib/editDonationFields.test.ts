@@ -8,7 +8,15 @@ const src = (p: string) => readFileSync(p, 'utf8');
 
 describe('donation fields removed from New Donation', () => {
   it('are not on the Edit Donation form, which has the same fields and rules as New Donation', () => {
-    expect(editDonationFields).toBe(newDonationFields);
+    // The same fields in the same order with the same rules; only the campaign box's choices differ (New Donation
+    // leaves out archived campaigns, readiness #39).
+    expect(editDonationFields.map(f => f.name)).toEqual(newDonationFields.map(f => f.name));
+    for (const [i, f] of editDonationFields.entries()) {
+      const { options: a, ...restEdit } = f;
+      const { options: b, ...restNew } = newDonationFields[i];
+      expect(restEdit).toEqual(restNew);
+      if (f.name !== 'campaign_id') expect(a).toBe(b);
+    }
     expect(editDonationFields.some(f => REMOVED.includes(f.name))).toBe(false);
   });
 
