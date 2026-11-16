@@ -33,12 +33,67 @@ async function rpc(name: string, args: unknown, auth: { token: string; org?: str
   return body;
 }
 
+/** One linked account's new bank lines from Plaid, page by page (used by Sync now and by the daily sync). */
+async function syncAccount(cfg: { baseUrl: string; clientId: string; secret: string; env: string }, org: string, account: string): Promise<Record<string, unknown>> {
+  const plaid = async (path: string, body: Record<string, unknown>) => {
+    const res = await fetch(`${cfg.baseUrl}${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: cfg.clientId, secret: cfg.secret, ...body }),
+    });
+    const out = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(plaidError(out, res.status));
+    return out;
+  };
+  const [item] = await rpc('plaid_item_secret', { p_org: org, p_account: account }, null) as { access_token: string; plaid_account_id: string; cursor: string | null; environment: string }[];
+  if (!item) return { error: 'This bank account isn\'t linked to Plaid.' };
+  // A link made in the sandbox can't be used in production (or the other way round).
+  if (item.environment !== cfg.env) {
+    return { error: `This account was linked in the Plaid ${item.environment}, but Plaid is now in ${cfg.env}. Disconnect it and connect the bank again.` };
+  }
+  let cursor = item.cursor;
+  const totals = { added: 0, updated: 0, removed: 0, pages: 0 };
+  try {
+    for (let more = true; more && totals.pages < 20; totals.pages++) {
+      const r = await plaid('/transactions/sync', { access_token: item.access_token, ...(cursor ? { cursor } : {}), count: 500 });
+      const [n] = await rpc('plaid_apply_sync', {
+        p_org: org, p_account: account,
+        p_added: toSyncLines(r.added as PlaidTxn[], item.plaid_account_id),
+        p_modified: toSyncLines(r.modified as PlaidTxn[], item.plaid_account_id),
+        p_removed: (r.removed as { transaction_id: string }[]).map(x => x.transaction_id),
+        p_cursor: r.next_cursor,
+      }, null) as { added: number; updated: number; removed: number }[];
+      totals.added += n.added; totals.updated += n.updated; totals.removed += n.removed;
+      cursor = r.next_cursor;
+      more = !!r.has_more;
+    }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await rpc('plaid_record_error', { p_org: org, p_account: account, p_error: message }, null).catch(() => null);
+    throw e;
+  }
+  return totals;
+}
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return reply({ error: 'Method not allowed' }, 405);
+  const b = await req.json().catch(() => ({})) as Record<string, any>;
+  // The daily sync of every linked bank account (readiness #60), from the database's scheduled job.
+  const cron = req.headers.get('x-cron-token') ?? '';
+  if (cron && b.action === 'sync_all') {
+    if (await rpc('check_cron_token', { p_token: cron }, null) !== true) return reply({ error: 'Forbidden' }, 403);
+    const cfgAll = plaidConfig(n => Deno.env.get(n));
+    if (!cfgAll.ok) return reply({ error: cfgAll.error, not_set_up: true });
+    const linked = await rpc('plaid_linked_accounts', {}, null) as { org_id: string; account_id: string }[];
+    const results: Record<string, unknown>[] = [];
+    for (const l of linked) {
+      try { results.push({ account: l.account_id, ...(await syncAccount(cfgAll, l.org_id, l.account_id)) }); }
+      catch (e) { results.push({ account: l.account_id, error: e instanceof Error ? e.message : String(e) }); }
+    }
+    return reply({ synced: results.length, results });
+  }
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (!token) return reply({ error: 'Sign in first.' }, 401);
-  const b = await req.json().catch(() => ({})) as Record<string, any>;
   const auth = { token, org: typeof b.org === 'string' ? b.org : undefined };
   const account = String(b.account ?? '');
 
@@ -95,34 +150,9 @@ Deno.serve(async req => {
         return reply({ linked: true });
       }
       case 'sync': {
-        const [item] = await rpc('plaid_item_secret', { p_org: org, p_account: account }, null) as { access_token: string; plaid_account_id: string; cursor: string | null; environment: string }[];
-        if (!item) return reply({ error: 'This bank account isn\'t linked to Plaid.' }, 400);
-        // A link made in the sandbox can't be used in production (or the other way round).
-        if (item.environment !== cfg.env) {
-          return reply({ error: `This account was linked in the Plaid ${item.environment}, but Plaid is now in ${cfg.env}. Disconnect it and connect the bank again.` }, 400);
-        }
-        let cursor = item.cursor;
-        const totals = { added: 0, updated: 0, removed: 0, pages: 0 };
-        try {
-          for (let more = true; more && totals.pages < 20; totals.pages++) {
-            const r = await plaid('/transactions/sync', { access_token: item.access_token, ...(cursor ? { cursor } : {}), count: 500 });
-            const [n] = await rpc('plaid_apply_sync', {
-              p_org: org, p_account: account,
-              p_added: toSyncLines(r.added as PlaidTxn[], item.plaid_account_id),
-              p_modified: toSyncLines(r.modified as PlaidTxn[], item.plaid_account_id),
-              p_removed: (r.removed as { transaction_id: string }[]).map(x => x.transaction_id),
-              p_cursor: r.next_cursor,
-            }, null) as { added: number; updated: number; removed: number }[];
-            totals.added += n.added; totals.updated += n.updated; totals.removed += n.removed;
-            cursor = r.next_cursor;
-            more = !!r.has_more;
-          }
-        } catch (e) {
-          const message = e instanceof Error ? e.message : String(e);
-          await rpc('plaid_record_error', { p_org: org, p_account: account, p_error: message }, null).catch(() => null);
-          throw e;
-        }
-        return reply(totals);
+        const out = await syncAccount(cfg, org, account);
+        if ('error' in out) return reply({ error: out.error }, 400);
+        return reply(out);
       }
       case 'unlink': {
         const [item] = await rpc('plaid_item_secret', { p_org: org, p_account: account }, null) as { access_token: string; environment: string }[];

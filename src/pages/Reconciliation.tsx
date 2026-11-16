@@ -356,6 +356,12 @@ function LinesTab({ account, version, onChanged }: { account: string; version: n
     setError(null); setMessage(null);
     try { setImporting({ file: await readBankFile(file), name: file.name }); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   }
+  // One click (readiness #60): a bank fee (money out) or interest (money in), recorded and matched for the organization.
+  function bankCharge(l: Row) {
+    const fee = l.amount < 0;
+    if (!confirm(`Record ${money(Math.abs(l.amount))} on ${usDate(l.posted_date)} as ${fee ? 'a bank fee' : 'interest'}? It's matched as explained, for the organization (no campaign).`)) return;
+    void act('match_bank', { p_account: account, p_lines: [l.id], p_items: [], p_difference_type: fee ? 'bank_fee' : 'interest', p_note: fee ? 'Bank fee' : 'Interest' });
+  }
   function setAside(l: Row) {
     const reason = prompt(`Set aside the bank line of ${money(l.amount)} on ${usDate(l.posted_date)}? It's kept, marked as explained, with your reason. Why doesn't it belong to the books?`);
     if (!reason?.trim()) return;
@@ -405,7 +411,9 @@ function LinesTab({ account, version, onChanged }: { account: string; version: n
               <td className={`right ${l.amount < 0 ? 'neg' : 'pos'}`}>{money(l.amount)}</td>
               <td>{l.match_id ? <Pill tone="green">Matched</Pill> : <Pill tone="amber">To match</Pill>}{l.source === 'manual' && <> <Pill>Typed</Pill></>}{l.source === 'plaid' && <> <Pill tone="blue">Plaid</Pill></>}</td>
               {/* A line from the bank feed is the bank's own record: set aside with a reason, never deleted (readiness #33). */}
-              <td>{!l.match_id && (l.source === 'plaid'
+              <td>{!l.match_id && <button type="button" className="link small" onClick={() => bankCharge(l)}>{l.amount < 0 ? 'Bank fee' : 'Interest'}</button>}
+                {!l.match_id && ' · '}
+                {!l.match_id && (l.source === 'plaid'
                 ? <button type="button" className="link small" onClick={() => setAside(l)}>Set aside</button>
                 : <button type="button" className="link small" onClick={() => act('delete_bank_line', { p_line: l.id }, 'Delete this bank line?')}>Delete</button>)}</td>
             </tr>
