@@ -27,3 +27,12 @@ describe('dashboard Recurring Transactions box (Moshe Henig, 2026-11-11)', () =>
     expect(d).toContain("next30: list.reduce((t, r) => t + Number(r.amount) * Number(r.due_30 ?? 0), 0),");
   });
 });
+
+// Readiness #57 (2026-11-15): slices under 2% of the total go into Other.
+import { pieSlices } from '../components/MethodPie';
+describe('small slices', () => {
+  it('fold into Other', () => {
+    const { slices } = pieSlices([{ name: 'Credit Card', total: 980 }, { name: 'Cash', total: 15 }, { name: 'Zelle', total: 5 }]);
+    expect(slices.map(s => s.name)).toEqual(['Credit Card', 'Other (2)']);
+  });
+});

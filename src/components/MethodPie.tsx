@@ -8,9 +8,14 @@ import { money } from '../lib/format';
 export interface MethodTotal { name: string; total: number; count?: number }
 const MAX_SLICES = 6;
 
+/** A method under this share of the total goes into Other (readiness #57: tiny slices cluttered the chart). */
+const MIN_SHARE = 0.02;
+
 export function pieSlices(rows: MethodTotal[]) {
   const sorted = [...rows].filter(r => Number(r.total) > 0).sort((a, b) => Number(b.total) - Number(a.total));
-  const head = sorted.length > MAX_SLICES ? sorted.slice(0, MAX_SLICES - 1) : sorted;
+  const all = sorted.reduce((s, r) => s + Number(r.total), 0);
+  const big = sorted.filter(r => !all || Number(r.total) / all >= MIN_SHARE);
+  const head = (big.length > MAX_SLICES ? big.slice(0, MAX_SLICES - 1) : big);
   const rest = sorted.slice(head.length);
   const slices = head.map((r, i) => ({ name: r.name, total: Number(r.total), color: `var(--series-${i + 1})` }));
   if (rest.length) slices.push({ name: `Other (${rest.length})`, total: rest.reduce((s, r) => s + Number(r.total), 0), color: 'var(--series-other)' });

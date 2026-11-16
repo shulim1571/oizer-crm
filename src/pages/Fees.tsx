@@ -3,6 +3,7 @@ import CrudPage, { campLabel } from '../components/CrudPage';
 import type { Field } from '../components/RecordForm';
 import { useAuth } from '../lib/auth';
 import { accountOptions, campaignOptions, paymentMethodIdOptions } from '../lib/lookups';
+import { fetchAll, supabase } from '../lib/supabase';
 import type { Row } from '../lib/supabase';
 
 const FEE_TYPES = [['none', 'None'], ['flat', 'Flat $'], ['percent', '% rate'], ['percent_flat', '% rate + flat $']].map(([value, label]) => ({ value, label }));
@@ -47,7 +48,17 @@ const processorFields: Field[] = [
 
 // Readiness #14: a Sola card gift and an Elevon card gift can carry different rates. Order: a campaign's own
 // override, then the processor's rate for the method, then the method's rate.
-const FEE_TABS = [['methods', 'Methods & fees'], ['processors', 'Processor rates'], ['overrides', 'Campaign overrides']] as const;
+/** Every method's name, vouchers included (an imported voucher name maps to its voucher method). */
+const paymentMethodNameOptions = async () =>
+  (await fetchAll((a, b) => supabase.from('payment_methods').select('name').order('name').range(a, b) as never) as Row[]).map(m => ({ value: String(m.name), label: String(m.name) }));
+
+const aliasFields: Field[] = [
+  { name: 'alias', label: 'Name as imported', required: true },
+  { name: 'method_name', label: 'Shown as method', type: 'select', options: paymentMethodNameOptions, help: 'Leave empty if it isn\'t a way of giving' },
+  { name: 'not_a_method', label: 'Not a way of giving (a payout or transfer)', type: 'checkbox' },
+];
+
+const FEE_TABS = [['methods', 'Methods & fees'], ['processors', 'Processor rates'], ['overrides', 'Campaign overrides'], ['aliases', 'Imported names']] as const;
 
 export default function FeesPage() {
   const { permissions } = useAuth();
@@ -86,6 +97,20 @@ export default function FeesPage() {
           { key: 'fee', label: 'Fee', value: feeText },
         ]}
         fields={processorFields}
+      />}
+      {/* Readiness #57: imported spellings shown under a standard method on the dashboard chart. */}
+      {tab === 'aliases' && <CrudPage
+        title="Imported Method Names" noun="Imported name"
+        table="payment_method_aliases"
+        order={{ column: 'alias' }}
+        canEdit={canEdit}
+        defaults={{ not_a_method: false }}
+        extraActions={<span className="muted small">How the dashboard's payment-method chart groups names from imported history. Fees aren't affected.</span>}
+        columns={[
+          { key: 'alias', label: 'Name as imported', width: 240 },
+          { key: 'method_name', label: 'Shown as', value: r => (r.not_a_method ? 'Not a way of giving' : r.method_name) },
+        ]}
+        fields={aliasFields}
       />}
       {tab === 'overrides' && <CrudPage
         title="Campaign Fee Overrides" noun="Override"
