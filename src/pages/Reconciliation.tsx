@@ -592,6 +592,13 @@ function PeriodsTab({ account, accountName, version, onChanged }: { account: str
   const [startDate, setStartDate] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Readiness #29: the books next to the adjusted bank balance, before signing off.
+  const tie = useQuery(async () => {
+    if (!end || balance === '' || (!last && (!startDate || opening === ''))) return null;
+    const r = (await rpc('recon_tieout', { p_account: account, p_period_end: end, p_statement_balance: Number(balance),
+      p_opening_balance: last ? null : Number(opening), p_period_start: last ? null : startDate })) as Row[];
+    return r[0] ?? null;
+  }, [account, end, balance, opening, startDate, last?.id, version]);
 
   async function signOff() {
     setError(null);
@@ -629,6 +636,12 @@ function PeriodsTab({ account, accountName, version, onChanged }: { account: str
           <label className="field"><span>Ending balance</span><input inputMode="decimal" value={balance} onChange={e => setBalance(e.target.value)} /></label>
           <label className="field"><span>Note</span><input value={note} onChange={e => setNote(e.target.value)} /></label>
         </div>
+        {tie.data && (
+          <p className={Number(tie.data.difference) === 0 ? 'muted small' : 'error'}>
+            Books: <b>{money(tie.data.book_balance)}</b> · Adjusted bank balance: <b>{money(tie.data.adjusted_balance)}</b>
+            {Number(tie.data.difference) === 0 ? ' · they agree.' : <> · difference <b>{money(tie.data.difference)}</b>. Find it, or explain it in the note to sign off anyway.</>}
+          </p>
+        )}
         {error && <div className="error">{error}</div>}
         <div className="form-actions"><div className="spacer" />
           <button type="button" className="btn primary" disabled={!end || balance === '' || (!last && (!startDate || opening === ''))} onClick={signOff}><Lock size={16} /> Sign off</button>
@@ -677,6 +690,7 @@ function printPeriod(p: Row, accountName: string) {
       ['Add deposits in transit', money(r.deposits_in_transit)],
       ['Less outstanding payments', money(r.outstanding_payments)],
       ['Adjusted bank balance', money(r.adjusted_balance)],
+      ...(r.book_balance != null ? [['Book balance', money(r.book_balance)] as [string, string], ['Difference', money(r.book_difference)] as [string, string]] : []),
       ['Bank lines', String(r.line_count)],
       ...(p.note ? [['Note', p.note] as [string, string]] : []),
     ],

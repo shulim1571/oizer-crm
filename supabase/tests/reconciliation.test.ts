@@ -349,6 +349,23 @@ describe('signing off a period', () => {
     expect(p.report.outstanding.map((o: any) => [o.item_type, o.amount])).toEqual([['donation', 300], ['payout', -80]]);
   });
 
+  // Readiness #29 (2026-11-15): the books have to tie out to the adjusted bank balance, or the note explains it.
+  it('ties the books out to the adjusted bank balance, and refuses an unexplained difference', async () => {
+    const g = await september();
+    await sql(db, `select public.match_bank('a1', array[$1], '[]', 'bank_fee')`, [await lineId(db, -12)]);
+    // The books: 1,000 opening + 200 + 300 - 80 - the 12 bank fee = 1,408, the adjusted bank balance.
+    expect(await one(db, `select book_balance, adjusted_balance, difference from public.recon_tieout('a1', '2026-09-30', 1188, 1000, '2026-09-01')`))
+      .toEqual({ book_balance: '1408.00', adjusted_balance: '1408.00', difference: '0.00' });
+    // A matched gift changed afterwards: the books now say 250 where the bank says 200.
+    await db.query(`update public.donations set amount = 250, net_donation = 250 where id = $1`, [g]);
+    expect((await one(db, `select difference from public.recon_tieout('a1', '2026-09-30', 1188, 1000, '2026-09-01')`)).difference).toBe('-50.00');
+    await expect(signOff('2026-09-30', 1188)).rejects.toThrow(/books come to 1,458.00, the adjusted bank balance to 1,408.00 \(a difference of -50.00\)/);
+    const id = (await one<{ id: string }>(db, `select public.sign_off_bank_period('a1', '2026-09-30', 1188, 1000, '2026-09-01', 'Gift corrected after deposit; bank to adjust') id`)).id;
+    const p = await one(db, `select report, note from public.bank_periods where id = $1`, [id]);
+    expect(p.report).toMatchObject({ book_opening: 1000, book_balance: 1458, book_difference: -50 });
+    expect(p.note).toBe('Gift corrected after deposit; bank to adjust');
+  });
+
   it('locks everything up to its end', async () => {
     await september();
     await sql(db, `select public.match_bank('a1', array[$1], '[]', 'bank_fee')`, [await lineId(db, -12)]);
