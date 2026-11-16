@@ -3,6 +3,7 @@ import { Overlay } from '../pages/Pledges';
 import { donationColumns } from '../pages/donationColumns';
 import { ReceiptActions } from '../pages/Receipts';
 import type { Row } from '../lib/supabase';
+import RecordHistory from './RecordHistory';
 
 /**
  * A donation, read-only (Moshe Henig, 2026-11-15, readiness #41): clicking a donation shows it first, with Edit and
@@ -32,6 +33,7 @@ export default function DonationView({ row, onEdit, onClose }: { row: Row; onEdi
           </div>
         ))}
       </dl>
+      <RecordHistory table="donations" id={String(row.id)} />
     </Overlay>
   );
 }

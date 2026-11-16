@@ -9,6 +9,7 @@ import { useSearch } from '../components/Layout';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import DonationView from '../components/DonationView';
+import RecordHistory from '../components/RecordHistory';
 import { useLiveRefresh } from '../lib/live';
 import { useAuth } from '../lib/auth';
 import { addDays, dateTime, money, orgDayStart } from '../lib/format';
@@ -97,6 +98,8 @@ function RequestReceiptDialog({ row, onClose }: { row: Row; onClose: () => void 
           </>
         ) : <p className="muted small">Only a completed donation can have a receipt.</p>}
       </form>
+      {/* The fundraiser's view of its history (readiness #46): no bank or payee details. */}
+      <RecordHistory table="donations" id={String(row.id)} />
     </Overlay>
   );
 }

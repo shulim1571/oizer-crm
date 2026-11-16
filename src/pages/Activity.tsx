@@ -3,6 +3,7 @@ import { ROLE_LABEL } from '../components/Layout';
 import { supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { dateTime } from '../lib/format';
+import { describeChanges } from '../components/RecordHistory';
 
 const LIMIT = 2000;
 
@@ -13,16 +14,8 @@ const ACTIONS: Record<string, string> = {
   platform_enter: 'Platform Owner entered', platform_exit: 'Platform Owner left',
 };
 
-const show = (v: unknown) => (v == null || v === '' ? '(empty)' : typeof v === 'object' ? JSON.stringify(v) : String(v));
-
-/** Edits list each field old → new; adds and deletes list the record's values. */
-function describe(r: Row): string {
-  if (!r.changes) return '';
-  const entries = Object.entries(r.changes as Row);
-  if (r.action === 'update') return entries.map(([k, v]) => `${k}: ${show(v?.old)} → ${show(v?.new)}`).join('; ');
-  if (r.action === 'soft_delete' || r.action === 'restore') return '';
-  return entries.filter(([k]) => k !== 'org_id').map(([k, v]) => `${k}: ${show(v)}`).join('; ');
-}
+/** Edits list each field old → new, in words (readiness #46: it showed raw key/value pairs); adds list the values. */
+const describe = (r: Row): string => describeChanges(r.action, r.changes as Row | null).join('; ');
 
 export default function ActivityPage() {
   const q = useQuery(async () => {

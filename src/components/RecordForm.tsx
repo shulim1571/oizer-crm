@@ -14,6 +14,7 @@ import SearchSelect from './SearchSelect';
 import DonationActions from '../pages/DonationActions';
 import { PayoutCheckActions } from '../pages/Checks';
 import { ReceiptActions } from '../pages/Receipts';
+import RecordHistory from './RecordHistory';
 
 export interface Field {
   name: string;
@@ -236,6 +237,10 @@ export default function RecordForm(p: Props) {
       {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <DonationActions record={p.record!} onDone={p.onSaved} />}
       {p.table === 'donations' && !isNew && !p.onBulk && isAdmin && <ReceiptActions donationId={p.record!.id} beforeIssue={async () => !!(await persist())} />}
       {p.table === 'expenses' && !isNew && !p.onBulk && isAdmin && <PayoutCheckActions record={p.record!} onDone={() => {}} />}
+      {/* Who changed what (readiness #46). */}
+      {(p.table === 'donations' || p.table === 'expenses' || p.table === 'transfers') && !isNew && !p.onBulk && p.record?.id && (
+        <RecordHistory table={p.table} id={String(p.record.id)} />
+      )}
       <div className="form-actions">
         {!isNew && p.allowDelete && p.table !== 'donations' && <button type="button" className="btn danger" onClick={remove}>Delete</button>}
         <div className="spacer" />
