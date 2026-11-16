@@ -1173,3 +1173,12 @@ code.break { word-break: break-all; }
 /* Share box: the campaign fundraiser's email and phone, with copy buttons (Moshe Henig, 2026-11-15). */
 .share-contact { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .share-contact-item { display: inline-flex; align-items: center; gap: 6px; }
+
+/* A donation, read-only (readiness #41). */
+.donation-view-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
+.donation-view-actions .donation-actions { margin: 0; }
+.donation-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px 18px; margin: 0; }
+.donation-view > div { min-width: 0; }
+.donation-view > div.wide { grid-column: 1 / -1; }
+.donation-view dt { font-size: 12px; color: var(--muted); margin: 0 0 2px; }
+.donation-view dd { margin: 0; overflow-wrap: anywhere; }

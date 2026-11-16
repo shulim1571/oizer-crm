@@ -8,6 +8,7 @@ import Pager from '../components/Pager';
 import { useSearch } from '../components/Layout';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import DonationView from '../components/DonationView';
 import { useLiveRefresh } from '../lib/live';
 import { useAuth } from '../lib/auth';
 import { addDays, dateTime, money, orgDayStart } from '../lib/format';
@@ -103,12 +104,16 @@ function RequestReceiptDialog({ row, onClose }: { row: Row; onClose: () => void 
 export function useDonationEditor(onChange: (row: Row) => void) {
   const { isAdmin, canWork } = useAuth();
   const [editing, setEditing] = useState<Row | null>(null);
+  // Admins see the donation read-only first, with Edit and Issue Receipt on top (Moshe Henig, readiness #41).
+  const [viewing, setViewing] = useState<Row | null>(null);
   const [requesting, setRequesting] = useState<Row | null>(null);
   // Fundraisers: a row opens the donation with Request receipt (admins get the edit form).
   if (!isAdmin) {
     return { open: canWork ? setRequesting : undefined, editor: requesting && <RequestReceiptDialog row={requesting} onClose={() => setRequesting(null)} /> };
   }
-  const editor = editing && (
+  const editor = viewing ? (
+    <DonationView row={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} />
+  ) : editing && (
     <RecordForm
       table="donations"
       title="Edit Donation"
@@ -124,7 +129,7 @@ export function useDonationEditor(onChange: (row: Row) => void) {
       }}
     />
   );
-  return { open: setEditing, editor };
+  return { open: setViewing, editor };
 }
 
 const replaceRow = (list: Row[] | null, row: Row) =>
