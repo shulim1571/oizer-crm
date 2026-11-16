@@ -27,10 +27,13 @@ export const campaignColumns: Column[] = [
     render: r => r.manager_id && <AdminLink to={`/managers/${encodeURIComponent(r.manager_id)}`}>{r.manager_name}</AdminLink>,
   },
   { key: 'raised', label: 'Raised', render: r => money(r.raised), align: 'right' },
-  { key: 'fees', label: 'Fees', optional: true, render: r => money(r.fees), align: 'right' },
+  { key: 'fees', label: 'Fees', render: r => money(r.fees), align: 'right' },
   { key: 'fee_percent', label: 'Fee %', optional: true, render: r => pct(r.fee_percent), align: 'right' },
   { key: 'expenses', label: 'Expenses', render: r => money(r.expenses), align: 'right' },
-  { key: 'balance', label: 'Balance', render: r => (r.balance_mode === 'shared' ? <span className="muted">Shared</span> : <Balance value={r.balance} />), align: 'right' },
+  // A team's money is in its parent's balance (readiness #38): say where, rather than $0.00.
+  { key: 'balance', label: 'Balance', render: r => (r.balance_mode === 'shared'
+      ? <span className="muted">Shared (in parent #{r.parent_campaign_id})</span>
+      : <Balance value={r.balance} />), align: 'right' },
   { key: 'pending_balance', label: 'Pending', render: r => money(r.pending_balance), align: 'right' },
   { key: 'parent_campaign_id', label: 'Under', optional: true, render: r => r.parent_campaign_id && <span className="id-tag">{r.parent_campaign_id}</span> },
 ];
@@ -47,6 +50,8 @@ export default function Campaigns({ mode }: { mode: Mode }) {
   const [choice, setChoice] = useState<{ template: Row | null; settings: Row | null } | null>(null);
   // The next campaign number, asked for when the form opens; the admin may change it (Moshe Henig, 2026-11-15).
   const [nextId, setNextId] = useState<string | null | undefined>(undefined);
+  // "Below zero": only campaigns whose balance is under zero (readiness #38).
+  const [belowZero, setBelowZero] = useState(false);
   useEffect(() => {
     if (!choice) { setNextId(undefined); return; }
     supabase.rpc('next_campaign_id').then(({ data }) => setNextId((data as string | null) ?? null), () => setNextId(null));
@@ -83,16 +88,19 @@ export default function Campaigns({ mode }: { mode: Mode }) {
     <>
       <DataTable
         title={TITLES[mode]}
-        rows={data ?? []}
+        rows={(data ?? []).filter(r => !belowZero || (r.balance_mode !== 'shared' && Number(r.balance) < 0))}
         loading={loading}
         error={error}
         columns={columns}
         groupBy={{ label: 'Fundraiser', value: r => r.manager_name ?? '' }}
         onOpen={r => nav(`/campaigns/${encodeURIComponent(r.id)}`)}
-        summary={data && <Totals rows={data} />}
-        actions={isAdmin && (
-          <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New campaign</button>
-        )}
+        summary={data && <Totals rows={(data ?? []).filter(r => !belowZero || (r.balance_mode !== 'shared' && Number(r.balance) < 0))} />}
+        actions={<>
+          <button type="button" className={`btn ${belowZero ? 'primary' : ''}`} aria-pressed={belowZero} onClick={() => setBelowZero(b => !b)}>
+            Below zero{data ? ` (${data.filter(r => r.balance_mode !== 'shared' && Number(r.balance) < 0).length})` : ''}
+          </button>
+          {isAdmin && <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New campaign</button>}
+        </>}
       />
       {adding && !choice && <TemplateStep onClose={() => setAdding(false)} onNext={setChoice} />}
       {adding && choice && nextId !== undefined && (
@@ -120,11 +128,12 @@ function Totals({ rows }: { rows: Row[] }) {
   const negative = rows.filter(r => Number(r.balance) < 0).length;
   return (
     <div className="kpis">
-      <Kpi label="Raised" value={money(raised)} icon={<TrendingUp size={18} />} tone="green"
-           sub={`${pct(raised ? fees / raised : 0)} in fees`} />
-      <Kpi label="Expenses" value={money(sum('expenses'))} icon={<Receipt size={18} />} tone="amber" />
+      <Kpi label="Raised" value={money(raised)} icon={<TrendingUp size={18} />} tone="green" sub="Gifts and transfers in" />
+      <Kpi label="Fees" value={money(fees)} icon={<Receipt size={18} />} tone="violet" sub={`${pct(raised ? fees / raised : 0)} of raised`} />
+      <Kpi label="Expenses" value={money(sum('expenses'))} icon={<Receipt size={18} />} tone="amber" sub="Payouts and transfers out" />
+      {/* Raised - Fees - Expenses = Balance over the list (readiness #38). */}
       <Kpi label="Balance" value={<Balance value={sum('balance')} />} icon={<Scale size={18} />} tone="violet"
-           sub={negative ? `${negative} campaign${negative === 1 ? '' : 's'} below zero` : 'All campaigns positive'} />
+           sub={`= raised − fees − expenses${negative ? ` · ${negative} below zero` : ''}`} />
       <Kpi label="Pending" value={money(sum('pending_balance'))} icon={<Clock size={18} />} tone="blue" />
     </div>
   );
