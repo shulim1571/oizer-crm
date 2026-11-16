@@ -1196,3 +1196,8 @@ code.break { word-break: break-all; }
 .picture-field .picture-preview { max-width: 160px; max-height: 80px; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
 .picture-field .picture-preview.banner { max-width: 100%; width: 320px; max-height: 110px; object-fit: cover; }
 .picture-field .picture-row { display: flex; gap: 8px; align-items: center; }
+
+/* What each permission allows (readiness #63). */
+.perm-help { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 18px; margin: 12px 0 0; font-size: 13px; }
+.perm-help dt { font-weight: 600; }
+.perm-help dd { margin: 0; color: var(--muted); }

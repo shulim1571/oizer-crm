@@ -218,7 +218,7 @@ export default function UsersPage() {
 
       {tab === 'permissions' && isSuperAdmin && (
         <>
-          <p className="muted small">Super Admin powers you can give to individual admins. Hover a heading for what it allows.</p>
+          <p className="muted small">Super Admin powers you can give to individual admins. What each one allows is listed under the table.</p>
           {regularAdmins.length === 0 ? <div className="panel-box muted small">There are no other admins yet. Give someone the Admin role on the Users tab first.</div> : (
             <div className="table-card"><div className="table-wrap">
               <table className="grid perm-grid">
@@ -242,16 +242,22 @@ export default function UsersPage() {
               </table>
             </div></div>
           )}
+          {/* Readiness #63: what each column allows, in plain words, always visible (not only on hover). */}
+          <dl className="perm-help">
+            {PERMISSION_GROUPS.flatMap(g => g.items.map(i => (
+              <div key={i.key}><dt>{i.short}</dt><dd>{i.full}</dd></div>
+            )))}
+          </dl>
         </>
       )}
 
       {tab === 'guests' && (
         <>
-          <p className="muted small">A Community Guest follows one campaign read-only: donor names, amounts, method and date. Invitation emails aren't sent yet, so tell them to create a login with this email.</p>
+          <p className="muted small">A Community Guest follows one campaign read-only: donor names (anonymous gifts stay anonymous), amounts, method and date. Adding one queues an invitation email asking them to sign up with that address (held while messaging is in test mode).</p>
           <form className="inline-form" onSubmit={e => {
             e.preventDefault();
             if (!guest.campaign) return setMsg({ ok: false, text: 'Choose a campaign first.' });
-            run(supabase.from('campaign_guests').insert({ email: guest.email.trim().toLowerCase(), campaign_id: guest.campaign }), `Added ${guest.email} as a guest.`);
+            run(supabase.from('campaign_guests').insert({ email: guest.email.trim().toLowerCase(), campaign_id: guest.campaign }), `Added ${guest.email} as a guest and queued their invitation email (held while messaging is in test mode).`);
             setGuest({ email: '', campaign: null });
           }}>
             <input type="email" required placeholder="name@example.org" value={guest.email} onChange={e => setGuest(g => ({ ...g, email: e.target.value }))} />
@@ -266,7 +272,10 @@ export default function UsersPage() {
                 {(guests.data ?? []).map(g => (
                   <tr key={`${g.campaign_id}-${g.email}`}>
                     <td>{g.email}</td><td>{campaignLabel(g.campaign_id)}</td><td>{dateTime(g.added_at)}</td>
-                    <td><RowMenu items={[{ label: 'Remove guest', danger: true, onClick: () => run(supabase.from('campaign_guests').delete().eq('campaign_id', g.campaign_id).eq('email', g.email), `Removed ${g.email}.`) }]} /></td>
+                    <td><RowMenu items={[
+                      { label: 'Send the invitation again', onClick: () => run(supabase.rpc('resend_guest_invite', { p_campaign: g.campaign_id, p_email: g.email }), `Invitation queued again for ${g.email}.`) },
+                      { label: 'Remove guest', danger: true, onClick: () => run(supabase.from('campaign_guests').delete().eq('campaign_id', g.campaign_id).eq('email', g.email), `Removed ${g.email}.`) },
+                    ]} /></td>
                   </tr>
                 ))}
               </tbody>
