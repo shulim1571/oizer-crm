@@ -14,8 +14,14 @@ const STATUS_LABELS: Record<string, string> = {
   disputed: 'Disputed', chargeback: 'Chargeback',
 };
 
-/** One word for a donation: its type once completed, otherwise what happened to it. */
-export const donationKind = (r: Row): string => (r.status === 'completed' ? r.type : STATUS_LABELS[r.status] ?? r.status);
+/** A check recorded but not delivered yet: not in the balance until it is (readiness #36). */
+export const NOT_DELIVERED = 'Not delivered';
+export const isUndeliveredCheck = (r: Row) => r.status === 'completed' && r.delivered === false && /check/i.test(r.payment_method ?? '');
+
+/** One word for a donation: its type once completed (or Not delivered for a check not delivered yet), otherwise what
+ *  happened to it. */
+export const donationKind = (r: Row): string =>
+  (isUndeliveredCheck(r) ? NOT_DELIVERED : r.status === 'completed' ? r.type : STATUS_LABELS[r.status] ?? r.status);
 
 /** The names a lookup column can be filtered to: every one in the organization, A to Z (for the filter panel). */
 const names = (table: string, column: string) => async () =>
@@ -49,7 +55,7 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
     },
   },
   { key: 'amount', label: 'Amount', render: r => <b className="num">{money(r.amount)}</b>, align: 'right', filter: { column: 'amount', type: 'number' } },
-  { key: 'type', label: 'Type', value: donationKind, filterOptions: async () => Object.keys(DONATION_KINDS), render: r => (
+  { key: 'type', label: 'Type', value: donationKind, filterOptions: async () => [...Object.keys(DONATION_KINDS), NOT_DELIVERED], render: r => (
     <>
       <StatusPill value={donationKind(r)} />
       {r.split_group_id && <> <StatusPill value="Split" /></>}

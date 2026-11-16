@@ -25,7 +25,7 @@ describe('filter panel choices', () => {
       ['source', "names('sources', 'name')"], ['account', "names('accounts', 'name')"]]) {
       expect(cols, col).toContain(`filterOptions: ${src}`);
     }
-    expect(cols).toContain('filterOptions: async () => Object.keys(DONATION_KINDS)');
+    expect(cols).toContain('filterOptions: async () => [...Object.keys(DONATION_KINDS), NOT_DELIVERED]');   // + Not delivered (readiness #36)
   });
 
   it('matches a picked value exactly, on the server and in the browser', () => {

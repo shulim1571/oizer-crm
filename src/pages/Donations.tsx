@@ -15,7 +15,7 @@ import { addDays, dateTime, money, orgDayStart } from '../lib/format';
 import { editDonationFields, fundraiserDonationFields, newDonationFields } from '../lib/schemas';
 import { campaignOptions, type Option } from '../lib/lookups';
 import TransactionBulk from './TransactionBulk';
-import { DONATION_KINDS, DONATION_SELECT, donationColumns } from './donationColumns';
+import { DONATION_KINDS, DONATION_SELECT, donationColumns, NOT_DELIVERED } from './donationColumns';
 import { CardChargeDialog } from './Payments';
 
 /**
@@ -155,6 +155,7 @@ export function applyColumnFilters<Q extends { ilike: Function; gte: Function; g
     const exact = exactValue(text);
     if (c.key === 'type') {
       const wanted = (exact ?? text).toLowerCase();
+      if (NOT_DELIVERED.toLowerCase().startsWith(wanted) && wanted.length >= 3) { q = q.eq('undelivered_check', true); continue; }
       const kind = exact != null
         ? Object.entries(DONATION_KINDS).find(([k]) => k.toLowerCase() === wanted)?.[1]
         : Object.entries(DONATION_KINDS).find(([k]) => k.toLowerCase().startsWith(wanted))?.[1];
@@ -234,6 +235,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
     if (kind) s = s.eq('status', kind.status);
     if (kind?.type) s = s.eq('type', kind.type);
     if (kindFilter === UNATTRIBUTED) s = s.is('campaign_id', null);
+    if (kindFilter === NOT_DELIVERED) s = s.eq('undelivered_check', true);
     const text = debounced.trim().replace(/[,()*]/g, ' ');
     // The date range picked above the list (replaces the Last 7 Days tab). Searching looks through every date
     // (Moshe Henig, 2026-11-11), so the range is set aside while there is search text.
@@ -392,6 +394,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
               <option value="">All types</option>
               {Object.keys(DONATION_KINDS).map(t => <option key={t}>{t}</option>)}
               <option>{UNATTRIBUTED}</option>
+              <option>{NOT_DELIVERED}</option>
               <option>{DUPLICATES}</option>
             </select>
             {isAdmin && !filter && <button className="btn primary" onClick={() => nav('/donations/new')}><Plus size={16} /> New donation</button>}
