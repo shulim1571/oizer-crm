@@ -32,6 +32,13 @@ const SECTIONS: { title: string; description: string; save: string; fields: Fiel
     ],
   },
   {
+    title: 'Payouts', description: 'How the "Available to pay out" figure on campaigns is worked out. It is shown for information and doesn\'t stop a payout.', save: 'Save payout settings',
+    fields: [
+      { name: 'payout_hold_days', label: 'Card hold before payout (days)', type: 'number', required: true,
+        help: 'Card gifts from this many days back are counted as not paid out by the processor yet. 3 unless set.' },
+    ],
+  },
+  {
     title: 'Branding and time zone', description: 'How the portal looks, and the time zone for dates, reports and digests.', save: 'Save branding',
     fields: [
       { name: 'timezone', label: 'Time zone', type: 'select', options: TIMEZONES, required: true },

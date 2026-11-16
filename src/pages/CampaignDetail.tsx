@@ -13,6 +13,7 @@ import AdminLink from '../components/AdminLink';
 import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { availableNote, useAvailable } from '../components/CampaignBalanceNote';
 import { ALL_TOPICS, useLiveRefresh } from '../lib/live';
 import { useAuth } from '../lib/auth';
 import { dateTime, money, pct, yn } from '../lib/format';
@@ -77,6 +78,7 @@ export default function CampaignDetail() {
 
   // Whether the campaign has a phone PIN (never the PIN itself, which is only kept hashed).
   const pin = useQuery(async () => (isAdmin ? (((await supabase.rpc('campaign_pin_status', { p_campaign: id })).data ?? []) as Row[])[0] ?? null : null), [id, isAdmin]);
+  const avail = useAvailable(id);
   const summary = useQuery(
     async () => {
       const { data, error } = await supabase.from('campaign_summary').select('*').eq('id', id).maybeSingle();
@@ -273,6 +275,9 @@ export default function CampaignDetail() {
         {c.balance_mode === 'shared'
           ? <Kpi label="Balance" value={<span className="muted">Shared</span>} icon={<Scale size={18} />} tone="blue" sub="Counted in the parent's balance" />
           : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} sub={Number(c.sub_count) > 0 ? "Includes its teams; sub-campaigns keep their own balance" : undefined} />}
+        {avail && c.balance_mode !== 'shared' && (
+          <Kpi label="Available to pay out" value={<Balance value={avail.available} />} icon={<Scale size={18} />} tone={Number(avail.available) < 0 ? 'red' : 'blue'} sub={availableNote(avail)} />
+        )}
         {Number(c.post_dated_amount) > 0 && <Kpi label="Post-dated checks" value={money(c.post_dated_amount)} icon={<Clock size={18} />} tone="blue" sub="Not in the balance yet" />}
         {/* Checks recorded but not yet delivered stay out of the balance like post-dated ones (Moshe Henig, 2026-11-13). */}
         {Number(c.undelivered_checks_count) > 0 && <Kpi label="Checks not delivered" value={money(c.undelivered_checks_amount)} icon={<Clock size={18} />} tone="amber"
