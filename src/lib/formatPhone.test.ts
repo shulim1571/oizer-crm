@@ -20,3 +20,25 @@ describe('phone numbers with dashes', () => {
     expect(formatPhone('  ')).toBe('');
   });
 });
+
+// Moshe Henig, 2026-11-16 11:55 AM: "You didn't fix it for donors that have 2 phone numbers."
+describe('two phone numbers in one field', () => {
+  it('writes each one with dashes, keeping the separators and labels', () => {
+    expect(formatPhone('8455551234 / 7185559876')).toBe('845-555-1234 / 718-555-9876');
+    expect(formatPhone('(845) 555-1234, (718) 555-9876')).toBe('845-555-1234, 718-555-9876');
+    expect(formatPhone('845.555.1234 or 718 555 9876')).toBe('845-555-1234 or 718-555-9876');
+    expect(formatPhone('Home: 8455551234 Cell: 7185559876')).toBe('Home: 845-555-1234 Cell: 718-555-9876');
+    expect(formatPhone('H 845-555-1234; C 718-555-9876 x22')).toBe('H 845-555-1234; C 718-555-9876 x22');
+    expect(formatPhone('8455551234\n7185559876')).toBe('845-555-1234\n718-555-9876');
+    expect(formatPhone('8455551234 7185559876')).toBe('845-555-1234 718-555-9876');
+    expect(formatPhone('+1 845 555 1234 & 1-718-555-9876')).toBe('845-555-1234 & 718-555-9876');
+  });
+
+  it('splits two numbers run together with nothing between them', () => {
+    expect(formatPhone('84555512347185559876')).toBe('845-555-1234 · 718-555-9876');
+  });
+
+  it('still leaves a number from abroad as it is, next to a US one', () => {
+    expect(formatPhone('845 555 1234 / +972 52-123-4567')).toBe('845-555-1234 / +972 52-123-4567');
+  });
+});

@@ -83,21 +83,39 @@ export function localToday(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/**
- * A phone number with dashes, easier to read (Moshe Henig, 2026-11-16): 845-555-1234. A leading 1 is dropped, an
- * extension is kept (845-555-1234 x12), 7 digits read 555-1234, and anything else (a number from abroad, say) is
- * shown as it was typed. Display only: what's stored and what's dialed or texted stay as they are.
- */
-export function formatPhone(p: unknown): string {
-  const raw = String(p ?? '').trim();
-  if (!raw) return '';
+/** One US number with dashes; anything else as it was. */
+function formatOnePhone(raw: string): string {
   const m = raw.match(/^(.*?)(?:\s*(?:x|ext\.?|extension|#)\s*(\d{1,6}))?$/i);
   const main = m?.[1] ?? raw;
   const ext = m?.[2] ? ` x${m[2]}` : '';
-  if (raw.startsWith('+') && !raw.startsWith('+1')) return raw;
   let d = main.replace(/\D/g, '');
   if (d.length === 11 && d.startsWith('1')) d = d.slice(1);
   if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}${ext}`;
   if (d.length === 7) return `${d.slice(0, 3)}-${d.slice(3)}${ext}`;
   return raw;
+}
+
+// A US number inside other text: optional +1, area code (with or without brackets), then 3 and 4 digits with
+// spaces, dots or dashes or nothing between, and an optional extension.
+const US_PHONE = /(?<![\d+])(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?:\s*(?:x|ext\.?|extension)\s*\d{1,6})?(?!\d)/gi;
+
+/**
+ * Phone numbers with dashes, easier to read (Moshe Henig, 2026-11-16): 845-555-1234. Every US number in the text
+ * gets them, so a field holding two numbers ("8455551234 / 718 555 9876", "Home (845) 555-1234, cell 718.555.9876")
+ * shows both that way, with the words and separators around them kept. A leading 1 is dropped and an extension kept
+ * (845-555-1234 x12); 7 digits alone read 555-1234; a number from abroad is shown as it was typed. Display only:
+ * what's stored and what's dialed or texted stay as they are.
+ */
+export function formatPhone(p: unknown): string {
+  const raw = String(p ?? '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('+') && !raw.startsWith('+1')) return raw;
+  // Two numbers run together with nothing between them (20 or 21 digits).
+  const digits = raw.replace(/\D/g, '');
+  if (/^\d+$/.test(raw.replace(/[.()-]/g, '')) && (digits.length === 20 || (digits.length === 22 && digits.startsWith('1')))) {
+    const half = digits.length / 2;
+    return `${formatOnePhone(digits.slice(0, half))} · ${formatOnePhone(digits.slice(half))}`;
+  }
+  const out = raw.replace(US_PHONE, m => formatOnePhone(m));
+  return out === raw ? formatOnePhone(raw) : out;
 }
