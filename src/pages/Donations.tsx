@@ -357,10 +357,11 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
             {/* The summary totals what's shown right now: date range, type, filters and search (Moshe Henig, 2026-11-11). */}
             <div className="totals-bar" aria-label="Totals for this view">
               <span className="muted small"><b>This view</b>{searching ? ' (all dates, search)' : ''}</span>
-              <span>{totals.data?.raisedView ? 'Raised' : 'Gross'} <b>{money(totals.data?.gross ?? 0)}</b></span>
-              <span>Fees <b>{money(totals.data?.fees ?? 0)}</b></span>
-              <span>Net <b>{money(totals.data?.net ?? 0)}</b></span>
-              <span>{Number(totals.data?.counted ?? 0).toLocaleString()} transaction{Number(totals.data?.counted) === 1 ? '' : 's'}{Number(totals.data?.counted) ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / Number(totals.data?.counted))}</b></> : null}</span>
+              <span>{totals.data?.raisedView ? 'Raised' : 'Gross'} <b>{totals.loading ? '…' : money(totals.data?.gross ?? 0)}</b></span>
+              <span>Fees <b>{totals.loading ? '…' : money(totals.data?.fees ?? 0)}</b></span>
+              <span>Net <b>{totals.loading ? '…' : money(totals.data?.net ?? 0)}</b></span>
+              {totals.loading && <span className="muted small">Updating…</span>}
+              <span>{totals.loading ? '…' : Number(totals.data?.counted ?? 0).toLocaleString()} transaction{Number(totals.data?.counted) === 1 ? '' : 's'}{Number(totals.data?.counted) ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / Number(totals.data?.counted))}</b></> : null}</span>
               {totals.data?.raisedView && (
                 <span className="muted small" title="The same rule as the dashboard and campaign balances">
                   Raised counts successful transactions (a batch deposit at what's been funded so far), and leaves out voided, refunded, failed and to-collect ones
