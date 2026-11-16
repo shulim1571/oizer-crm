@@ -262,7 +262,9 @@ export const donorFields: Field[] = [
   { name: 'yiddish_first_name', label: 'Yiddish First Name' },
   { name: 'yiddish_last_name', label: 'Yiddish Last Name' },
   { name: 'yiddish_suffix', label: 'Yiddish Suffix' },
-  { name: 'phone', label: 'Phone' },
+  // Separate boxes (Moshe, Nov 16). The database keeps the donor's Phone as "cell, home" for search and imports.
+  { name: 'cell_phone', label: 'Cell phone', help: 'Texts go to this number' },
+  { name: 'home_phone', label: 'Home phone' },
   { name: 'email', label: 'Email', type: 'email' },
   { name: 'address', label: 'Address', uspsCheck: true },
   { name: 'ojc_id', label: 'OJC account number', help: 'The donor\'s account at the OJC Fund, as it shows on their grants' },

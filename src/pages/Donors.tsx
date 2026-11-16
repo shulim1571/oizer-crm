@@ -48,7 +48,8 @@ const DONOR_COLUMNS: Column[] = [
   { key: 'open_pledges', label: 'Open Pledges', render: r => money(r.open_pledges), align: 'right', filter: { column: 'open_pledges', type: 'number' } },
   { key: 'id', label: 'Donor ID', optional: true, filter: { column: 'id', type: 'text' } },
   { key: 'country', label: 'Country', optional: true, filter: { column: 'country', type: 'text' } },
-  { key: 'phone', label: 'Phone', render: r => formatPhone(r.phone), filter: { column: 'phone', type: 'text' } },
+  { key: 'cell_phone', label: 'Cell', render: r => formatPhone(r.cell_phone), filter: { column: 'cell_phone', type: 'text' } },
+  { key: 'home_phone', label: 'Home', render: r => formatPhone(r.home_phone), filter: { column: 'home_phone', type: 'text' } },
   { key: 'email', label: 'Email', filter: { column: 'email', type: 'text' } },
   { key: 'address', label: 'Address', long: true, optional: true, filter: { column: 'address', type: 'text' } },
   { key: 'campaign_count', label: 'Campaigns', optional: true, align: 'right', filter: { column: 'campaign_count', type: 'number' } },
@@ -232,7 +233,7 @@ function FundraiserNewDonor({ onClose, onError }: { onClose: () => void; onError
         <div className="fields">
           <label className="field"><span>First name *</span><input value={first} onChange={e => setFirst(e.target.value)} /></label>
           <label className="field"><span>Last name *</span><input value={last} onChange={e => setLast(e.target.value)} /></label>
-          <label className="field"><span>Phone</span><input value={phone} onChange={e => setPhone(e.target.value)} /></label>
+          <label className="field"><span>Cell phone</span><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} /></label>
           <label className="field"><span>Email</span><input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
           <label className="field"><span>Address</span><input value={address} onChange={e => setAddress(e.target.value)} /></label>
           <label className="field"><span>Country</span>
@@ -347,7 +348,8 @@ export function DonorDetail() {
         <div className="card">
           <h3>Contact</h3>
           <dl>
-            <dt>Phone</dt><dd>{formatPhone(d.phone) || '—'}</dd>
+            <dt>Cell</dt><dd>{formatPhone(d.cell_phone) || '—'}</dd>
+            <dt>Home</dt><dd>{formatPhone(d.home_phone) || '—'}</dd>
             <dt>Email</dt><dd>{d.email || '—'}</dd>
             <dt>Address</dt><dd>
               <span className="pre-line">{d.address?.trim() || '—'}</span>

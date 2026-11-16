@@ -45,7 +45,7 @@ function FundraiserDonorForm({ first: f0, last: l0, onClose, onSaved }: { first:
         <div className="fields">
           <label className="field"><span>First name *</span><input value={v.first} onChange={set('first')} /></label>
           <label className="field"><span>Last name *</span><input value={v.last} onChange={set('last')} /></label>
-          <label className="field"><span>Phone</span><input value={v.phone} onChange={set('phone')} /></label>
+          <label className="field"><span>Cell phone</span><input type="tel" value={v.phone} onChange={set('phone')} /></label>
           <label className="field"><span>Email</span><input type="email" value={v.email} onChange={set('email')} /></label>
           <label className="field"><span>Address</span><input value={v.address} onChange={set('address')} /></label>
           <label className="field"><span>Country</span>

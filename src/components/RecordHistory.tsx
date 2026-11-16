@@ -16,7 +16,7 @@ const LABELS: Record<string, string> = {
   created_at: 'Date', check_number: 'Check #', check_date: 'Check date', post_dated: 'Post-dated', delivered: 'Delivered',
   source: 'Source', anonymous: 'Anonymous', possible_duplicate: 'Possible duplicate', payee: 'To', scheduled_for: 'Scheduled for',
   processed_at: 'Processed', cleared: 'Cleared', reversal_date: 'Reversal date', reversal_reason: 'Reason', reversal_notes: 'Reversal notes',
-  split_group_id: 'Split', deleted_at: 'Deleted', voucher_id: 'Voucher', batch_id: 'Batch', email: 'Email', phone: 'Phone',
+  split_group_id: 'Split', deleted_at: 'Deleted', voucher_id: 'Voucher', batch_id: 'Batch', email: 'Email', phone: 'Phone', cell_phone: 'Cell phone', home_phone: 'Home phone',
 };
 const MONEY = new Set(['amount', 'fee', 'manual_fee', 'net_donation', 'chargeback_fee', 'funded', 'batch_pending']);
 const SKIP = new Set(['id', 'org_id', 'updated_at', 'search_text']);
