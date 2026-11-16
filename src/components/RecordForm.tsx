@@ -34,6 +34,8 @@ export interface Field {
   section?: string;
   /** A US address: offers "Check with USPS" under it once the organization has USPS keys (Shulim, 2026-11-12). */
   uspsCheck?: boolean;
+  /** Checked before saving: a message stops the save and says what's wrong (the database checks too). */
+  validate?: (value: any, values: Row) => string | null;
   /** How to make a new one from right here, without leaving this form. */
   create?: () => { noun: string; table: string; fields: Field[]; defaults?: Row; pk?: string };
 }
@@ -139,8 +141,13 @@ export default function RecordForm(p: Props) {
 
   /** Saves the form and returns the saved row (or null, with the error shown), without closing it. */
   async function persist(): Promise<Row | null> {
-    setSaving(true);
     setError(null);
+    for (const f of fields) {
+      if (!f.validate || f.readOnly || (f.showIf && !f.showIf(values))) continue;
+      const problem = f.validate(values[f.name], values);
+      if (problem) { setError(problem); return null; }
+    }
+    setSaving(true);
     const payload: Row = isNew ? { ...p.defaults } : {};
     for (const f of fields) {
       if (f.readOnly || (f.showIf && !f.showIf(values))) continue;

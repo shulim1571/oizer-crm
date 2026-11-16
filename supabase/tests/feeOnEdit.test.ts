@@ -53,3 +53,31 @@ describe('fee when a donation is edited', () => {
     expect(await fees(db, 'fe-6')).toEqual({ fee: '3.20', net: '96.80' });
   });
 });
+
+// Readiness #16 (2026-11-15): a manual fee runs from $0 to the amount; blank uses the preset.
+describe('manual fee bounds', () => {
+  let base: PGlite;
+  let db: PGlite;
+  beforeAll(async () => {
+    base = await seededDb();
+    await as(base, ADMIN, tx => tx.query(`insert into public.payment_methods (org_id, name, fee_type, fee_percent, fee_flat) values (public.current_org_id(), 'Card Test', 'percent_flat', 2.9, 0.30)`));
+  });
+  beforeEach(async () => { db = await base.clone(); });
+  const add = (id: string, manual: number | null, amount = 100) =>
+    sql(db, `insert into public.donations (id, campaign_id, type, status, amount, payment_method, manual_fee) values ($1, '1001', 'Payment', 'completed', $2, 'Card Test', $3)`, [id, amount, manual]);
+
+  it('refuses a negative fee and a fee above the amount, and takes 0 up to the amount', async () => {
+    await expect(add('mb-neg', -1)).rejects.toThrow(/donations_manual_fee_range/);
+    await expect(add('mb-over', 100.01)).rejects.toThrow(/donations_manual_fee_range/);
+    await add('mb-zero', 0);
+    await add('mb-all', 100);
+    await expect(sql(db, `update public.donations set manual_fee = 150 where id = 'mb-zero'`)).rejects.toThrow(/donations_manual_fee_range/);
+  });
+
+  it('uses the preset when the manual fee is left blank', async () => {
+    await add('mb-blank', null, 1000);
+    const [d] = await rows<{ fee: string; manual_fee: string | null }>(db, ADMIN, `select fee, manual_fee from public.donations where id = 'mb-blank'`);
+    expect(d.manual_fee).toBeNull();
+    expect(d.fee).toBe('29.30');   // the Card Test preset, as in the tests above
+  });
+});

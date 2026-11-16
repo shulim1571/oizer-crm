@@ -6,6 +6,16 @@ import {
   donorOptions, managerOptions, sourceOptions,
 } from './lookups';
 
+
+/** A manual fee runs from $0 to the amount; blank means "use the preset" (readiness #16). */
+export function manualFeeProblem(v: unknown, values: Row): string | null {
+  if (v === '' || v == null) return null;
+  const fee = Number(v);
+  if (!Number.isFinite(fee) || fee < 0) return 'The manual fee can\'t be below $0. Leave it blank to use the payment method\'s fee.';
+  if (fee > Math.max(Number(values.amount) || 0, 0)) return 'The manual fee can\'t be more than the amount.';
+  return null;
+}
+
 const create = {
   campaign: () => ({ noun: 'campaign', table: 'campaigns', fields: newCampaignFields, defaults: { status: 'active' } }),
   fundraiser: () => ({ noun: 'fundraiser', table: 'managers', fields: personFields }),
@@ -64,7 +74,8 @@ export const donationFields: Field[] = [
   { name: 'source', label: 'Source', advanced: true, type: 'select', options: sourceOptions, create: create.source },
   { name: 'account_id', label: 'Account', advanced: true, type: 'select', options: accountOptions, create: create.account, help: 'Leave empty to route it automatically' },
   { name: 'fee', label: 'Fee', advanced: true, type: 'number', help: "Leave empty to use the method's fee. Enter 0 to waive it." },
-  { name: 'manual_fee', label: 'Manual Fee', advanced: true, type: 'number' },
+  // Readiness #16: from $0 up to the amount; blank uses the payment method's preset fee.
+  { name: 'manual_fee', label: 'Manual Fee', advanced: true, type: 'number', help: 'Leave blank to use the payment method\'s fee.', validate: manualFeeProblem },
   { name: 'batch_id', label: 'Batch ID / Voucher #', advanced: true },
   { name: 'funded', label: 'Funded', advanced: true, type: 'number', help: 'Batch rows: amount actually received' },
   { name: 'batch_status', label: 'Batch Status', advanced: true, type: 'select', options: ['Open', 'Complete'].map(v => ({ value: v, label: v })) },
