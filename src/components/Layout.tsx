@@ -151,6 +151,10 @@ function saveFolded(v: string[]) { try { localStorage.setItem(FOLD_KEY, JSON.str
 export default function Layout() {
   const { isAdmin, canWork, isPlatformOwner, inPlatformSession, org, role, profile, signOut } = useAuth();
   const [q, setQ] = useState('');
+  // A searching state while typing settles (readiness #66); lists searched on the server show their own loading too.
+  const [typing, setTyping] = useState(false);
+  useEffect(() => { if (!q) { setTyping(false); return; } setTyping(true); const t = setTimeout(() => setTyping(false), 450); return () => clearTimeout(t); }, [q]);
+  const [jumpBusy, setJumpBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [tick, setTick] = useState(0);
   const [campaignId, setCampaignId] = useState('');
@@ -252,13 +256,14 @@ export default function Layout() {
           <label className="search">
             <Search size={16} />
             <input ref={searchRef} value={q} onChange={e => setQ(e.target.value)} placeholder={`Search ${current?.label.toLowerCase() ?? ''}…`} />
-            <span className="kbd">Ctrl K</span>
+            {typing ? <span className="muted small search-busy" aria-live="polite">Searching…</span> : <span className="kbd">Ctrl K</span>}
           </label>
           {canWork && (
             <form className="id-jump-form" onSubmit={async e => {
               e.preventDefault();
               // Finds the campaign by its ID, the number alone (3040 for AS-3040), part of it or its name (Moshe Henig, 2026-11-12).
-              const found = await findCampaigns(campaignId);
+              setJumpBusy(true);
+              const found = await findCampaigns(campaignId).finally(() => setJumpBusy(false));
               setJumpNote(null);
               if (found.length === 1 || (found.length > 1 && String(found[0].id).toLowerCase() === campaignId.trim().toLowerCase())) {
                 nav(`/campaigns/${encodeURIComponent(found[0].id)}`); setCampaignId(''); setJumpMatches([]);
@@ -268,8 +273,9 @@ export default function Layout() {
               <input className="id-jump" aria-label="Go to campaign ID" placeholder="Campaign ID" value={campaignId}
                 onChange={e => { setCampaignId(e.target.value); setJumpMatches([]); setJumpNote(null); }}
                 onBlur={() => setTimeout(() => { setJumpMatches([]); setJumpNote(null); }, 200)} />
-              {(jumpMatches.length > 0 || jumpNote) && (
+              {(jumpMatches.length > 0 || jumpNote || jumpBusy) && (
                 <ul className="ss-list id-jump-list" role="listbox">
+                  {jumpBusy && <li className="muted" aria-live="polite">Searching…</li>}
                   {jumpNote && <li className="muted">{jumpNote}</li>}
                   {jumpMatches.map(c => (
                     <li key={c.id} role="option" onMouseDown={ev => { ev.preventDefault(); nav(`/campaigns/${encodeURIComponent(c.id)}`); setCampaignId(''); setJumpMatches([]); }}>
