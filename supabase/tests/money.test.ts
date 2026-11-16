@@ -65,8 +65,9 @@ describe('fees', () => {
     expect(await change(MANAGER_1)).toEqual([]);
     await as(db, ADMIN, tx => tx.query(`select public.set_delegation('${second}', 'configure_fees', true)`));
     expect(await change(second)).toHaveLength(1);
-    const log = (await db.query<{ changes: { fee_flat: { new: number } } }>(`select changes from public.activity_log where table_name = 'payment_methods' and action = 'update'`)).rows;
-    expect(log[0].changes.fee_flat.new).toBe(9);
+    const log = (await db.query<{ changes: { fee_flat?: { new: number } } }>(`select changes from public.activity_log where table_name = 'payment_methods' and action = 'update'`)).rows;
+    // The is_check backfill (readiness #58) also logged an update on Check; look for the fee change itself.
+    expect(log.find(l => l.changes.fee_flat)?.changes.fee_flat.new).toBe(9);
   });
 });
 
