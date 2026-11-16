@@ -454,3 +454,20 @@ describe('applying the real processor fee', () => {
     await expect(sql(db, `select public.apply_fee_difference($1)`, [m])).rejects.toThrow(/short by processor fees/);
   });
 });
+
+// Readiness #32 (2026-11-15): deposits in transit in the per-account summary.
+describe('reconciliation summary', () => {
+  it('counts book deposits the bank hasn\'t shown yet, and drops one once it\'s matched', async () => {
+    const db = await seededDb();
+    const today = (await one<{ d: string }>(db, `select public.org_today()::text d`)).d;
+    const g = await giftOn(db, 125, today);
+    const sum = async () => one(db, `select deposits_unmatched::int n, deposits_unmatched_total::numeric t, deposits_since::text since from public.bank_reconciliation_summary() where account_id = 'a1'`);
+    const before = await sum();
+    expect(before.n).toBeGreaterThanOrEqual(1);
+    await importLines(db, [{ date: today, amount: 125 }]);
+    await sql(db, `select public.match_bank('a1', array[$1], $2)`, [await lineId(db, 125), JSON.stringify([{ type: 'donation', id: g }])]);
+    const after = await sum();
+    expect(after.n).toBe(before.n - 1);
+    expect(Number(before.t) - Number(after.t)).toBeCloseTo(125, 2);
+  });
+});

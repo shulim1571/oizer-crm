@@ -7,7 +7,7 @@ import Kpi from '../components/Kpi';
 import { Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
 import { readBankFile, guessMapping, toLines, type BankFile, type BankLine, type BankMapping } from '../lib/bankCsv';
-import { dateTime, localToday, money } from '../lib/format';
+import { dateTime, download, localToday, money, toCsv } from '../lib/format';
 import { printReport } from '../lib/printReport';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -82,7 +82,10 @@ function ReconciliationScreen() {
       {a && (
         <>
           <div className="kpis">
-            <Kpi label="Lines to match" value={String(a.unmatched_lines)} icon={<Landmark size={18} />} tone={Number(a.unmatched_lines) ? 'amber' : 'green'} sub={money(a.unmatched_total)} />
+            <Kpi label="Lines to match" value={String(a.unmatched_lines)} icon={<Landmark size={18} />} tone={Number(a.unmatched_lines) ? 'amber' : 'green'} sub={`${money(a.unmatched_total)} unreconciled`} />
+            {/* Readiness #32: book deposits the bank doesn't show yet. */}
+            <Kpi label="Deposits in transit" value={String(a.deposits_unmatched ?? 0)} icon={<ArrowLeftRight size={18} />} tone={Number(a.deposits_unmatched) ? 'amber' : 'green'}
+              sub={`${money(a.deposits_unmatched_total ?? 0)} since ${a.deposits_since ? usDate(a.deposits_since) : '—'}`} />
             <Kpi label="Signed off through" value={a.locked_through ? usDate(a.locked_through) : 'Not yet'} icon={<Lock size={18} />} tone="blue"
               sub={a.last_statement_balance != null ? `Ending balance ${money(a.last_statement_balance)}` : undefined} />
             <Kpi label="Latest bank line" value={a.last_line_date ? usDate(a.last_line_date) : 'None yet'} icon={<FileUp size={18} />} tone="violet" small />
@@ -162,6 +165,11 @@ function MatchTab({ account, version, onChanged }: { account: string; version: n
     p_items: chosenItems.map(b => ({ type: b.item_type, id: b.item_id })),
     p_difference_type: diff !== 0 ? diffType || null : null, p_note: note || null,
   }), 'Matched.');
+  // Readiness #32: everything not matched yet, both sides, for a spreadsheet.
+  const exportUnmatched = () => download(`unmatched-${account}-${localToday()}.csv`, toCsv([
+    ...openLines.map(l => ({ side: 'Bank', date: usDate(l.posted_date), kind: 'Bank line', description: l.description, check: l.check_number ?? '', amount: l.amount })),
+    ...openItems.map(b => ({ side: 'Books', date: usDate(String(b.item_date)), kind: ITEM_LABEL[b.item_type] ?? b.item_type, description: b.description, check: b.check_number ?? '', amount: b.amount })),
+  ], [{ key: 'side', label: 'Side' }, { key: 'date', label: 'Date' }, { key: 'kind', label: 'Kind' }, { key: 'description', label: 'Details' }, { key: 'check', label: 'Check #' }, { key: 'amount', label: 'Amount' }]));
   const autoMatch = () => run(async () => {
     const n = (await rpc('auto_match_bank', { p_account: account })) as number;
     setMessage(n ? `Matched ${n} automatically. Check the rest by hand.` : 'Nothing could be matched with certainty. Match the rest by hand.');
@@ -179,8 +187,10 @@ function MatchTab({ account, version, onChanged }: { account: string; version: n
         <input placeholder="Search description, check # or amount" value={search} onChange={e => setSearch(e.target.value)} />
         <div className="spacer" />
         <button type="button" className="btn" onClick={() => setShowMatched(true)}>Matched</button>
+        <button type="button" className="btn" onClick={exportUnmatched}>Unmatched list (CSV)</button>
         <button type="button" className="btn primary" disabled={busy} onClick={autoMatch}><Wand2 size={16} /> Match automatically</button>
       </div>
+      <p className="muted small">Match automatically pairs checks by number and amount, then one bank line with one book item of the same amount within 10 days. Anything else is left for you to match.</p>
       {message && <p className="muted">{message}</p>}
       {(lines.error || book.error) && <div className="error">{lines.error || book.error}</div>}
 
@@ -671,7 +681,8 @@ function PeriodsTab({ account, accountName, version, onChanged }: { account: str
               <td className="small">{p.signed_by} <span className="muted">{dateTime(p.signed_at)}</span>
                 {p.status === 'reopened' && <div className="muted">Reopened by {p.reopened_by}: {p.reopen_reason}</div>}</td>
               <td>
-                <button type="button" className="link" onClick={() => printPeriod(p, accountName).catch(e => alert(e.message))}><Printer size={13} /> Print</button>
+                <button type="button" className="link" onClick={() => printPeriod(p, accountName).catch(e => alert(e.message))}><Printer size={13} /> Print / PDF</button>
+                {' · '}<button type="button" className="link" onClick={() => periodCsv(p, accountName)}>CSV</button>
                 {isSuperAdmin && p.id === last?.id && <> · <button type="button" className="link" onClick={() => reopen(p)}>Reopen</button></>}
               </td>
             </tr>
@@ -681,6 +692,19 @@ function PeriodsTab({ account, accountName, version, onChanged }: { account: str
       </table></div></div>
     </>
   );
+}
+
+/** The signed-off period as a spreadsheet: the summary, then what was outstanding (readiness #32). */
+function periodCsv(p: Row, accountName: string) {
+  const r = p.report as Row;
+  const lines = [
+    ['Opening balance', p.opening_balance], ['Deposits', r.deposits], ['Withdrawals', r.withdrawals], ['Statement ending balance', p.statement_balance],
+    ['Deposits in transit', r.deposits_in_transit], ['Outstanding payments', r.outstanding_payments], ['Adjusted bank balance', r.adjusted_balance],
+    ...(r.book_balance != null ? [['Book balance', r.book_balance], ['Difference', r.book_difference]] : []),
+  ].map(([label, amount]) => ({ section: 'Summary', date: '', kind: label, description: '', check: '', amount }));
+  const outstanding = (r.outstanding as Row[]).map(o => ({ section: 'Outstanding', date: usDate(o.item_date), kind: ITEM_LABEL[o.item_type] ?? o.item_type, description: o.description, check: o.check_number ?? '', amount: o.amount }));
+  download(`reconciliation-${accountName}-${p.period_end}.csv`, toCsv([...lines, ...outstanding],
+    [{ key: 'section', label: 'Section' }, { key: 'date', label: 'Date' }, { key: 'kind', label: 'Item' }, { key: 'description', label: 'Details' }, { key: 'check', label: 'Check #' }, { key: 'amount', label: 'Amount' }]));
 }
 
 const nextDay = (iso: string) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
