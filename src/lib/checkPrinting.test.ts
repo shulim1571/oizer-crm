@@ -64,3 +64,12 @@ describe('Email to fundraiser (Moshe Henig, 2026-11-11)', () => {
     expect(checks).toContain("{ label: 'Email to fundraiser', onClick: () => { emailCheck(r.id)");                // register
   });
 });
+
+// Moshe #20: once a payout's check has printed, the payout form shows its amount and payee read-only.
+describe('printed payout form lock', () => {
+  it('locks amount and payee with a void-the-check note', () => {
+    const src = readFileSync('src/components/RecordForm.tsx', 'utf8');
+    expect(src).toContain("const PAYOUT_LOCKED = ['amount', 'payee_id', 'payee'];");
+    expect(src).toContain('has printed. Void the check to change this.');
+  });
+});

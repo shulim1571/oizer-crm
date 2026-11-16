@@ -7,7 +7,7 @@ Build these (refs are finding numbers in readiness-fixes-2026-11-15.md, "Held fo
 - #10 "To collect" status: use it only for checks not yet delivered (Moshe's rule). Adjust balance/fee handling to match.
 - #11 Total potential: keep the formula; team (sub-campaign) amounts count just like the parent's amounts, so include them on the parent. Done Nov 16: a parent's Total potential now adds its teams' raised, open pledges, pending and undelivered checks (the box says "with teams" when they add anything). Sub-campaigns that keep their own balance stay on their own page, as for Raised.
 - #8 Checks not delivered: on the dashboard, show them in one box together with open pledges (not counted in raised).
-- #20 After "Yes, it printed": lock that payout's amount and payee (void the check to change). Unprinted payouts stay editable.
+- #20 After "Yes, it printed": lock that payout's amount and payee (void the check to change). Unprinted payouts stay editable. Done Nov 16: once a check is confirmed printed (or emailed), the payout form shows amount and payee read-only with "Check #N has printed. Void the check to change this.", and the database refuses the change too. Voiding the check unlocks it; memo, notes and other fields stay editable; merging payees still works. 19 payouts on file are locked now.
 - #41 Clicking a donation opens a read-only view first, with Edit and Issue Receipt buttons on top.
 - #65 Sidebar says "Task Sheet". Rename the Machine Bookings "Calendar" and "Bookings" tabs to clearer names of your choice.
 

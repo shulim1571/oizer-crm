@@ -16,6 +16,9 @@ import { PayoutCheckActions } from '../pages/Checks';
 import { ReceiptActions } from '../pages/Receipts';
 import RecordHistory from './RecordHistory';
 
+/** A payout's fields that lock once its check has printed (Moshe #20). */
+const PAYOUT_LOCKED = ['amount', 'payee_id', 'payee'];
+
 export interface Field {
   name: string;
   label: string;
@@ -82,7 +85,22 @@ export default function RecordForm(p: Props) {
     supabase.rpc('donation_gateway', { p_donation: p.record!.id }).then(({ data }) => setProcessed(((data ?? []) as Row[]).length > 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const fields: Field[] = !donationEdit ? p.fields : p.fields.map(f => {
+  // A payout whose check has printed (or been emailed) keeps its amount and payee; void the check to change them
+  // (Moshe #20). The database enforces it too.
+  const [printedCheck, setPrintedCheck] = useState<number | null>(null);
+  const payoutEdit = p.table === 'expenses' && !isNew && !p.onBulk;
+  useEffect(() => {
+    if (!payoutEdit) return;
+    supabase.from('checks').select('check_number, printed_at, emailed_at').eq('expense_id', p.record!.id).in('status', ['outstanding', 'cleared'])
+      .then(({ data }) => {
+        const k = ((data ?? []) as Row[]).find(r => r.printed_at || r.emailed_at);
+        setPrintedCheck(k ? Number(k.check_number) : null);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const fields: Field[] = payoutEdit ? p.fields.map(f => printedCheck != null && PAYOUT_LOCKED.includes(f.name)
+    ? { ...f, readOnly: true, help: `Check #${printedCheck} has printed. Void the check to change this.` } : f)
+    : !donationEdit ? p.fields : p.fields.map(f => {
     if (processed && PROCESSOR_FIELDS.includes(f.name)) return { ...f, readOnly: true, help: 'From the card processor' };
     if (f.name === 'status') {
       const ok = allowedStatuses(p.record!.status);
