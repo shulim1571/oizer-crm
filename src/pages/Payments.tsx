@@ -543,9 +543,10 @@ export function PaymentsSettingsPage() {
       <div className="panel-box">
         <h2>Status</h2>
         <dl className="record-facts">
-          <dt>iFields key</dt><dd>{cfg?.ifields_key ? <Pill tone="green">Set</Pill> : <Pill tone="red">Missing</Pill>}</dd>
-          <dt>API key</dt><dd>{cfg?.api_key_set ? <Pill tone="green">Set</Pill> : <Pill tone="red">Missing</Pill>}</dd>
-          <dt>Webhook PIN</dt><dd>{cfg?.pin_set ? <Pill tone="green">Set</Pill> : <Pill tone="amber">Not set</Pill>}</dd>
+          {/* Nothing is called missing until the settings have loaded (readiness #45). */}
+          <dt>iFields key</dt><dd>{config.loading ? <span className="muted">Checking…</span> : cfg?.ifields_key ? <Pill tone="green">Set</Pill> : <Pill tone="red">Missing</Pill>}</dd>
+          <dt>API key</dt><dd>{config.loading ? <span className="muted">Checking…</span> : cfg?.api_key_set ? <Pill tone="green">Set</Pill> : <Pill tone="red">Missing</Pill>}</dd>
+          <dt>Webhook PIN</dt><dd>{config.loading ? <span className="muted">Checking…</span> : cfg?.pin_set ? <Pill tone="green">Set</Pill> : <Pill tone="amber">Not set</Pill>}</dd>
           <dt>Mode</dt><dd>{cfg ? (cfg.sandbox ? <Pill tone="amber">Sandbox</Pill> : <Pill tone="green">Live</Pill>) : '—'}</dd>
           {cfg?.updated_at && <><dt>Last changed</dt><dd>{dateTime(cfg.updated_at)} by {cfg.updated_by}</dd></>}
         </dl>

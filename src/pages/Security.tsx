@@ -122,7 +122,8 @@ function PhoneSection({ mfa, onChanged }: { mfa: MfaState & { reload: () => Prom
   }
   return (
     <div className="panel-box">
-      <h2>Text or call codes {mfa.phone ? <Pill tone="green">On</Pill> : <Pill>Off</Pill>}</h2>
+      {/* No On or Off until it has loaded (readiness #45). */}
+      <h2>Text or call codes {mfa.loading ? <span className="muted small">Checking…</span> : mfa.phone ? <Pill tone="green">On</Pill> : <Pill>Off</Pill>}</h2>
       <p className="muted small">No app needed: get a 6-digit code by text message or a phone call when you sign in.</p>
       {mfa.phone && !adding && (
         <>
@@ -136,7 +137,7 @@ function PhoneSection({ mfa, onChanged }: { mfa: MfaState & { reload: () => Prom
           </div>
         </>
       )}
-      {!mfa.phone && !adding && <button type="button" className="btn primary" onClick={() => { setAdding(true); setReady(false); }}>Add a phone</button>}
+      {!mfa.loading && !mfa.phone && !adding && <button type="button" className="btn primary" onClick={() => { setAdding(true); setReady(false); }}>Add a phone</button>}
       {adding && (
         <div className="mfa-enroll">
           <label className="field"><span>Phone number (US)</span>
@@ -184,7 +185,7 @@ export default function AccountSecurityPage() {
       {message && <div className="notice">{message}</div>}
       {error && <div className="error">{error}</div>}
       <div className="panel-box">
-        <h2><ShieldCheck size={16} /> Authenticator app {mfa.factorId ? <Pill tone="green">On</Pill> : <Pill>Off</Pill>}
+        <h2><ShieldCheck size={16} /> Authenticator app {mfa.loading ? <span className="muted small">Checking…</span> : mfa.factorId ? <Pill tone="green">On</Pill> : <Pill>Off</Pill>}
           {mfa.verified && <Pill tone="blue">This session verified</Pill>}</h2>
         <p className="muted small">After your password, you also enter a 6-digit code from an authenticator app on your phone
           (Google Authenticator, Microsoft Authenticator, 1Password and similar).
