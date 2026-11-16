@@ -97,6 +97,12 @@ export default function CampaignDetail() {
   // Shared teams: their gifts and payouts are in this campaign's figures, so the lists show them too (readiness #37).
   const teams = useQuery(async () => ((await supabase.from('campaigns').select('id').eq('parent_campaign_id', id).eq('balance_mode', 'shared').is('deleted_at', null)).data ?? []).map(t => String(t.id)), [id]);
   const family = [id, ...((teams.data as string[] | null) ?? [])];
+  // Transfers in and out, apart from gifts and payouts (readiness #43). Raised and expenses include them.
+  const moves = useQuery(async () => {
+    const rows = ((await supabase.rpc('campaign_transfer_totals')).data ?? []) as Row[];
+    const mine = rows.filter(r => family.includes(String(r.campaign_id)));
+    return { in: mine.reduce((t, r) => t + Number(r.amount_in ?? 0), 0), out: mine.reduce((t, r) => t + Number(r.amount_out ?? 0), 0) };
+  }, [id, version, family.join(',')], { live: ['transfers'] });
   const rows = useQuery(async () => {
     const page = <T,>(q: (a: number, b: number) => PromiseLike<T>) => fetchAll(q as never);
     switch (tab) {
@@ -133,6 +139,8 @@ export default function CampaignDetail() {
 
   const saved = () => { setForm(null); setVersion(v => v + 1); };
   const combines = Number(c.combined_raised) !== Number(c.raised);
+  const tIn = Number((moves.data as Row | null)?.in ?? 0);
+  const tOut = Number((moves.data as Row | null)?.out ?? 0);
   // Teams' gifts or payouts are in the figures (readiness #37): say so on every box that includes them.
   const withTeams = combines || Number(c.combined_fees) !== Number(c.fees) || Number(c.combined_expenses) !== Number(c.expenses)
     || Number(c.combined_donations) !== Number(c.donation_count);
@@ -279,13 +287,16 @@ export default function CampaignDetail() {
       </div>
 
       <div className="kpis">
-        <Kpi label={combines ? 'Raised, with teams' : 'Raised'} value={money(c.combined_raised)} icon={<TrendingUp size={18} />} tone="green"
+        <Kpi label={combines ? 'Raised (gifts), with teams' : 'Raised (gifts)'} value={money(Number(c.combined_raised) - tIn)} icon={<TrendingUp size={18} />} tone="green"
              sub={[combines && `${money(c.raised)} directly`, `${Number(c.combined_donations).toLocaleString()} donations${withTeams ? ' incl. teams' : ''}`, c.goal != null && Number(c.goal) > 0 && `${pct(Number(c.combined_raised) / Number(c.goal))} of ${money(c.goal)} goal`].filter(Boolean).join(' · ')} />
         <Kpi label={withTeams ? 'Fees, with teams' : 'Fees'} value={money(c.combined_fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(Number(c.combined_raised) ? Number(c.combined_fees) / Number(c.combined_raised) : 0)} of raised`} />
-        <Kpi label={withTeams ? 'Expenses, with teams' : 'Expenses'} value={money(c.combined_expenses)} icon={<Receipt size={18} />} tone="amber" />
+        {tIn > 0 && <Kpi label="Transfers in" value={money(tIn)} icon={<TrendingUp size={18} />} tone="green" sub="From other campaigns" />}
+        <Kpi label={withTeams ? 'Expenses (payouts), with teams' : 'Expenses (payouts)'} value={money(Number(c.combined_expenses) - tOut)} icon={<Receipt size={18} />} tone="amber" />
+        {tOut > 0 && <Kpi label="Transfers out" value={money(tOut)} icon={<Receipt size={18} />} tone="amber" sub="To other campaigns" />}
         {c.balance_mode === 'shared'
           ? <Kpi label="Balance" value={<span className="muted">Shared</span>} icon={<Scale size={18} />} tone="blue" sub="Counted in the parent's balance" />
-          : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} sub={Number(c.sub_count) > 0 ? "Includes its teams; sub-campaigns keep their own balance" : undefined} />}
+          : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'}
+              sub={[`= gifts${tIn ? ' + transfers in' : ''} − fees − payouts${tOut ? ' − transfers out' : ''}`, Number(c.sub_count) > 0 && 'includes its teams; sub-campaigns keep their own balance'].filter(Boolean).join(' · ')} />}
         {avail && c.balance_mode !== 'shared' && (
           <Kpi label="Available to pay out" value={<Balance value={avail.available} />} icon={<Scale size={18} />} tone={Number(avail.available) < 0 ? 'red' : 'blue'} sub={availableNote(avail)} />
         )}
