@@ -122,7 +122,7 @@ describe('public payment pages', () => {
   it('take a receipt request off the Task Sheet once the receipt is sent, from wherever it is sent', async () => {
     const asked = async (amount: number) => {
       const r = await give(db, amount, { custom: { 'Table number': '4' } });
-      await answer(db, r.id, OK);
+      await answer(db, r.id, { ...OK, xRefNum: `21000${amount}` });   // each sale its own Sola reference (readiness #23)
       await rows(db, 'anon', `select public.request_receipt($1, 'chaim@example.org', null)`, [r.token]);
       return (await one(db, `select donation_id from public.gateway_transactions where id = $1`, [r.id])).donation_id as string;
     };
