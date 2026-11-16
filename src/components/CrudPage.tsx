@@ -15,6 +15,8 @@ interface Props {
   table: string;
   /** Topics that make the list update on its own when they change (live refresh). */
   live?: LiveTopic[];
+  /** Quick filters shown as buttons above the list (one at a time; click again for all). */
+  presets?: { label: string; test: (row: Row) => boolean }[];
   select?: string;
   order?: { column: string; ascending?: boolean };
   columns: Column[];
@@ -37,6 +39,7 @@ export default function CrudPage(p: Props) {
   const { isAdmin } = useAuth();
   const canEdit = p.canEdit ?? isAdmin;
   const [editing, setEditing] = useState<Row | null | undefined>(undefined);
+  const [preset, setPreset] = useState<string | null>(null);
   const nav = useNavigate();
 
   const { data, error, loading, setData, reload } = useQuery(
@@ -66,7 +69,7 @@ export default function CrudPage(p: Props) {
     <>
       <DataTable
         title={p.title}
-        rows={data ?? []}
+        rows={(data ?? []).filter(r => !preset || (p.presets?.find(x => x.label === preset)?.test(r) ?? true))}
         loading={loading}
         error={error}
         columns={p.columns}
@@ -74,6 +77,12 @@ export default function CrudPage(p: Props) {
         onOpen={p.openPath ? r => nav(p.openPath!(r)) : canEdit ? r => setEditing(r) : undefined}
         actions={
           <>
+            {p.presets?.map(x => (
+              <button key={x.label} type="button" className={`btn ${preset === x.label ? 'primary' : ''}`} aria-pressed={preset === x.label}
+                onClick={() => setPreset(v => (v === x.label ? null : x.label))}>
+                {x.label}{data ? ` (${data.filter(x.test).length})` : ''}
+              </button>
+            ))}
             {p.extraActions}
             {canEdit && (
               <button className="btn primary" onClick={() => setEditing(null)}><Plus size={16} /> New {(p.noun ?? p.title).toLowerCase()}</button>

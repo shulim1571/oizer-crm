@@ -19,6 +19,13 @@ import {
 
 const CAMP = 'id, internal_name, campaign_name, external_name';
 
+/** Payouts to act on: checks to print, payouts waiting for their date, and checks the bank hasn't cleared. */
+export const PAYOUT_PRESETS = [
+  { label: 'To pay', test: (r: Row) => /check/i.test(r.method ?? '') && !r.check_number && !!r.processed_at },
+  { label: 'Scheduled', test: (r: Row) => !!r.scheduled_for && !r.processed_at },
+  { label: 'Outstanding checks', test: (r: Row) => !!r.check_number && !r.cleared },
+];
+
 export function ExpensesPage() {
   const { defaultAccountId, isAdmin, canWork } = useAuth();
   const [requesting, setRequesting] = useState(false);
@@ -29,6 +36,8 @@ export function ExpensesPage() {
       title="Payouts" noun="Payout"
       table="expenses"
       live={['payouts']}
+      // Quick filters (readiness #42).
+      presets={PAYOUT_PRESETS}
       select={`*, campaigns(${CAMP}), accounts(name)`}
       order={{ column: 'created_at', ascending: false }}
       columns={[
