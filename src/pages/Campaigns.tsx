@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { clearLookups } from '../lib/lookups';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ExternalLink, Plus, Receipt, Scale, TrendingUp } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
@@ -113,6 +114,9 @@ export default function Campaigns({ mode }: { mode: Mode }) {
           onSaved={async r => {
             const { error: e } = await supabase.rpc('save_campaign_settings', { p_campaign: r.id, p_settings: choice.settings, p_template: choice.template?.id ?? null });
             if (e) alert(`The campaign was created, but its page settings weren't saved: ${e.message}`);
+            // In every campaign box and in this list straight away, not after a reload (readiness #52).
+            clearLookups();
+            void reload({ quiet: true });
             nav(`/campaigns/${encodeURIComponent(r.id)}`);
           }}
         />

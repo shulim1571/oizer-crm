@@ -45,7 +45,8 @@ export const campaignFields: Field[] = [
 export const newCampaignFields: Field[] = [
   // Prefilled with the next number, and editable while creating; permanent after (Moshe Henig, 2026-11-15).
   { name: 'id', label: 'Campaign ID', help: 'Suggested: the next number. You can change it: letters, numbers and dashes, not one already used. It can\'t be changed later. Leave it empty for the next number.' },
-  ...campaignFields,
+  // A new campaign needs its Primary Fundraiser (readiness #52); one can be added right from the box.
+  ...campaignFields.map(f => (f.name === 'manager_id' ? { ...f, required: true, help: 'Who runs this campaign. Not on the list? Create them from here.' } : f)),
   { name: 'status', label: 'Status', type: 'select', options: CAMPAIGN_STATUSES, required: true },
 ];
 
