@@ -63,3 +63,16 @@ describe('split gifts keep their references', () => {
     expect((await parts(db, g)).map(p => p.status)).toEqual(['refunded', 'refunded']);
   });
 });
+
+// Readiness #28 (2026-11-15): a check not delivered yet isn't offered for bank matching until it's delivered.
+describe('checks not delivered yet', () => {
+  it("stay off the books side of bank matching until they're delivered", async () => {
+    const db = await seededDb();
+    await db.query(`insert into public.donations (org_id, id, campaign_id, type, status, amount, manual_fee, payment_method, account_id, delivered)
+                    values ($1, 'ud-1', '1003', 'Payment', 'completed', 250, 0, 'Check', 'a1', false)`, [OIZER]);
+    const offered = async () => (await db.query(`select item_id from public.recon_book_items($1, 'a1') where item_id = 'ud-1'`, [OIZER])).rows.length;
+    expect(await offered()).toBe(0);
+    await db.query(`update public.donations set delivered = true where id = 'ud-1'`);
+    expect(await offered()).toBe(1);
+  });
+});
