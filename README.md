@@ -84,6 +84,13 @@ so confirmation and password-reset emails link back to it.
 ## Database
 
 - Schema, RLS policies and views: `supabase/migrations/`.
+- **Migration numbering (readiness #49):** files run in name order, so a new migration always takes the next number
+  after the highest one in the folder (they're numbered `20261222…` and continue from there), not today's date: a
+  file named with an earlier date would sort before ones already applied and run out of order. Apply a migration by
+  name through the Management API (`POST /v1/projects/{ref}/database/migrations` with `name` and `query`), which
+  records it in `supabase_migrations.schema_migrations` under the time it was applied; `supabase db push` isn't used.
+  Live history matched the folder by name on 2026-11-16, apart from one early hotfix applied without a file
+  (`log_sign_in_never_blocks`, Nov 1), whose change later migrations already include.
 - IDs keep the AppSheet Row IDs (campaign IDs are the campaign numbers).
 - Donor data lives only in Supabase; nothing from the spreadsheet is committed here.
 - **Deleting never removes data.** Deletes on business tables mark the row with `deleted_at`, and it disappears from
