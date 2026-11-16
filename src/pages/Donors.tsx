@@ -53,8 +53,8 @@ const DONOR_COLUMNS: Column[] = [
   { key: 'address', label: 'Address', long: true, optional: true, filter: { column: 'address', type: 'text' } },
   { key: 'campaign_count', label: 'Campaigns', optional: true, align: 'right', filter: { column: 'campaign_count', type: 'number' } },
   { key: 'last_gift_at', label: 'Last Gift', render: r => dateTime(r.last_gift_at), filter: { column: 'last_gift_at', type: 'date' } },
-  { key: 'matbia_id', label: 'Matbia ID', optional: true, filter: { column: 'matbia_id', type: 'text' } },
-  { key: 'ojc_id', label: 'OJC ID', optional: true, filter: { column: 'ojc_id', type: 'text' } },
+  { key: 'matbia_id', label: 'Matbia account #', optional: true, filter: { column: 'matbia_id', type: 'text' } },
+  { key: 'ojc_id', label: 'OJC account #', optional: true, filter: { column: 'ojc_id', type: 'text' } },
 ];
 
 /** The search, as conditions on donor_summary: every word must match a name, email or ID; digits also match phones. */
@@ -353,8 +353,11 @@ export function DonorDetail() {
               <span className="pre-line">{d.address?.trim() || '—'}</span>
               {canWork && <> <button type="button" className="link" onClick={() => setEditingAddress(true)}>{d.address?.trim() ? 'Edit address' : 'Add address'}</button></>}
             </dd>
-            <dt>OJC / Matbia</dt><dd>{[d.ojc_id, d.matbia_id].filter(Boolean).join(' / ') || '—'}</dd>
-            <dt>Pledger / Nadvan</dt><dd>{[d.pledger_id, d.nadvan_id].filter(Boolean).join(' / ') || '—'}</dd>
+            {/* Plain words for the giving-fund account numbers (readiness #64). */}
+            <dt>OJC account number</dt><dd>{d.ojc_id || '—'}</dd>
+            <dt>Matbia account number</dt><dd>{d.matbia_id || '—'}</dd>
+            <dt>Pledger account number</dt><dd>{d.pledger_id || '—'}</dd>
+            <dt>Nadvan account number</dt><dd>{d.nadvan_id || '—'}</dd>
             <dt>Country</dt><dd>{d.country}</dd>
             <dt>Donor ID</dt><dd>{d.id}</dd>
             {isAdmin && <><dt>Notes</dt><dd className="pre-line">{d.notes || '—'}</dd></>}

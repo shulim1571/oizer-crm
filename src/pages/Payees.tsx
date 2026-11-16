@@ -40,7 +40,7 @@ export function PayeesPage() {
           { key: 'id', label: 'ID', render: r => <span className="id-tag">{r.id}</span> },
           { key: 'phone', label: 'Phone', render: r => formatPhone(r.phone) },
           { key: 'email', label: 'Email' },
-          { key: 'total_paid', label: 'Lifetime paid', render: r => money(r.total_paid), align: 'right' },
+          { key: 'total_paid', label: 'Paid to date', render: r => money(r.total_paid), align: 'right' },
           { key: 'payout_count', label: 'Payouts', align: 'right' },
           { key: 'campaigns', label: 'Campaigns', value: r => (r.campaigns ?? []).join(', '), width: 160 },
           { key: 'methods', label: 'Methods', value: r => (r.methods ?? []).join(', ') },
@@ -105,7 +105,7 @@ function PayeeDialog({ id, onClose, onChanged, onMerged }: { id: string; onClose
         {p.email && <><dt>Email</dt><dd>{p.email}</dd></>}
         {p.address && <><dt>Address</dt><dd className="pre-line">{p.address}</dd></>}
         {p.preferred_method && <><dt>Prefers</dt><dd>{p.preferred_method}</dd></>}
-        <dt>{isAdmin ? 'Lifetime paid' : 'Paid from your campaigns'}</dt><dd>{money(p.total_paid)} · {p.payout_count} payout{Number(p.payout_count) === 1 ? '' : 's'}</dd>
+        <dt>{isAdmin ? 'Paid to date' : 'Paid from your campaigns'}</dt><dd>{money(p.total_paid)} · {p.payout_count} payout{Number(p.payout_count) === 1 ? '' : 's'}</dd>
         {p.notes && <><dt>Notes</dt><dd className="pre-line">{p.notes}</dd></>}
       </dl>
       {error && <div className="error">{error}</div>}

@@ -265,10 +265,10 @@ export const donorFields: Field[] = [
   { name: 'phone', label: 'Phone' },
   { name: 'email', label: 'Email', type: 'email' },
   { name: 'address', label: 'Address', uspsCheck: true },
-  { name: 'ojc_id', label: 'OJC ID' },
-  { name: 'nadvan_id', label: 'Nadvan ID' },
-  { name: 'matbia_id', label: 'Matbia ID' },
-  { name: 'pledger_id', label: 'Pledger ID' },
+  { name: 'ojc_id', label: 'OJC account number', help: 'The donor\'s account at the OJC Fund, as it shows on their grants' },
+  { name: 'nadvan_id', label: 'Nadvan account number' },
+  { name: 'matbia_id', label: 'Matbia account number' },
+  { name: 'pledger_id', label: 'Pledger account number' },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 

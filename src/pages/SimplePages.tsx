@@ -208,7 +208,8 @@ export function ManagersPage() {
       columns={[
         personColumns[0],
         { key: 'status', label: 'Status', value: r => FUNDRAISER_STATUS[r.status], render: r => <StatusPill value={FUNDRAISER_STATUS[r.status]} /> },
-        { key: 'campaign_count', label: 'Campaigns', render: r => `${r.campaign_count} (${r.active_count} active)`, value: r => r.campaign_count },
+        // Archived and closed ones are in the count (readiness #64): say so.
+        { key: 'campaign_count', label: 'Campaigns', render: r => `${r.active_count} active of ${r.campaign_count}${Number(r.campaign_count) > Number(r.active_count) ? ' (rest archived or closed)' : ''}`, value: r => r.campaign_count },
         { key: 'raised', label: 'Raised', render: r => money(r.raised), align: 'right' },
         { key: 'balance', label: 'Balance', render: r => <Balance value={r.balance} />, align: 'right' },
         ...personColumns.slice(1),
