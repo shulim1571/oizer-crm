@@ -88,7 +88,9 @@ describe('transaction list', () => {
   });
 
   it('does not lose donations whose campaign was deleted', async () => {
-    await as(db, ADMIN, tx => tx.query(`delete from public.campaigns where id = '1002'`));
+    // People can't delete a campaign with money left (readiness #53); one deleted before that rule, or by the system,
+    // still keeps its gifts in the list.
+    await db.query(`update public.campaigns set deleted_at = now() where id = '1002'`);
     const [r] = await rows(db, ADMIN, `select id, campaign_internal from public.transaction_list where id = 'b1'`);
     expect(r).toEqual({ id: 'b1', campaign_internal: null });
   });

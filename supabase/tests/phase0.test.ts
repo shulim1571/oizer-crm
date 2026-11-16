@@ -115,7 +115,8 @@ describe('soft delete', () => {
   });
 
   it('hides a deleted campaign from its manager and keeps its ID reserved', async () => {
-    await as(db, ADMIN, tx => tx.query(`delete from public.campaigns where id = '1001'`));
+    // (1001 has money left, which people can't delete since readiness #53; deleted here as the system would.)
+    await db.query(`update public.campaigns set deleted_at = now() where id = '1001'`);
     expect(ids(await rows(db, MANAGER_1, 'select id from public.campaigns'))).toEqual(['1003']);
     expect(ids(await rows(db, ADMIN, `select id from public.campaign_summary`))).toEqual(['1002', '1003']);
     await expect(rows(db, ADMIN, `insert into public.campaigns (id, internal_name) values ('1001', 'x')`)).rejects.toThrow(/Campaign ID 1001 is already taken/);   // friendly message (2026-11-15)
