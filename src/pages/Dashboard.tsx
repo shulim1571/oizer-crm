@@ -116,6 +116,8 @@ export default function DashboardPage() {
   const s = q.data as Row | undefined;
   const per = (k: string) => (s?.periods as Row | undefined)?.[k] as Row | undefined;
   const period = (p?: Row) => (p ? `${money(p.fees)} fees · ${money(Number(p.raised) - Number(p.fees))} net` : '');
+  // Until the first numbers arrive, a placeholder rather than $0.00, which reads as a real zero.
+  const amt = (v: unknown) => (s ? money(v as number) : '…');
   const tasksOpen = (myTasks.data as Row[]) ?? [];
   const today = orgToday();
 
@@ -126,13 +128,13 @@ export default function DashboardPage() {
       {q.error && <div className="error">{q.error}</div>}
 
       <div className="kpis">
-        <Kpi label="Today" value={money(per('today')?.raised ?? 0)} icon={<Clock size={18} />} tone="green" sub={period(per('today'))} />
+        <Kpi label="Today" value={amt(per('today')?.raised ?? 0)} icon={<Clock size={18} />} tone="green" sub={period(per('today'))} />
         {/* All Time in place of This Week (Moshe Henig, 2026-11-11). */}
-        <Kpi label="All time" value={money(per('all')?.raised ?? 0)} icon={<CalendarDays size={18} />} tone="green" sub={period(per('all'))} />
-        <Kpi label="This month" value={money(per('month')?.raised ?? 0)} icon={<CalendarRange size={18} />} tone="green" sub={period(per('month'))} />
-        {isAdmin && <Kpi label="This year" value={money(per('year')?.raised ?? 0)} icon={<TrendingUp size={18} />} tone="green" sub={period(per('year'))} />}
+        <Kpi label="All time" value={amt(per('all')?.raised ?? 0)} icon={<CalendarDays size={18} />} tone="green" sub={period(per('all'))} />
+        <Kpi label="This month" value={amt(per('month')?.raised ?? 0)} icon={<CalendarRange size={18} />} tone="green" sub={period(per('month'))} />
+        {isAdmin && <Kpi label="This year" value={amt(per('year')?.raised ?? 0)} icon={<TrendingUp size={18} />} tone="green" sub={period(per('year'))} />}
         {/* Checks not delivered yet sit with open pledges: promised, not raised (Moshe Henig, #8). */}
-        <Kpi label="Pledged & checks not delivered" value={money(Number(s?.pledged ?? 0) + Number(s?.undelivered?.amount ?? 0))} icon={<Handshake size={18} />} tone="blue"
+        <Kpi label="Pledged & checks not delivered" value={amt(Number(s?.pledged ?? 0) + Number(s?.undelivered?.amount ?? 0))} icon={<Handshake size={18} />} tone="blue"
           sub={`${money(s?.pledged ?? 0)} open pledges · ${money(s?.undelivered?.amount ?? 0)} in ${s?.undelivered?.count ?? 0} check${Number(s?.undelivered?.count) === 1 ? '' : 's'} not delivered · not in raised`} />
         <Kpi label="Recurring transactions" value={<Link to="/donations/recurring">{money(recurring.data?.next30 ?? 0)}</Link>} icon={<CalendarClock size={18} />} tone="violet"
           sub={`next 30 days · ${money(recurring.data?.next90 ?? 0)} next 90 · ${recurring.data?.active ?? 0} active`} />

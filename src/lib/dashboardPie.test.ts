@@ -13,7 +13,7 @@ describe('dashboard pie (Moshe Henig, 2026-11-11)', () => {
 describe('dashboard All Time box (Moshe Henig, 2026-11-11)', () => {
   it('replaces This week', () => {
     const d = readFileSync('src/pages/Dashboard.tsx', 'utf8');
-    expect(d).toContain('<Kpi label="All time" value={money(per(\'all\')?.raised ?? 0)}');
+    expect(d).toContain('<Kpi label="All time" value={amt(per(\'all\')?.raised ?? 0)}');
     expect(d).not.toContain('<Kpi label="This week"');
   });
 });
