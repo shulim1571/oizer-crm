@@ -206,7 +206,7 @@ describe('post-dated checks', () => {
     const id = await add30();
     await db.query(`select public.run_job('post_dated')`);
     expect((await donation(db, id)).status).toBe('post_dated');
-    await db.exec(`update public.donations set check_date = current_date where id = '${id}'`);
+    await db.exec(`update public.donations set check_date = public.org_today() where id = '${id}'`);
     await db.query(`select public.run_job('post_dated')`);
     expect((await donation(db, id)).status).toBe('completed');
     expect((await summary(db, '1003')).post_dated_amount).toBe('0');
@@ -218,7 +218,7 @@ describe('post-dated checks', () => {
     const b = await add30('1003');
     await as(db, ADMIN, tx => tx.query(`update public.campaigns set status = 'archived' where id = '1002'`));
     await as(db, ADMIN, tx => tx.query(`update public.campaigns set status = 'closed' where id = '1003'`));
-    await db.exec(`update public.donations set check_date = current_date where id in ('${a}', '${b}')`);
+    await db.exec(`update public.donations set check_date = public.org_today() where id in ('${a}', '${b}')`);
     await db.query(`select public.run_job('post_dated')`);
     expect((await db.query(`select status from public.campaigns where id = '1002'`)).rows).toEqual([{ status: 'active' }]);
     expect(await donation(db, b)).toMatchObject({ status: 'completed', campaign_id: null });
