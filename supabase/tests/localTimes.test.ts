@@ -26,3 +26,38 @@ describe('times from Donary and Sola', () => {
     expect(await val(db, `select public.local_time_text('', $1)`, [OIZER])).toBeNull();
   });
 });
+
+// Readiness #13 (2026-11-15): processor times (Make, Sola, Elevon) with no zone were read as UTC.
+describe('processor times through make_time', () => {
+  let base: PGlite;
+  let db: PGlite;
+  beforeAll(async () => { base = await seededDb(); });
+  beforeEach(async () => { db = await base.clone(); await db.query(`set timezone = 'UTC'`); });
+  const ny = async (text: string) => val(db, `select to_char(public.make_time($1) at time zone 'America/New_York', 'YYYY-MM-DD HH24:MI')`, [text]);
+
+  it('reads a time with no zone in New York time: 1:30 am on Nov 12 stays Nov 12', async () => {
+    expect(await ny('2026-11-12 01:30')).toBe('2026-11-12 01:30');
+    expect(await ny('2026-11-12T01:30:00')).toBe('2026-11-12 01:30');
+    expect(await ny('11/12/2026 1:30 AM')).toBe('2026-11-12 01:30');
+    expect(await val(db, `select (public.make_time('2026-11-12 01:30') at time zone 'America/New_York')::date::text`)).toBe('2026-11-12');
+  });
+
+  it('leaves times that carry an offset or zone as they are', async () => {
+    expect(await ny('2026-11-12T06:30:00Z')).toBe('2026-11-12 01:30');
+    expect(await ny('2026-11-12 01:30:00-05:00')).toBe('2026-11-12 01:30');
+    expect(await ny('2026-11-12T06:30:00+0000')).toBe('2026-11-12 01:30');
+    expect(await ny('2026-11-12 06:30 UTC')).toBe('2026-11-12 01:30');
+    expect(await ny('2026-11-12 00:30 America/Chicago')).toBe('2026-11-12 01:30');
+  });
+
+  it('takes a date alone as that day in New York, not as an offset', async () => {
+    expect(await ny('2026-11-12')).toBe('2026-11-12 00:00');
+  });
+
+  it('falls back to now for empty or unreadable text, as before', async () => {
+    const recent = async (t: string | null) => Number(await val(db, `select abs(extract(epoch from now() - public.make_time($1)))`, [t]));
+    expect(await recent('')).toBeLessThan(5);
+    expect(await recent(null)).toBeLessThan(5);
+    expect(await recent('not a date')).toBeLessThan(5);
+  });
+});
