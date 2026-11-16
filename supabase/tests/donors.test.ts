@@ -266,3 +266,28 @@ describe('donor search shows every match', () => {
     await expect(rows(db, 'anon', `select * from public.donor_ids_by_phone('7185550100')`)).rejects.toThrow();
   });
 });
+
+// Moshe Henig, 2026-11-16: "the donor search takes very long" (about 6 s): the totals were regrouped over every
+// donation once per matching donor. Each donor's totals now come from that donor's own gifts (a lateral join).
+describe('donor totals', () => {
+  let db: PGlite;
+  beforeEach(async () => { db = await seededDb(); });
+
+  it("work out each donor's totals from their own gifts, the same numbers as before", async () => {
+    const a = await donor(db, 'Leah', 'Fast');
+    const none = await donor(db, 'Rivka', 'Nogifts');
+    await give(db, '1001', a, 100);
+    await give(db, '1002', a, 50);
+    await sql(db, `insert into public.donations (campaign_id, donor_id, amount, type, status) values ('1001', $1, 999, 'Payment', 'voided')`, [a]);
+    const [r] = await rows<Record<string, any>>(db, ADMIN, `select gift_count::int, total_given::text, campaign_count::int, open_pledges::text from public.donor_summary where id = $1`, [a]);
+    expect({ ...r, total_given: Number(r.total_given) }).toEqual({ gift_count: 2, total_given: 150, campaign_count: 2, open_pledges: '0' });
+    const [n] = await rows<Record<string, any>>(db, ADMIN, `select gift_count::int, total_given::text, campaign_count from public.donor_summary where id = $1`, [none]);
+    expect(n).toEqual({ gift_count: 0, total_given: '0', campaign_count: null });
+    // Every donor's totals match a direct sum of their completed and to-collect gifts.
+    const off = await rows(db, ADMIN, `select s.id from public.donor_summary s
+      where s.total_given <> coalesce((select sum(amount) from public.donations d where d.donor_id = s.id and d.status in ('completed', 'collect') and d.deleted_at is null), 0)`);
+    expect(off).toEqual([]);
+    const [{ def }] = (await db.query<{ def: string }>(`select pg_get_viewdef('public.donor_summary'::regclass) def`)).rows;
+    expect(def).toMatch(/LEFT JOIN LATERAL/);
+  });
+});
