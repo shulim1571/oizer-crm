@@ -5,7 +5,7 @@ import DataTable from '../components/DataTable';
 import Kpi from '../components/Kpi';
 import { Balance, Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { money, orgTimeZone } from '../lib/format';
+import { addDays, money, orgTimeZone, orgToday } from '../lib/format';
 import MethodPie, { type MethodTotal } from '../components/MethodPie';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -16,16 +16,17 @@ type Range = 'today' | 'yesterday' | 'week' | 'month' | 'year' | '30' | 'custom'
 const RANGES: [Range, string][] = [['30', 'Last 30 days'], ['today', 'Today'], ['yesterday', 'Yesterday'], ['week', 'This week'], ['month', 'This month'], ['year', 'This year'], ['custom', 'Custom']];
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-function rangeDates(r: Range, from: string, to: string): [string, string] {
-  const now = new Date();
-  const today = iso(now);
-  const back = (n: number) => iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - n));
+/** The dates a range covers, counted in the organization's time zone like every other total (readiness #9: the
+ *  dashboard used this computer's own date, so "Today" could be a different day than on Transactions). */
+export function rangeDates(r: Range, from: string, to: string, now = new Date()): [string, string] {
+  const today = orgToday(now);
+  const back = (n: number) => addDays(today, -n);
   switch (r) {
     case 'today': return [today, today];
     case 'yesterday': return [back(1), back(1)];
-    case 'week': return [back(now.getDay()), today];
-    case 'month': return [iso(new Date(now.getFullYear(), now.getMonth(), 1)), today];
-    case 'year': return [iso(new Date(now.getFullYear(), 0, 1)), today];
+    case 'week': return [back(new Date(`${today}T12:00:00Z`).getUTCDay()), today];
+    case 'month': return [`${today.slice(0, 8)}01`, today];
+    case 'year': return [`${today.slice(0, 5)}01-01`, today];
     case 'custom': return [from || back(30), to || today];
     default: return [back(29), today];
   }
@@ -116,7 +117,7 @@ export default function DashboardPage() {
   const per = (k: string) => (s?.periods as Row | undefined)?.[k] as Row | undefined;
   const period = (p?: Row) => (p ? `${money(p.fees)} fees · ${money(Number(p.raised) - Number(p.fees))} net` : '');
   const tasksOpen = (myTasks.data as Row[]) ?? [];
-  const today = iso(new Date());
+  const today = orgToday();
 
   return (
     <section className="view">
@@ -130,12 +131,25 @@ export default function DashboardPage() {
         <Kpi label="All time" value={money(per('all')?.raised ?? 0)} icon={<CalendarDays size={18} />} tone="green" sub={period(per('all'))} />
         <Kpi label="This month" value={money(per('month')?.raised ?? 0)} icon={<CalendarRange size={18} />} tone="green" sub={period(per('month'))} />
         {isAdmin && <Kpi label="This year" value={money(per('year')?.raised ?? 0)} icon={<TrendingUp size={18} />} tone="green" sub={period(per('year'))} />}
-        <Kpi label="Pledged (open)" value={money(s?.pledged ?? 0)} icon={<Handshake size={18} />} tone="blue" sub="Not confirmed income" />
+        {/* Checks not delivered yet sit with open pledges: promised, not raised (Moshe Henig, #8). */}
+        <Kpi label="Pledged & checks not delivered" value={money(Number(s?.pledged ?? 0) + Number(s?.undelivered?.amount ?? 0))} icon={<Handshake size={18} />} tone="blue"
+          sub={`${money(s?.pledged ?? 0)} open pledges · ${money(s?.undelivered?.amount ?? 0)} in ${s?.undelivered?.count ?? 0} check${Number(s?.undelivered?.count) === 1 ? '' : 's'} not delivered · not in raised`} />
         <Kpi label="Recurring transactions" value={<Link to="/donations/recurring">{money(recurring.data?.next30 ?? 0)}</Link>} icon={<CalendarClock size={18} />} tone="violet"
           sub={`next 30 days · ${money(recurring.data?.next90 ?? 0)} next 90 · ${recurring.data?.active ?? 0} active`} />
         {isAdmin && <Kpi label="Tasks waiting" value={<Link to="/task-sheet">{taskCount}</Link>} icon={<AlertTriangle size={18} />} tone="amber" sub="On the Task Sheet" />}
         {!isAdmin && <Kpi label="My tasks" value={<Link to="/tasks">{tasksOpen.length}</Link>} icon={<AlertTriangle size={18} />} tone="amber" sub={`${tasksOpen.filter(t => t.due_date && t.due_date < today).length} overdue`} />}
       </div>
+
+      <details className="dash-defs">
+        <summary>How these numbers are calculated</summary>
+        <ul>
+          <li><b>Raised</b> (Today, This month, This year, All time, the chart and the pie): successful gifts by the day they came in, New York time. A batch deposit counts what has been funded so far. Voided, refunded, failed and to-collect gifts, and checks not delivered yet, aren't counted. The Transactions totals and campaign balances use the same rule.</li>
+          <li><b>Fees</b> and <b>net</b>: the fees on those same gifts, and raised minus fees.</li>
+          <li><b>Pledged & checks not delivered</b>: what's still owed on open pledges, plus checks recorded but not delivered yet. Promised money, not counted in raised.</li>
+          <li><b>Recurring transactions</b>: what active recurring gifts are scheduled to charge in the next 30 and 90 days.</li>
+          <li>Fundraisers see these numbers for their own campaigns.</li>
+        </ul>
+      </details>
 
       {!isAdmin && (
         <div className="quick-links">

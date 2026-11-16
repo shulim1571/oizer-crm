@@ -479,6 +479,9 @@ table.grid { border-collapse: separate; border-spacing: 0; width: 100%; }
   .calendar-line { font-size: 9.5px; }
   .calendar-line.muted { display: none; }
 }
+.dash-defs { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.dash-defs summary { cursor: pointer; width: fit-content; }
+.dash-defs ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; max-width: 900px; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
 .kpi {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow);

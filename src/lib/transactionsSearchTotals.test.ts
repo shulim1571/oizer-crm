@@ -17,7 +17,8 @@ describe('Transactions search and totals', () => {
 
   it('totals the current view at the top, with no second summary at the bottom (Moshe Henig, 2026-11-11)', () => {
     expect(src).toContain('<div className="totals-bar" aria-label="Totals for this view">');
-    expect(src).toContain('<span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>');
+    // Raised on the successful view (readiness #9: the same rule as the dashboard), Gross on other types.
+    expect(src).toContain("<span>{totals.data?.raisedView ? 'Raised' : 'Gross'} <b>{money(totals.data?.gross ?? 0)}</b></span>");
     expect(src).not.toContain('allTotals');
     expect(src).not.toContain('filter-totals');
   });

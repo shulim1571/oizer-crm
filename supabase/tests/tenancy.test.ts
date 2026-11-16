@@ -221,9 +221,11 @@ describe('the Platform Owner', () => {
 
   it('sees counts but no data until they open a session', async () => {
     const list = await rows<{ slug: string; campaign_count: number; donation_count: number }>(db, OWNER, `select slug, campaign_count::int, donation_count::int from public.platform_list_orgs()`);
+    // Successful donations, as the Transactions list counts them by default (readiness #9).
+    const done = async (org: string) => Number((await db.query<{ n: number }>(`select count(*)::int n from public.donations where org_id = $1 and status = 'completed' and deleted_at is null`, [org])).rows[0].n);
     expect(list).toEqual([
-      { slug: 'oizer', campaign_count: 3, donation_count: 6 },
-      { slug: 'other', campaign_count: 1, donation_count: 1 },
+      { slug: 'oizer', campaign_count: 3, donation_count: await done(OIZER) },
+      { slug: 'other', campaign_count: 1, donation_count: await done(OTHER) },
     ]);
     expect(await rows(db, OWNER, 'select id from public.campaigns', [], OTHER)).toEqual([]);
   });

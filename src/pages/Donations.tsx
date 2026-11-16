@@ -279,9 +279,21 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
   const totals = useQuery(async () => {
     if (!query) return null;
     // Counted over the same transactions the sums cover, so the average is right whatever type is picked.
-    let t = conditions(supabase.from('transaction_list').select('gross:amount.sum(),net:net_donation.sum(),fees:fee.sum(),counted:id.count()'));
-    if (!DONATION_KINDS[kindFilter] && !query.filters.type?.trim()) t = t.in('status', ['completed', 'collect']);
-    const { data, error } = await t;
+    // Successful (or all types): the one "raised" rule the dashboard and campaign balances use (readiness #9):
+    // completed, Batch deposits at what was funded, checks not yet delivered left out (and counted separately).
+    const kind = DONATION_KINDS[kindFilter];
+    const raisedView = (!kind && !query.filters.type?.trim()) || kind?.status === 'completed';
+    if (raisedView) {
+      const [sums, held] = await Promise.all([
+        conditions(supabase.from('transaction_list').select('gross:raised.sum(),fees:fee.sum(),counted:id.count()')).eq('counted', true),
+        conditions(supabase.from('transaction_list').select('n:id.count(),amount:amount.sum()')).eq('undelivered_check', true),
+      ]);
+      if (sums.error) throw new Error(sums.error.message);
+      const r = (sums.data as Row[])?.[0] ?? {};
+      const u = (held.data as Row[] | null)?.[0] ?? {};
+      return { ...r, net: Number(r.gross ?? 0) - Number(r.fees ?? 0), raisedView: true, undeliveredCount: Number(u.n ?? 0), undeliveredAmount: Number(u.amount ?? 0) };
+    }
+    const { data, error } = await conditions(supabase.from('transaction_list').select('gross:amount.sum(),net:net_donation.sum(),fees:fee.sum(),counted:id.count()'));
     if (error) throw new Error(error.message);
     return (data as Row[])?.[0] ?? null;
   }, [queryKey]);
@@ -338,11 +350,16 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
             {/* The summary totals what's shown right now: date range, type, filters and search (Moshe Henig, 2026-11-11). */}
             <div className="totals-bar" aria-label="Totals for this view">
               <span className="muted small"><b>This view</b>{searching ? ' (all dates, search)' : ''}</span>
-              <span>Gross <b>{money(totals.data?.gross ?? 0)}</b></span>
+              <span>{totals.data?.raisedView ? 'Raised' : 'Gross'} <b>{money(totals.data?.gross ?? 0)}</b></span>
               <span>Fees <b>{money(totals.data?.fees ?? 0)}</b></span>
               <span>Net <b>{money(totals.data?.net ?? 0)}</b></span>
               <span>{Number(totals.data?.counted ?? 0).toLocaleString()} transaction{Number(totals.data?.counted) === 1 ? '' : 's'}{Number(totals.data?.counted) ? <> · avg <b>{money(Number(totals.data?.gross ?? 0) / Number(totals.data?.counted))}</b></> : null}</span>
-              {!kindFilter && !query?.filters.type?.trim() && <span className="muted small">Leaves out voided, refunded and failed transactions ({(data?.count ?? 0).toLocaleString()} listed in all).</span>}
+              {totals.data?.raisedView && (
+                <span className="muted small" title="The same rule as the dashboard and campaign balances">
+                  Raised counts successful transactions (a batch deposit at what's been funded so far), and leaves out voided, refunded, failed and to-collect ones
+                  {totals.data.undeliveredCount ? <> and {totals.data.undeliveredCount} check{totals.data.undeliveredCount === 1 ? '' : 's'} not delivered yet ({money(totals.data.undeliveredAmount)})</> : null}.
+                </span>
+              )}
             </div>
             {searching && <p className="muted small">Searching all dates: the date range is set aside while you search.</p>}
             {cardIds !== null && <p className="muted small">Card ending {card}: {cardIds.length ? `${cardIds.length} transaction${cardIds.length === 1 ? '' : 's'}` : 'none found'}. Only card payments taken through Sola carry the card's last 4 digits; imported ones don't.</p>}
