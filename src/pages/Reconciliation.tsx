@@ -24,7 +24,7 @@ const DIFF_TYPES: Record<string, string> = {
   other: 'Something else (add a note)',
 };
 const ITEM_LABEL: Record<string, string> = {
-  donation: 'Gift', donation_reversal: 'Refund or return', payout: 'Payout',
+  donation: 'Gift', donation_split: 'Split gift', donation_reversal: 'Refund or return', payout: 'Payout',
   bank_transfer_out: 'Transfer out', bank_transfer_in: 'Transfer in',
 };
 const usDate = (iso: string | null | undefined) => { if (!iso) return ''; const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number); return `${m}/${d}/${y}`; };
