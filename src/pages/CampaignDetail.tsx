@@ -315,7 +315,7 @@ export default function CampaignDetail() {
         {/* Raised + open pledges + pending + checks not delivered (Moshe Henig, 2026-11-13). Nothing counts twice: raised
             leaves out undelivered checks and batches' pending amounts, and a payment matched to a pledge takes it off the
             open pledges. */}
-        <Kpi label="Total potential" value={money(totalPotential(c))} icon={<Target size={18} />} tone="violet" sub="Raised + pledged + pending + checks not delivered" />
+        <Kpi label="Total potential" value={money(totalPotential(c))} icon={<Target size={18} />} tone="violet" sub={`Raised + pledged + pending + checks not delivered${withTeams || Number(c.combined_pledged_open ?? 0) !== Number(c.pledged_open ?? 0) || Number(c.combined_undelivered_checks ?? 0) !== Number(c.undelivered_checks_amount ?? 0) ? ', with teams' : ''}`} />
         {Number(c.awaiting_funds) > 0 && <Kpi label="Vouchers awaiting funds" value={money(c.awaiting_funds)} icon={<Ticket size={18} />} tone="amber" sub="Not in the balance yet" />}
         <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={18} />} tone="blue"
              sub={c.last_donation_at ? `last gift ${dateTime(c.last_donation_at)}` : undefined} />
@@ -452,6 +452,8 @@ function UndeliveredChecks({ campaignId, canMark, onChange }: { campaignId: stri
   );
 }
 
-/** Everything the campaign has or is expecting: raised, open pledges, batches' pending amounts and undelivered checks. */
+/** Everything the campaign has or is expecting: raised, open pledges, batches' pending amounts and undelivered checks.
+ *  A parent's figure includes its teams' amounts, just like its own (Moshe #11). */
 export const totalPotential = (c: Row) =>
-  Number(c.raised ?? 0) + Number(c.pledged_open ?? 0) + Number(c.pending_balance ?? 0) + Number(c.undelivered_checks_amount ?? 0);
+  Number(c.combined_raised ?? c.raised ?? 0) + Number(c.combined_pledged_open ?? c.pledged_open ?? 0)
+  + Number(c.combined_pending ?? c.pending_balance ?? 0) + Number(c.combined_undelivered_checks ?? c.undelivered_checks_amount ?? 0);

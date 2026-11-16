@@ -5,7 +5,7 @@ Build these (refs are finding numbers in readiness-fixes-2026-11-15.md, "Held fo
 - #44 Payment page (desktop): keep the 2-column layout, renumber steps so they read in order; "Cover the processing fee" starts unticked. Done Nov 16: desktop numbers read 1 Your details (left), 2 Amount, 3 Payment (right); phones keep 1 Amount, 2 Your details, 3 Payment. Cover the fee is now off on every template and campaign page (new ones were already off); admins can still turn it on per template.
 - #54 After saving a donation: go to Transactions when started from the top New Donation button; go back to the campaign when started from a campaign page.
 - #10 "To collect" status: use it only for checks not yet delivered (Moshe's rule). Adjust balance/fee handling to match.
-- #11 Total potential: keep the formula; team (sub-campaign) amounts count just like the parent's amounts, so include them on the parent.
+- #11 Total potential: keep the formula; team (sub-campaign) amounts count just like the parent's amounts, so include them on the parent. Done Nov 16: a parent's Total potential now adds its teams' raised, open pledges, pending and undelivered checks (the box says "with teams" when they add anything). Sub-campaigns that keep their own balance stay on their own page, as for Raised.
 - #8 Checks not delivered: on the dashboard, show them in one box together with open pledges (not counted in raised).
 - #20 After "Yes, it printed": lock that payout's amount and payee (void the check to change). Unprinted payouts stay editable.
 - #41 Clicking a donation opens a read-only view first, with Edit and Issue Receipt buttons on top.
