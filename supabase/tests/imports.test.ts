@@ -26,6 +26,26 @@ describe('imports', () => {
     expect((await one(db, `select kind, created, imported_by from public.imports`))).toEqual({ kind: 'donors', created: 1, imported_by: 'office@example.org' });
   });
 
+  // Readiness #25 (2026-11-15): money imports preview too: rows with errors are shown, and nothing is saved (no
+  // balance moves) until the import is confirmed.
+  it('preview a donation history with errors without saving anything, then save only the good rows when confirmed', async () => {
+    const data = [
+      { donor_id: 'd1', campaign_id: '1002', amount: '100', date: '2025-03-15', payment_method: 'Check' },
+      { donor_id: 'd1', campaign_id: '9999', amount: '5', date: '2025-01-01' },
+      { donor_id: 'd1', campaign_id: '1002', amount: 'abc', date: '2025-01-01' },
+    ];
+    const before = { balance: await balance(db, '1002'), gifts: await count(db, 'donations'), imports: await count(db, 'imports') };
+    const preview = await run(db, 'donations', data, {}, false);
+    expect(preview).toMatchObject({ committed: false, created: 1, errors: 2 });
+    expect(preview.rows.filter((r: any) => r.status === 'error').map((r: any) => r.row)).toEqual([2, 3]);   // data rows 2 and 3 (the page adds the header row)
+    expect(await balance(db, '1002')).toBeCloseTo(before.balance, 2);
+    expect(await count(db, 'donations')).toBe(before.gifts);
+    expect(await count(db, 'imports')).toBe(before.imports);
+    const done = await run(db, 'donations', data, {}, true);
+    expect(done).toMatchObject({ committed: true, created: 1, errors: 2 });
+    expect(await balance(db, '1002')).toBeCloseTo(before.balance + 100, 2);
+  });
+
   it('are for the Super Admin, except contact lists', async () => {
     await expect(run(db, 'donors', [{ first_name: 'A', last_name: 'B' }], {}, true, MANAGER_1)).rejects.toThrow(/Super Admin/);
     await expect(run(db, 'contacts', [{ first_name: 'A' }], { campaign: '1002' }, true, MANAGER_1)).rejects.toThrow(/own campaigns/);
