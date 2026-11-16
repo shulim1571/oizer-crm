@@ -367,6 +367,13 @@ describe('Community Guests', () => {
     expect(await rows(db, GUEST, `select * from public.guest_donations('1002')`)).toEqual([]);
   });
 
+  // Readiness #24 (2026-11-15): a gift given anonymously shows as Anonymous to guests.
+  it('see Anonymous for a gift given anonymously', async () => {
+    await db.query(`update public.donations set anonymous = true where campaign_id = '1001' and amount = 250.50`);
+    const feed = await rows<Record<string, unknown>>(db, GUEST, `select * from public.guest_donations('1001') order by amount`);
+    expect(feed.map(f => [f.donor, f.amount])).toEqual([['Anonymous', '250.50'], ['Donor One', '1000.00']]);
+  });
+
   it('have no access to any table', async () => {
     for (const t of ['campaigns', 'donations', 'donors', 'expenses', 'transfers', 'pledges', 'tasks', 'managers', 'campaign_summary', 'settings', 'activity_log']) {
       expect(await rows(db, GUEST, `select 1 from public.${t}`), t).toEqual([]);
