@@ -76,3 +76,28 @@ describe('checks not delivered yet', () => {
     expect(await offered()).toBe(1);
   });
 });
+
+// Readiness #31 (2026-11-15): a completed gift always has a bank account.
+describe('bank account on completed gifts', () => {
+  it('routes one, and puts a gift with nowhere else to go in the Clearing account, which the books check lists', async () => {
+    const db = await seededDb();
+    await db.query(`insert into public.settings (org_id, key, value) values ($1, 'default_account_id', '"a1"')`, [OIZER]);
+    await db.query(`insert into public.donations (org_id, id, campaign_id, type, status, amount, manual_fee, payment_method) values ($1, 'ac-1', '1003', 'Payment', 'completed', 10, 0, 'Cash')`, [OIZER]);
+    const acct = async (id: string) => (await db.query<{ a: string | null; name: string | null }>(
+      `select d.account_id a, x.name from public.donations d left join public.accounts x on x.org_id = d.org_id and x.id = d.account_id where d.id = $1`, [id])).rows[0];
+    expect((await acct('ac-1')).a).toBe('a1');
+    // No default, campaign or method account: the Clearing account, and the books check counts it.
+    await db.query(`delete from public.settings where key = 'default_account_id'`);
+    const before = Number((await db.query<{ n: number }>(`select n from public.integrity_checks($1) where check_key = 'no_account'`, [OIZER])).rows[0].n);
+    await db.query(`insert into public.donations (org_id, id, campaign_id, type, status, amount, manual_fee, payment_method) values ($1, 'ac-2', '1003', 'Payment', 'completed', 10, 0, 'Cash')`, [OIZER]);
+    expect((await acct('ac-2')).name).toBe('Clearing (unassigned)');
+    const after = Number((await db.query<{ n: number }>(`select n from public.integrity_checks($1) where check_key = 'no_account'`, [OIZER])).rows[0].n);
+    expect(after - before).toBe(1);
+    // One Clearing account per organization, reused.
+    await db.query(`insert into public.donations (org_id, id, campaign_id, type, status, amount, manual_fee, payment_method) values ($1, 'ac-3', '1003', 'Payment', 'completed', 10, 0, 'Cash')`, [OIZER]);
+    expect((await acct('ac-3')).a).toBe((await acct('ac-2')).a);
+    // Nothing completed is left without one.
+    const [{ n }] = (await db.query<{ n: number }>(`select count(*)::int n from public.donations where status = 'completed' and account_id is null and id like 'ac-%'`)).rows;
+    expect(n).toBe(0);
+  });
+});
