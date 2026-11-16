@@ -59,22 +59,22 @@ export default function OrganizationPage() {
       </div>
       {saved && <div className="notice">{saved} saved.</div>}
       <LogoUpload org={org} onSaved={() => { setSaved('Logo'); refresh(); }} />
-      {SECTIONS.map(sec => (
-        <div key={sec.title} className="settings-section">
-          <RecordForm
-            inline
-            table="organizations"
-            title={sec.title}
-            description={sec.description}
-            saveLabel={sec.save}
-            // An uploaded logo is managed by the Logo box above; the address field is for a linked logo only.
-            fields={String(org.logo_url ?? "").startsWith("data:") ? sec.fields.filter(f => f.name !== "logo_url") : sec.fields}
-            record={org}
-            onClose={() => setSaved(null)}
-            onSaved={() => { setSaved(sec.title); refresh(); }}
-          />
-        </div>
-      ))}
+      {/* One form, one Save, for the organization's details (readiness #62); the sections are headings in it. */}
+      <div className="settings-section">
+        <RecordForm
+          inline
+          table="organizations"
+          title="Organization details"
+          description="Who the organization is, what receipts and payment pages show, and how the portal looks."
+          saveLabel="Save"
+          // An uploaded logo is managed by the Logo box above; the address field is for a linked logo only.
+          fields={SECTIONS.flatMap(sec => sec.fields.map(f => ({ ...f, section: sec.title })))
+            .filter(f => !(f.name === 'logo_url' && String(org.logo_url ?? '').startsWith('data:')))}
+          record={org}
+          onClose={() => setSaved(null)}
+          onSaved={() => { setSaved('Organization details'); refresh(); }}
+        />
+      </div>
       {/* The stale-check threshold (Moshe Henig, 2026-11-12): already a setting the Task Sheet reads. */}
       <NumberSetting orgId={String(org.id)} settingKey="stale_check_days" title="Task Sheet" intro="When the Task Sheet flags things that need a look."
         label="Stale check after (days)" unit="days" defaultValue={STALE_CHECK_DEFAULT} parse={parseStaleDays} saveLabel="Save Task Sheet settings"
@@ -172,16 +172,21 @@ function NumberSetting({ orgId, settingKey, title, intro, label, unit, help, def
       setText(String(n ?? defaultValue));
     });
   }, [orgId, settingKey, defaultValue]);
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
+  const [done, setDone] = useState(false);
+  // Saved as soon as you leave the box (readiness #62: no separate Save for each setting), saying so.
+  async function save(e?: React.FormEvent) {
+    e?.preventDefault();
     setError(null);
+    setDone(false);
     const n = parse(text);
     if (typeof n === 'string') return setError(n);
+    if (n === stored) return;
     setSaving(true);
     const { error: err } = await supabase.from('settings').upsert({ org_id: orgId, key: settingKey, value: n }, { onConflict: 'org_id,key' });
     setSaving(false);
     if (err) return setError(err.message);
     setStored(n);
+    setDone(true);
     onSaved();
   }
   return (
@@ -191,12 +196,12 @@ function NumberSetting({ orgId, settingKey, title, intro, label, unit, help, def
         <p className="muted small form-desc">{intro}</p>
         <div className="fields">
           <label className="field"><span>{label}</span>
-            <input type="number" step={1} value={text} onChange={e => setText(e.target.value)} />
+            <input type="number" step={1} value={text} onChange={e => { setText(e.target.value); setDone(false); }} onBlur={() => void save()} />
             <small className="muted">{help} {stored == null ? `Not set yet, so the default of ${defaultValue}${unit ? ` ${unit}` : ''} applies.` : `Default ${defaultValue}${unit ? ` ${unit}` : ''}.`}</small>
           </label>
         </div>
         {error && <div className="error">{error}</div>}
-        <div className="form-actions"><div className="spacer" /><button className="btn primary" disabled={saving}>{saving ? 'Saving…' : saveLabel}</button></div>
+        <p className="muted small" aria-live="polite">{saving ? 'Saving…' : done ? `Saved. (${saveLabel.replace(/^Save /, '')})` : 'Saved when you leave the box.'}</p>
       </form>
     </div>
   );

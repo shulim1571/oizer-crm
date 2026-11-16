@@ -78,12 +78,18 @@ export default function NotificationsPage() {
         <div className="view-title"><h1>My Notifications</h1><span className="count">What reaches you, and how</span></div>
       </div>
 
+      {/* Readiness #62: no ticked-but-greyed switch while loading, and a clear ask for the cell number. */}
+      {!q.loading && isAdmin && wantsText && !f.phone.trim() && (
+        <div className="notice">Some notifications are set to come by text, but there's no cell number yet. Add it under <b>How they reach me</b>; until then those come as emails.</div>
+      )}
       <div className={`panel-box notify-switch ${on ? '' : 'off'}`}>
-        <label className="inline-check"><input type="checkbox" checked={on} disabled={q.loading} onChange={e => void toggle(e.target.checked)} />
+        {q.loading ? <p className="muted">Checking your notification settings…</p> : <>
+        <label className="inline-check"><input type="checkbox" checked={on} onChange={e => void toggle(e.target.checked)} />
           <b>{on ? 'Notifications are on' : 'Notifications are off'}</b></label>
         <p className="muted small">{on
           ? 'Turn this off to stop all notification emails and texts to you. Your choices below are kept.'
           : 'No notification emails or texts reach you. Turn it back on any time; your choices below still apply then.'}</p>
+        </>}
         {switchError && <div className="error">{switchError}</div>}
       </div>
 
@@ -145,8 +151,8 @@ export default function NotificationsPage() {
               {ADMIN_KINDS.map(([k, label]) => (
                 <label key={k} className="field"><span>{label}</span><ChannelPick value={channel(k)} onChange={c => set('channels', { ...f.channels, [k]: c })} /></label>
               ))}
-              <label className="field"><span>My cell for texts</span><input type="tel" value={f.phone} onChange={e => set('phone', e.target.value)} />
-                {wantsText && !f.phone.trim() && <small className="muted">Without a number, texts come as emails instead.</small>}</label>
+              <label className="field"><span>My cell for texts{wantsText ? ' *' : ''}</span><input type="tel" value={f.phone} placeholder="845-555-1234" onChange={e => set('phone', e.target.value)} />
+                {wantsText && !f.phone.trim() && <small className="error-text">Add your cell number to get texts; without one they come as emails.</small>}</label>
             </div>
           </div>
         </>
