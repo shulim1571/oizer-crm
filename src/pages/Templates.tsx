@@ -195,9 +195,11 @@ export function TemplateDialog({ record, onClose, onDone }: { record: Row | null
 }
 
 /** Choose a template and adjust its settings. They're saved once the campaign itself exists. */
-export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template: Row | null; settings: Row | null }) => void; onClose: () => void }) {
+export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template: Row | null; settings: Row | null; name?: string }) => void; onClose: () => void }) {
   const [templates, setTemplates] = useState<Row[]>([]);
   const [chosen, setChosen] = useState('');
+  // The campaign's name comes first (readiness #56); it fills the next step's Internal Name.
+  const [name, setName] = useState('');
   const [settings, setSettings] = useState<Row>(blankSettings());
   const [creating, setCreating] = useState(false);
   const { isAdmin } = useAuth();
@@ -223,6 +225,9 @@ export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template:
     <div className="modal-back" onMouseDown={e => e.target === e.currentTarget && onClose()}>
       <div className="modal modal-wide"><div className="record-form">
         <div className="form-head"><h2>New campaign</h2></div>
+        <label className="field"><span>Campaign name *</span>
+          <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="What the office calls it" />
+        </label>
         <label className="field"><span>Start from</span>
           <select value={chosen} onChange={e => pickTemplate(e.target.value)}>
             <option value="">Scratch</option>
@@ -235,7 +240,7 @@ export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template:
         <div className="form-actions">
           <div className="spacer" />
           <button type="button" className="btn" onClick={onClose}>Cancel</button>
-          <button type="button" className="btn primary" onClick={() => onNext({ template, settings })}>Continue</button>
+          <button type="button" className="btn primary" disabled={!name.trim()} onClick={() => onNext({ template, settings, name: name.trim() })}>Continue</button>
         </div>
       </div></div>
       {creating && <TemplateDialog record={null} onClose={() => setCreating(false)} onDone={saved => {

@@ -48,7 +48,7 @@ export default function Campaigns({ mode }: { mode: Mode }) {
   const { isAdmin } = useAuth();
   const nav = useNavigate();
   const [adding, setAdding] = useState(false);
-  const [choice, setChoice] = useState<{ template: Row | null; settings: Row | null } | null>(null);
+  const [choice, setChoice] = useState<{ template: Row | null; settings: Row | null; name?: string } | null>(null);
   // The next campaign number, asked for when the form opens; the admin may change it (Moshe Henig, 2026-11-15).
   const [nextId, setNextId] = useState<string | null | undefined>(undefined);
   // "Below zero": only campaigns whose balance is under zero (readiness #38).
@@ -109,7 +109,7 @@ export default function Campaigns({ mode }: { mode: Mode }) {
           table="campaigns"
           title={choice.template ? `New campaign from ${choice.template.name}` : 'New Campaign'}
           fields={newCampaignFields}
-          defaults={{ status: 'active', account_id: choice.template?.account_id ?? undefined, id: nextId ?? undefined }}
+          defaults={{ status: 'active', account_id: choice.template?.account_id ?? undefined, id: nextId ?? undefined, internal_name: choice.name || undefined }}
           onClose={() => { setAdding(false); setChoice(null); }}
           onSaved={async r => {
             const { error: e } = await supabase.rpc('save_campaign_settings', { p_campaign: r.id, p_settings: choice.settings, p_template: choice.template?.id ?? null });
