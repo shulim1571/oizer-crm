@@ -1,6 +1,6 @@
 import RowMenu from '../components/RowMenu';
 import { CardChargeDialog } from './Payments';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Clock, CreditCard, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Share2, Star, StickyNote, TrendingUp,
@@ -130,6 +130,11 @@ export default function CampaignDetail() {
         return page((a, b) => supabase.from('voucher_list').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
     }
   }, [id, tab, version, family.join(',')]);
+  // Each tab's rows are kept, so switching back shows them at once while they refresh (readiness #55).
+  const tabRows = useRef(new Map<string, Row[]>());
+  useEffect(() => { tabRows.current.clear(); }, [id]);
+  useEffect(() => { if (!rows.loading && rows.data) tabRows.current.set(tab, rows.data as Row[]); }, [rows.loading, rows.data, tab]);
+  const shownRows = rows.loading ? tabRows.current.get(tab) ?? null : (rows.data as Row[] | null);
   // The summary (balances) and the open tab update on their own (live refresh, Moshe Henig, 2026-11-15).
   useLiveRefresh(ALL_TOPICS, () => { void summary.reload({ quiet: true }); void rows.reload({ quiet: true }); });
 
@@ -336,8 +341,8 @@ export default function CampaignDetail() {
       {tab === 'settings' ? <CampaignSettingsTab key={settingsKey} campaignId={id} /> : tab === 'teams' || tab === 'sub-campaigns' ? <SubCampaignsTab key={tab} parent={c} kind={tab === 'teams' ? 'team' : 'sub'} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
         title={tab[0].toUpperCase() + tab.slice(1)}
         exportName={`${c.id}-${tab}`}
-        rows={(rows.data as Row[]) ?? []}
-        loading={rows.loading}
+        rows={shownRows ?? []}
+        loading={rows.loading && !shownRows}
         error={rows.error}
         columns={tabConfig.columns}
         onOpen={tab === 'pledges' ? r => setOpenPledge(r.id) : tab === 'vouchers' ? r => setOpenVoucher(r.id)

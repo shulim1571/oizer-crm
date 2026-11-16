@@ -8,6 +8,7 @@ import { money } from '../lib/format';
 import { accountOptions, clearLookups, paymentMethodIdOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { pictureToDataUrl } from '../lib/imageUpload';
 import { useAuth } from '../lib/auth';
 import { NEW_TEMPLATE, NEW_TEMPLATE_LABEL } from '../lib/templatePick';
 
@@ -49,9 +50,7 @@ export function SettingsFields({ value, onChange }: { value: Row; onChange: (v: 
         <label className="field"><span>Minimum donation</span>
           <input type="number" step="0.01" min="0" value={value.min_donation ?? ''} onChange={e => set('min_donation', e.target.value === '' ? null : Number(e.target.value))} />
         </label>
-        <label className="field"><span>Logo address</span>
-          <input value={value.logo_url ?? ''} placeholder="Empty uses the default" onChange={e => set('logo_url', e.target.value)} />
-        </label>
+        <PictureField label="Logo" kind="logo" value={value.logo_url ?? ''} onChange={url => set('logo_url', url)} hint="Empty uses the organization's logo" />
         <label className="field"><span>Brand color</span>
           <input value={value.brand_color ?? ''} placeholder="Empty uses the default" onChange={e => set('brand_color', e.target.value)} />
         </label>
@@ -251,78 +250,98 @@ export function TemplateStep({ onNext, onClose }: { onNext: (choice: { template:
   );
 }
 
-/** The public payment page: its address, whether it's on, and what it says beyond the amounts. */
-function PageContentCard({ campaignId, current, onSaved }: { campaignId: string; current: Row | null; onSaved: () => void }) {
-  const [v, setV] = useState({ page_enabled: true, cover_fee_enabled: true, suggested: '', description: '', thank_you: '', banner_url: '' });
-  const [message, setMessage] = useState<string | null>(null);
+type PageContent = { page_enabled: boolean; cover_fee_enabled: boolean; suggested: string; description: string; thank_you: string; banner_url: string };
+const pageContentOf = (current: Row | null): PageContent => ({
+  page_enabled: current?.page_enabled ?? true, cover_fee_enabled: current?.cover_fee_enabled ?? true,
+  suggested: current?.suggested_amount != null ? String(current.suggested_amount) : '', description: current?.description ?? '',
+  thank_you: current?.thank_you ?? '', banner_url: current?.banner_url ?? '',
+});
+
+/** A picture box: upload one (shrunk and stored with the page), or type an address (readiness #55). */
+function PictureField({ label, value, onChange, kind, hint }: { label: string; value: string; onChange: (v: string) => void; kind: 'photo' | 'logo'; hint: string }) {
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    setV({
-      page_enabled: current?.page_enabled ?? true, cover_fee_enabled: current?.cover_fee_enabled ?? true,
-      suggested: current?.suggested_amount != null ? String(current.suggested_amount) : '', description: current?.description ?? '',
-      thank_you: current?.thank_you ?? '', banner_url: current?.banner_url ?? '',
-    });
-  }, [current]);
-  const link = `${window.location.origin}${import.meta.env.BASE_URL}give/${encodeURIComponent(campaignId)}`;
-  async function save() {
-    setMessage(null);
+  const uploaded = value.startsWith('data:');
+  async function pick(file: File) {
     setError(null);
-    const { error: e } = await supabase.rpc('save_page_content', {
-      p_campaign: campaignId, p_page_enabled: v.page_enabled, p_cover_fee_enabled: v.cover_fee_enabled, p_suggested: v.suggested ? Number(v.suggested) : null,
-      p_description: v.description, p_thank_you: v.thank_you, p_banner_url: v.banner_url,
-    });
-    if (e) return setError(e.message);
-    setMessage('Saved.');
-    onSaved();
+    setBusy(true);
+    try { onChange(await pictureToDataUrl(file, kind === 'photo' ? 1600 : 400, kind === 'photo' ? 600 : 400, kind)); }
+    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    setBusy(false);
   }
+  return (
+    <div className="field picture-field"><span>{label}</span>
+      {value && <img src={value} alt="" className={kind === 'photo' ? 'picture-preview banner' : 'picture-preview'} />}
+      <div className="picture-row">
+        <label className="btn small">{busy ? 'Uploading…' : uploaded || value ? 'Upload another' : 'Upload a picture'}
+          <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={busy} onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void pick(f); }} />
+        </label>
+        {value && <button type="button" className="link small" onClick={() => onChange('')}>Remove</button>}
+      </div>
+      {!uploaded && <input value={value} onChange={e => onChange(e.target.value)} placeholder={hint} aria-label={`${label} address`} />}
+      {uploaded && <small className="muted">Uploaded picture (saved with the page)</small>}
+      {error && <small className="error-text">{error}</small>}
+    </div>
+  );
+}
+
+/** The public payment page: its address, whether it's on, and what it says beyond the amounts. */
+function PageContentCard({ campaignId, v, setV }: { campaignId: string; v: PageContent; setV: (f: (prev: PageContent) => PageContent) => void }) {
+  const link = `${window.location.origin}${import.meta.env.BASE_URL}give/${encodeURIComponent(campaignId)}`;
   return (
     <div className="panel-box">
       <h3>Payment page</h3>
       <p className="small"><a href={link} target="_blank" rel="noreferrer">{link}</a></p>
       <div className="check-row">
-        <label className="inline-check"><input type="checkbox" checked={v.page_enabled} onChange={e => setV({ ...v, page_enabled: e.target.checked })} /> Page takes donations</label>
-        <label className="inline-check"><input type="checkbox" checked={v.cover_fee_enabled} onChange={e => setV({ ...v, cover_fee_enabled: e.target.checked })} /> Offer "cover the fee"</label>
+        <label className="inline-check"><input type="checkbox" checked={v.page_enabled} onChange={e => setV(p => ({ ...p, page_enabled: e.target.checked }))} /> Page takes donations</label>
+        <label className="inline-check"><input type="checkbox" checked={v.cover_fee_enabled} onChange={e => setV(p => ({ ...p, cover_fee_enabled: e.target.checked }))} /> Offer "cover the fee"</label>
       </div>
       <div className="fields">
-        <label className="field"><span>Suggested amount</span><input type="number" min="0" step="0.01" value={v.suggested} onChange={e => setV({ ...v, suggested: e.target.value })} placeholder="One of the presets" /></label>
-        <label className="field"><span>Banner image address</span><input value={v.banner_url} onChange={e => setV({ ...v, banner_url: e.target.value })} placeholder="https://… (1200×400)" /></label>
+        <label className="field"><span>Suggested amount</span><input type="number" min="0" step="0.01" value={v.suggested} onChange={e => setV(p => ({ ...p, suggested: e.target.value }))} placeholder="One of the presets" /></label>
+        <PictureField label="Banner" kind="photo" value={v.banner_url} onChange={url => setV(p => ({ ...p, banner_url: url }))} hint="https://… (1200×400)" />
         <div className="field wide"><span>Description or story</span>
           <RichTextEditor label="Description or story" value={v.description} onChange={html => setV(prev => ({ ...prev, description: html }))} /></div>
-        <label className="field wide"><span>Thank-you message</span><textarea rows={2} dir="auto" value={v.thank_you} onChange={e => setV({ ...v, thank_you: e.target.value })} /></label>
+        <label className="field wide"><span>Thank-you message</span><textarea rows={2} dir="auto" value={v.thank_you} onChange={e => setV(p => ({ ...p, thank_you: e.target.value }))} /></label>
       </div>
-      {message && <div className="notice">{message}</div>}
-      {error && <div className="error">{error}</div>}
-      <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={save}>Save page</button></div>
     </div>
   );
 }
 
-/** A campaign's own page settings, used by its public payment page. */
+/** A campaign's own page settings, used by its public payment page. One Save for everything (readiness #55). */
 export function CampaignSettingsTab({ campaignId }: { campaignId: string }) {
   const q = useQuery(async () => (await supabase.from('campaign_page_settings').select('*').eq('campaign_id', campaignId).maybeSingle()).data as Row | null, [campaignId]);
   const [settings, setSettings] = useState<Row | null>(null);
+  const [page, setPage] = useState<PageContent>(pageContentOf(null));
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { if (!q.loading) setSettings(pickSettings(q.data)); }, [q.loading, q.data]);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { if (!q.loading) { setSettings(pickSettings(q.data)); setPage(pageContentOf(q.data as Row | null)); } }, [q.loading, q.data]);
 
   async function save() {
     setMessage(null);
     setError(null);
-    const { error: e } = await supabase.rpc('save_campaign_settings', { p_campaign: campaignId, p_settings: settings });
-    if (e) return setError(e.message);
+    setSaving(true);
+    const a = await supabase.rpc('save_page_content', {
+      p_campaign: campaignId, p_page_enabled: page.page_enabled, p_cover_fee_enabled: page.cover_fee_enabled, p_suggested: page.suggested ? Number(page.suggested) : null,
+      p_description: page.description, p_thank_you: page.thank_you, p_banner_url: page.banner_url,
+    });
+    const b = a.error ? a : await supabase.rpc('save_campaign_settings', { p_campaign: campaignId, p_settings: settings });
+    setSaving(false);
+    if (b.error) return setError(b.error.message);
     setMessage('Saved.');
+    void q.reload({ quiet: true });
   }
 
   if (!settings) return <p className="muted pad">Loading…</p>;
   return (
     <div className="table-card pad">
-      <PageContentCard campaignId={campaignId} current={q.data as Row | null} onSaved={() => void q.reload()} />
+      <PageContentCard campaignId={campaignId} v={page} setV={setPage} />
       <div key={q.data?.updated_at ?? 'new'}><SettingsFields value={settings} onChange={setSettings} /></div>
       {message && <div className="notice">{message}</div>}
       {error && <div className="error">{error}</div>}
       <div className="form-actions">
         <div className="spacer" />
-        <button type="button" className="btn primary" onClick={save}>Save settings</button>
+        <button type="button" className="btn primary" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>
       </div>
     </div>
   );
