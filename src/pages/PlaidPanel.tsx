@@ -119,7 +119,7 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
       ) : (
         live
           ? <p className="muted small">Connects the real bank account: in Plaid Link find the bank and sign in with its online-banking login. Plaid passes the transactions on; the bank login is never seen or kept here.</p>
-          : <p className="muted small">Test institutions only: in Plaid Link pick any bank and sign in with <code>user_good</code> / <code>pass_good</code>. No real bank is connected.</p>
+          : <p className="muted small">Test mode: only Plaid's test banks can be connected here, no real bank.</p>
       )}
       {otherEnv && <div className="error">This account was linked in the Plaid {s!.environment}, and Plaid is now in {env}. Disconnect it, then connect the bank again.</div>}
       {s?.last_error && <div className="error">Last sync failed: {s.last_error}</div>}

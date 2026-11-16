@@ -471,3 +471,18 @@ describe('reconciliation summary', () => {
     expect(Number(before.t) - Number(after.t)).toBeCloseTo(125, 2);
   });
 });
+
+// Readiness #33 (2026-11-15): a line from the bank feed can't be deleted; it's set aside with a reason instead.
+describe('bank feed lines', () => {
+  it('can\'t be deleted, but can be set aside with a reason; a line from a file can still be deleted', async () => {
+    const db = await seededDb();
+    await db.query(`insert into public.bank_lines (org_id, id, account_id, posted_date, amount, description, source, fingerprint) values ($1, 'pl-1', 'a1', '2026-11-10', -4.95, 'Monthly fee', 'plaid', 'plaid:test-1')`, ['00000000-0000-4000-8000-000000000001']);
+    await expect(sql(db, `select public.delete_bank_line('pl-1')`)).rejects.toThrow(/came from the bank feed/);
+    await sql(db, `select public.match_bank('a1', array['pl-1'], '[]', 'other', 'Bank service fee, not a gift')`);
+    const [l] = (await db.query<{ match_id: string | null }>(`select match_id from public.bank_lines where id = 'pl-1'`)).rows;
+    expect(l.match_id).not.toBeNull();
+    await importLines(db, [{ date: '2026-11-11', amount: 7 }]);
+    await sql(db, `select public.delete_bank_line($1)`, [await lineId(db, 7)]);
+    expect((await db.query(`select 1 from public.bank_lines where amount = 7`)).rows).toEqual([]);
+  });
+});
