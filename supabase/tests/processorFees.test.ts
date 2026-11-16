@@ -70,3 +70,22 @@ describe('gifts with no fee rule', () => {
     expect((await tasks(db)).map(t => t.task_key)).toEqual(['no_fee_rule:']);
   });
 });
+
+// Readiness #15: card gifts taken in the app and saved with a $0 fee get the fee their rules give.
+describe('zero-fee card gifts taken in the app', () => {
+  it('get the fee their rules give; hand-entered fees and feed gifts are left alone', async () => {
+    const { db } = await setup();
+    const { readFileSync } = await import('node:fs');
+    const put = (id: string, source: string, extra: string) => db.query(
+      `insert into public.donations (org_id, id, campaign_id, type, status, amount, payment_method, source, gateway_id, fee, net_donation${extra ? ', manual_fee' : ''})
+       values ($1, $2, '1001', 'Payment', 'completed', 100, 'Credit Card', $3, $4, 0, 100${extra ? `, ${extra}` : ''})`, [OIZER, id, source, `G-${id}`]);
+    await put('z-online', 'Online', '');
+    await put('z-hand', 'Manual', '0');      // a fee of 0 typed in by hand stays
+    await put('z-feed', 'Cartis', '');       // a feed's fee stays as the feed sent it
+    await db.exec(readFileSync('supabase/migrations/20261222005600_zero_fee_card_gifts.sql', 'utf8'));
+    const fee = async (id: string) => (await db.query<{ fee: string; net_donation: string }>(`select fee, net_donation from public.donations where id = $1`, [id])).rows[0];
+    expect(await fee('z-online')).toEqual({ fee: '2.73', net_donation: '97.27' });
+    expect((await fee('z-hand')).fee).toBe('0.00');
+    expect((await fee('z-feed')).fee).toBe('0.00');
+  });
+});
