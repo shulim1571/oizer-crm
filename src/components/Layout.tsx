@@ -42,7 +42,7 @@ export const useSearch = () => useContext(SearchContext);
 
 interface Tab { to: string; label: string; admin?: boolean }
 // offMenu: not listed in the sidebar, but its pages still get their tabs and breadcrumb.
-interface NavItem { to: string; label: string; icon: ReactNode; admin?: boolean; platform?: boolean; offMenu?: boolean; tabs?: Tab[]; badge?: 'tasks' | 'inbox' }
+interface NavItem { to: string; label: string; /** Shown to admins instead of label. */ adminLabel?: string; icon: ReactNode; admin?: boolean; platform?: boolean; offMenu?: boolean; tabs?: Tab[]; badge?: 'tasks' | 'inbox' }
 interface NavSection { title: string; items: NavItem[] }
 
 // One entry per kind of work. Views of the same list (active/archived campaigns, last 7 days/all transactions…)
@@ -53,7 +53,8 @@ const NAV: NavSection[] = [
     title: 'Home',
     items: [
       { to: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={I} /> },
-      { to: '/task-sheet', label: 'Tasks', icon: <ListChecks size={I} />, badge: 'tasks',
+      // Admins see "Task Sheet" (Moshe Henig, #65); fundraisers, who have Campaign Tasks only, see "Tasks".
+      { to: '/task-sheet', label: 'Tasks', adminLabel: 'Task Sheet', icon: <ListChecks size={I} />, badge: 'tasks',
         tabs: [{ to: '/task-sheet', label: 'Task Sheet', admin: true }, { to: '/tasks', label: 'Campaign Tasks' }] },
       { to: '/inbox', label: 'Messages', icon: <MessagesSquare size={I} />, badge: 'inbox' },
       { to: '/outreach', label: 'Outreach', icon: <Send size={I} />, admin: true,
@@ -79,7 +80,8 @@ const NAV: NavSection[] = [
       { to: '/payees', label: 'Payees', icon: <BookUser size={I} /> },
       // Everyone opens the calendar, where bookings show on their day; fundraisers see only their own (Moshe Henig, 2026-11-11).
       { to: '/machines', label: 'Machine Bookings', icon: <CalendarDays size={I} />,
-        tabs: [{ to: '/calendar', label: 'Calendar' }, { to: '/machines', label: 'Bookings' }, { to: '/machines/donary', label: 'Donary Machines', admin: true }] },
+        // Clearer tab names (Moshe Henig, #65): "Calendar" and "Bookings" didn't say what they were.
+        tabs: [{ to: '/calendar', label: 'Booking calendar' }, { to: '/machines', label: 'All bookings' }, { to: '/machines/donary', label: 'Donary Machines', admin: true }] },
     ],
   },
   {
@@ -183,11 +185,12 @@ export default function Layout() {
 
   const allowed = (t: { admin?: boolean }) => !t.admin || isAdmin;
   const visible = (n: NavItem) => (n.platform ? isPlatformOwner : canWork && (!n.admin || isAdmin));
+  const MENU = NAV.map(sec => ({ ...sec, items: sec.items.map(n => (isAdmin && n.adminLabel ? { ...n, label: n.adminLabel } : n)) }));
   // An entry's tabs this person may open; the entry opens the first of them.
   const tabsOf = (n: NavItem) => (n.tabs ?? []).filter(allowed);
   const entryTo = (n: NavItem) => tabsOf(n)[0]?.to ?? n.to;
   const paths = (n: NavItem) => (n.tabs ? tabsOf(n).map(t => t.to) : [n.to]);
-  const all = [...NAV.flatMap(s => s.items.filter(visible).map(i => ({ ...i, section: s.title }))), ...OTHER.map(i => ({ ...i, section: 'Settings' }))];
+  const all = [...MENU.flatMap(s => s.items.filter(visible).map(i => ({ ...i, section: s.title }))), ...OTHER.map(i => ({ ...i, section: 'Settings' }))];
   // The longest matching path wins, so /outreach/history is the History tab, not New Message.
   const matches = all.flatMap(n => paths(n).filter(p => onPath(loc.pathname, p)).map(p => ({ n, p })))
     .sort((a, b) => b.p.length - a.p.length)[0];
@@ -207,7 +210,7 @@ export default function Layout() {
             <OrgLogo org={org} />
             <div className="logo-text">{org?.name ?? PRODUCT_NAME}{org && <small>{PRODUCT_NAME}</small>}</div>
           </div>
-          {NAV.map(section => {
+          {MENU.map(section => {
             const items = section.items.filter(n => visible(n) && !n.offMenu);
             if (!items.length) return null;
             const here = current?.section === section.title;
