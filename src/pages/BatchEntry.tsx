@@ -66,6 +66,10 @@ export default function BatchEntry() {
     if (!filled.length) return setError('Enter at least one donation.');
     const problem = filled.findIndex(l => !(Number(l.amount) > 0) || !l.method);
     if (problem >= 0) return setError(`Row ${lines.indexOf(filled[problem]) + 1} needs an amount and a payment method.`);
+    // Only listed methods, so every gift gets its fee (readiness #14: an unknown method meant no fee, silently).
+    const known = new Set(methods.map(m => m.value.toLowerCase()));
+    const unknown = filled.findIndex(l => !known.has(l.method.trim().toLowerCase()));
+    if (unknown >= 0) return setError(`Row ${lines.indexOf(filled[unknown]) + 1}: "${filled[unknown].method}" isn't a payment method on the list. Pick one from the list, or add it under Payment Methods & Fees.`);
 
     setBusy(true);
     const { data, error: e } = await supabase.rpc('submit_batch', {

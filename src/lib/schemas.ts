@@ -50,7 +50,8 @@ export const donationFields: Field[] = [
   { name: 'type', label: 'Type', type: 'select', options: DONATION_TYPES, required: true },
   { name: 'status', label: 'Status', type: 'select', options: DONATION_STATUSES, required: true },
   { name: 'amount', label: 'Amount', type: 'number', required: true },
-  { name: 'payment_method', label: 'Payment Method', type: 'select', options: paymentMethodOptions, freeText: true },
+  // Listed methods only, so the fee is always worked out (readiness #14); an older gift's unlisted method still shows.
+  { name: 'payment_method', label: 'Payment Method', type: 'select', options: paymentMethodOptions },
   // Check fields show only for a check, here and in every donation form (Moshe Henig, 2026-11-11).
   { name: 'check_number', label: 'Check #', showIf: isCheck },
   { name: 'post_dated', label: 'Post-dated check', type: 'checkbox', showIf: isCheck },
@@ -127,7 +128,7 @@ export const editDonationFields: Field[] = newDonationFields;
 /** What a fundraiser with the override fills in. It always waits for an admin. */
 export const fundraiserDonationFields: Field[] = [
   { name: 'amount', label: 'Amount', type: 'number', required: true },
-  { name: 'payment_method', label: 'Payment Method', type: 'select', options: paymentMethodOptions, freeText: true, required: true },
+  { name: 'payment_method', label: 'Payment Method', type: 'select', options: paymentMethodOptions, required: true },
   { name: 'name', label: 'Donor name' },
   { name: 'phone', label: 'Phone' },
   { name: 'check_number', label: 'Check #', showIf: isCheck },

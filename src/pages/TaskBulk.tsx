@@ -27,7 +27,7 @@ export type BulkAction = {
 };
 
 /** Task types whose panel has a "take it off the sheet" button. */
-const DISMISSABLE = ['returned_check', 'ach_returned', 'post_dated_due', 'stale_check', 'inactive_campaign', 'delivery_failed', 'bank_move_needed'];
+const DISMISSABLE = ['returned_check', 'ach_returned', 'post_dated_due', 'stale_check', 'inactive_campaign', 'delivery_failed', 'bank_move_needed', 'no_fee_rule'];
 
 export const BULK_ACTIONS: BulkAction[] = [
   { key: 'archive', label: 'Archive campaigns', types: ['inactive_campaign'], logAs: 'archived', primary: true,

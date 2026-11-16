@@ -38,7 +38,16 @@ const feeText = (r: Row) => {
   }
 };
 
-const FEE_TABS = [['methods', 'Methods & fees'], ['overrides', 'Campaign overrides']] as const;
+const PROCESSORS = [['sola', 'Sola (Cardknox), incl. cards taken in the app'], ['elevon', 'Elevon (Cartis)'], ['donary', 'Donary']].map(([value, label]) => ({ value, label }));
+const processorFields: Field[] = [
+  { name: 'processor', label: 'Processor', type: 'select', options: PROCESSORS, required: true },
+  { name: 'method_id', label: 'Method', type: 'select', options: paymentMethodIdOptions, required: true },
+  ...feeFields,
+];
+
+// Readiness #14: a Sola card gift and an Elevon card gift can carry different rates. Order: a campaign's own
+// override, then the processor's rate for the method, then the method's rate.
+const FEE_TABS = [['methods', 'Methods & fees'], ['processors', 'Processor rates'], ['overrides', 'Campaign overrides']] as const;
 
 export default function FeesPage() {
   const { permissions } = useAuth();
@@ -62,6 +71,21 @@ export default function FeesPage() {
           { key: 'active', label: 'Active', value: r => (r.active ? 'Yes' : 'No') },
         ]}
         fields={methodFields}
+      />}
+      {tab === 'processors' && <CrudPage
+        title="Processor Rates" noun="Processor rate"
+        table="processor_fee_rules"
+        select="*, payment_methods(name)"
+        order={{ column: 'created_at', ascending: false }}
+        canEdit={canEdit}
+        defaults={{ processor: 'sola', fee_type: 'percent_flat', fee_percent: 0, fee_flat: 0 }}
+        extraActions={<span className="muted small">Used instead of the method's own rate for gifts through that processor. A campaign override still comes first.</span>}
+        columns={[
+          { key: 'processor', label: 'Processor', value: r => PROCESSORS.find(p => p.value === r.processor)?.label ?? r.processor, width: 260 },
+          { key: 'method', label: 'Method', value: r => r.payment_methods?.name },
+          { key: 'fee', label: 'Fee', value: feeText },
+        ]}
+        fields={processorFields}
       />}
       {tab === 'overrides' && <CrudPage
         title="Campaign Fee Overrides" noun="Override"

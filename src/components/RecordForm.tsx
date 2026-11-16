@@ -284,6 +284,8 @@ export default function RecordForm(p: Props) {
                   onChange={e => (e.target.value === NEW_OPTION ? setCreating(f) : set(f.name, e.target.value))}>
             <option value="">—</option>
             {((Array.isArray(f.options) ? f.options : opts[f.name]) ?? []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {/* A value the record already has that isn't on the list (an imported method, say) stays as it is. */}
+            {v && !((Array.isArray(f.options) ? f.options : opts[f.name]) ?? []).some(o => o.value === v) && <option value={v}>{v} (not in the list)</option>}
             {f.create && isAdmin && <option value={NEW_OPTION}>+ Create new {f.create().noun}</option>}
           </select>
         );

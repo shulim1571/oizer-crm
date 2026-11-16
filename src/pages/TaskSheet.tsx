@@ -55,6 +55,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   recurring_failed: { label: 'Recurring Charge Failed', tone: 'red' },
   ach_returned: { label: 'Bank Payment Returned', tone: 'red' },
   bank_move_needed: { label: 'Bank Transfer Needed', tone: 'amber' },
+  no_fee_rule: { label: 'No Fee Rule', tone: 'amber' },
 };
 /** Tasks whose record is a transaction (donation): those can be edited or deleted from the sheet. */
 const TRANSACTION_TASKS = new Set(['pending_payment', 'unattributed', 'returned_check', 'post_dated_due', 'ach_returned', 'receipt_requested']);
@@ -338,6 +339,12 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
         <>
           <p className="muted">This campaign transfer moved money between campaigns on different bank accounts, so the money has to move between the banks too. Record it under <Link to="/reconciliation">Bank Reconciliation → Between accounts</Link>; this leaves the sheet once it's recorded.</p>
           <div className="donation-actions">{dismiss('Not needed', 'Take this off the sheet without recording a bank transfer? Say why:')}</div>
+        </>
+      )}
+      {item.task_type === 'no_fee_rule' && (
+        <>
+          <p className="muted">These completed gifts have no fee because {item.record_id ? <>"{item.record_id}" isn't</> : <>they have no payment method, and no method is</>} on the list of payment methods. Add it under <Link to="/fees">Payment Methods & Fees</Link> with its fee, or change these gifts to a listed method (<Link to={`/donations/all`}>Transactions</Link>). This leaves the sheet by itself once that's done.</p>
+          <div className="donation-actions">{dismiss('Leave as is', 'Take this off the sheet and leave these gifts without a fee? Say why:')}</div>
         </>
       )}
       {item.task_type === 'bank_reassign' && (
