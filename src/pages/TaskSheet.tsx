@@ -57,6 +57,7 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   bank_move_needed: { label: 'Bank Transfer Needed', tone: 'amber' },
   no_fee_rule: { label: 'No Fee Rule', tone: 'amber' },
   disputed: { label: 'Disputed Payment', tone: 'red' },
+  integrity: { label: 'Books Check', tone: 'red' },
   chargeback: { label: 'Chargeback', tone: 'red' },
 };
 /** Tasks whose record is a transaction (donation): those can be edited or deleted from the sheet. */
@@ -341,6 +342,12 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
         <>
           <p className="muted">This campaign transfer moved money between campaigns on different bank accounts, so the money has to move between the banks too. Record it under <Link to="/reconciliation">Bank Reconciliation → Between accounts</Link>; this leaves the sheet once it's recorded.</p>
           <div className="donation-actions">{dismiss('Not needed', 'Take this off the sheet without recording a bank transfer? Say why:')}</div>
+        </>
+      )}
+      {item.task_type === 'integrity' && (
+        <>
+          <p className="muted">Found by the nightly check of the books (also on the dashboard's Books health). It leaves the sheet by itself once the next check comes back clean; run one any time with Check now on the dashboard.</p>
+          <div className="donation-actions">{dismiss('Leave as is', 'Take this check off the sheet for good? It still shows on the dashboard\'s Books health. Say why:')}</div>
         </>
       )}
       {item.task_type === 'disputed' && (

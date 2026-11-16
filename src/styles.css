@@ -479,6 +479,9 @@ table.grid { border-collapse: separate; border-spacing: 0; width: 100%; }
   .calendar-line { font-size: 9.5px; }
   .calendar-line.muted { display: none; }
 }
+.books-health { margin: 12px 0 0; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; }
+.books-health.ok { border-color: color-mix(in srgb, var(--pos) 40%, var(--line)); background: var(--pos-soft); }
+.books-health.bad { border-color: color-mix(in srgb, var(--neg) 40%, var(--line)); background: var(--neg-soft); }
 .dash-defs { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
 .dash-defs summary { cursor: pointer; width: fit-content; }
 .dash-defs ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; max-width: 900px; }

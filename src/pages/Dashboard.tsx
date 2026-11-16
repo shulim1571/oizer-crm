@@ -142,6 +142,8 @@ export default function DashboardPage() {
         {!isAdmin && <Kpi label="My tasks" value={<Link to="/tasks">{tasksOpen.length}</Link>} icon={<AlertTriangle size={18} />} tone="amber" sub={`${tasksOpen.filter(t => t.due_date && t.due_date < today).length} overdue`} />}
       </div>
 
+      {isAdmin && <BooksHealth />}
+
       <details className="dash-defs">
         <summary>How these numbers are calculated</summary>
         <ul>
@@ -267,5 +269,31 @@ export function BalanceSummaryPage() {
         }
       />
     </section>
+  );
+}
+
+/**
+ * Books health (readiness #26): the latest nightly check of the books, green when every check came back clean,
+ * red with what it found (each also on the Task Sheet). Admins only; "Check now" runs it again.
+ */
+function BooksHealth() {
+  const [busy, setBusy] = useState(false);
+  const q = useQuery(async () => ((await supabase.from('integrity_runs').select('ran_at, ok, results').order('ran_at', { ascending: false }).limit(1)).data ?? [])[0] as Row | undefined, []);
+  const run = q.data;
+  const found = ((run?.results ?? []) as Row[]).filter(r => Number(r.n) > 0);
+  async function now() {
+    setBusy(true);
+    await supabase.rpc('check_books_now');
+    setBusy(false);
+    void q.reload({ quiet: true });
+    window.dispatchEvent(new Event('task-sheet-changed'));
+  }
+  return (
+    <div className={`books-health ${run ? (run.ok ? 'ok' : 'bad') : ''}`} role="status">
+      <b>Books health: {run ? (run.ok ? 'all checks clean' : `${found.length} check${found.length === 1 ? '' : 's'} need a look`) : 'not checked yet'}</b>
+      {run && <span className="muted small"> · checked {new Date(run.ran_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: orgTimeZone() })}</span>}
+      {found.length > 0 && <span className="small"> · {found.map(r => `${r.label} (${r.n})`).join(' · ')} · <Link to="/task-sheet">on the Task Sheet</Link></span>}
+      <button type="button" className="link small" disabled={busy} onClick={now}>{busy ? 'Checking…' : 'Check now'}</button>
+    </div>
   );
 }
