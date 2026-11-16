@@ -175,7 +175,9 @@ export function AccountsPage() {
           ),
         },
         { key: 'donations_total', label: 'Donations in', render: r => money(r.donations_total), align: 'right' },
-        { key: 'expenses_total', label: 'Expenses out', render: r => money(r.expenses_total), align: 'right' },
+        // Always positive (readiness #61); money that came back as payouts below zero is its own column.
+        { key: 'payouts_out', label: 'Payouts out', render: r => money(r.payouts_out), align: 'right' },
+        { key: 'returned_in', label: 'Came back', optional: true, render: r => (Number(r.returned_in) ? money(r.returned_in) : ''), align: 'right' },
         { key: 'uncleared_total', label: 'Uncleared checks', render: r => money(r.uncleared_total), align: 'right' },
         { key: 'notes', label: 'Notes' },
       ]}

@@ -108,8 +108,8 @@ export function AccountDetail() {
       <div className="kpis">
         <Kpi label="Donations in" value={money(d.donations_total)} icon={<TrendingUp size={18} />} tone="green"
              sub={`${Number(d.donation_count).toLocaleString()} donations`} />
-        <Kpi label="Expenses out" value={money(d.expenses_total)} icon={<Receipt size={18} />} tone="amber"
-             sub={`${Number(d.expense_count).toLocaleString()} expenses`} />
+        <Kpi label="Payouts out" value={money(d.payouts_out)} icon={<Receipt size={18} />} tone="amber"
+             sub={`${Number(d.expense_count).toLocaleString()} payouts${Number(d.returned_in) ? ` · ${money(d.returned_in)} came back` : ''}`} />
         <Kpi label="Net" value={<Balance value={d.donations_total - d.expenses_total} />} icon={<Scale size={18} />} tone="violet" />
         <Kpi label="Uncleared checks" value={money(d.uncleared_total)} icon={<AlertCircle size={18} />} tone="red" />
       </div>
