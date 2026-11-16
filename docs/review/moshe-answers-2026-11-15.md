@@ -1,0 +1,23 @@
+# Moshe's answers on held readiness items (Nov 15, 2026). Approved by Shulim to build.
+
+Build these (refs are finding numbers in readiness-fixes-2026-11-15.md, "Held for Moshe"):
+
+- #44 Payment page (desktop): keep the 2-column layout, renumber steps so they read in order; "Cover the processing fee" starts unticked. Done Nov 16: desktop numbers read 1 Your details (left), 2 Amount, 3 Payment (right); phones keep 1 Amount, 2 Your details, 3 Payment. Cover the fee is now off on every template and campaign page (new ones were already off); admins can still turn it on per template.
+- #54 After saving a donation: go to Transactions when started from the top New Donation button; go back to the campaign when started from a campaign page.
+- #10 "To collect" status: use it only for checks not yet delivered (Moshe's rule). Adjust balance/fee handling to match.
+- #11 Total potential: keep the formula; team (sub-campaign) amounts count just like the parent's amounts, so include them on the parent.
+- #8 Checks not delivered: on the dashboard, show them in one box together with open pledges (not counted in raised).
+- #20 After "Yes, it printed": lock that payout's amount and payee (void the check to change). Unprinted payouts stay editable.
+- #41 Clicking a donation opens a read-only view first, with Edit and Issue Receipt buttons on top.
+- #65 Sidebar says "Task Sheet". Rename the Machine Bookings "Calendar" and "Bookings" tabs to clearer names of your choice.
+
+Do NOT build (Moshe said no):
+- #18 blocking payouts/transfers below zero.
+- #21 second approver.
+- #2 locking records after bank sign-off.
+
+Leave out for now: #34 "books closed through" date (undecided).
+
+Added Nov 16 (Moshe, text 11:36 AM ET; Shulim asked to add it):
+- Phones: show numbers with dashes (845-555-1234) throughout the app. Done Nov 16 (display only).
+- Phones: home phone and cell phone as separate fields on donors/contacts, existing numbers moved over sensibly. Needs a database change; waiting on the Supabase access token.

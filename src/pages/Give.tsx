@@ -386,7 +386,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
     <form className="give-form" onSubmit={e => { e.preventDefault(); void submit(); }}>
       {data.payments.sandbox && <p className="give-test" dir="auto">{method === 'card' ? t.test : t.test_other}</p>}
       <div className="give-part give-part-amount">
-      <h2 className="give-step" dir="auto"><span>1</span>{t.amount}</h2>
+      <h2 className="give-step" dir="auto"><span className="give-step-n" data-n="1" data-nd="2" aria-hidden="true" />{t.amount}</h2>
       {presets.length > 0 && (
         <div className="give-presets">
           {presets.map(a => (
@@ -432,7 +432,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
       </div>
 
       <div className="give-part give-part-details">
-      <h2 className="give-step" dir="auto"><span>2</span>{t.details}</h2>
+      <h2 className="give-step" dir="auto"><span className="give-step-n" data-n="2" data-nd="1" aria-hidden="true" />{t.details}</h2>
       <div className="give-grid">
         <div className="give-names wide">
           <label className="field"><span dir="auto">{t.first} *</span><input required dir="auto" value={d.first_name} onChange={set('first_name')} autoComplete="given-name" /></label>
@@ -458,7 +458,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
       </div>
 
       <div className="give-part give-part-pay">
-      <h2 className="give-step" dir="auto"><span>3</span>{L.pay_with}</h2>
+      <h2 className="give-step" dir="auto"><span className="give-step-n" data-n="3" data-nd="3" aria-hidden="true" />{L.pay_with}</h2>
       <MethodTabs value={method} program={program} ach={!!data.payments.ach} daf={data.payments.daf ?? []} L={L}
         onChange={(m, prog) => { setMethod(m); setProgram(prog); setDaf(emptyDaf()); setError(null); }} />
       {method === 'card' && (

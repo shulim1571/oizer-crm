@@ -761,6 +761,10 @@ ul.plain li { padding: 6px 0; }
 .give-step:first-of-type { margin-top: 2px !important; }
 .give-step span { width: 26px; height: 26px; border-radius: 50%; background: color-mix(in srgb, var(--give-accent) 12%, #fff); color: var(--give-accent);
   display: grid; place-items: center; font-size: 13px; font-weight: 800; flex: none; }
+/* Moshe #44: the step numbers read in order on each layout. Phones: 1 Amount, 2 Your details, 3 Payment. Desktop, where
+   Your details is the left column: 1 Your details, 2 Amount, 3 Payment. */
+.give-step-n::before { content: attr(data-n); }
+@media (min-width: 960px) { .give-step-n::before { content: attr(data-nd); } }
 .give-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
 .give-presets button { border: 1.5px solid var(--give-line); background: #fff; border-radius: 12px; padding: 14px 6px; font-size: 18px; font-weight: 700; cursor: pointer;
   color: var(--give-ink); transition: transform .08s, border-color .12s, box-shadow .12s; }
@@ -926,7 +930,7 @@ tr.selected td { background: var(--accent-soft); }
 .recurring-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 10px 0; background: var(--surface-2); }
 
 /* Payment page form in three parts (Moshe Henig, 2026-11-10). Phones: 1 Amount, 2 Your details, 3 Payment.
-   Desktop: 2 Your details on the left; 1 Amount above 3 Payment on the right, with Donate under Payment.
+   Desktop (numbered to read in order, Moshe #44): 1 Your details on the left; 2 Amount above 3 Payment on the right, with Donate under Payment.
    The progress bar and story sit full width above the form; donors and other ways to give below it. */
 .give-form { display: flex; flex-direction: column; }
 .give-part-amount { order: 1; }
