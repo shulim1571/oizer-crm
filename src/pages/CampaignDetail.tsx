@@ -16,7 +16,7 @@ import { useQuery } from '../lib/useQuery';
 import { availableNote, useAvailable } from '../components/CampaignBalanceNote';
 import { ALL_TOPICS, useLiveRefresh } from '../lib/live';
 import { useAuth } from '../lib/auth';
-import { dateTime, money, pct, yn } from '../lib/format';
+import { dateTime, money, pct, yn, formatPhone } from '../lib/format';
 import { campaignFields, editDonationFields, expenseFields, newDonationFields, fundraiserDonationFields, newPayoutDefaults, taskFields, transferEditFields } from '../lib/schemas';
 import { clearLookups } from '../lib/lookups';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
@@ -302,7 +302,7 @@ export default function CampaignDetail() {
       {(c.email || c.phone || c.notes) && (
         <div className="info">
           {c.email && <span><Mail size={14} /> {c.email}</span>}
-          {c.phone && <span><Phone size={14} /> {c.phone}</span>}
+          {c.phone && <span><Phone size={14} /> {formatPhone(c.phone)}</span>}
           {c.notes && <span><StickyNote size={14} /> {c.notes}</span>}
         </div>
       )}

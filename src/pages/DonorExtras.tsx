@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import DataTable from '../components/DataTable';
 import { StatusPill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { localToday, dateTime, money } from '../lib/format';
+import { localToday, dateTime, money, formatPhone } from '../lib/format';
 import { clearLookups } from '../lib/lookups';
 import { supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -116,7 +116,7 @@ export function DuplicatesPage() {
         columns={[
           { key: 'reason', label: 'Why' },
           { key: 'donor_count', label: 'Donors', align: 'right' },
-          { key: 'names', label: 'Who', width: 420, value: r => (r.donors as Row[]).map(d => `${d.name} (#${d.id})${d.phone ? ` ${d.phone}` : ''}`).join(' · ') },
+          { key: 'names', label: 'Who', width: 420, value: r => (r.donors as Row[]).map(d => `${d.name} (#${d.id})${d.phone ? ` ${formatPhone(d.phone)}` : ''}`).join(' · ') },
         ]}
       />
       {group && <MergeDialog group={group} onClose={() => setGroup(null)} onDone={() => { setGroup(null); clearLookups(); setVersion(v => v + 1); }} />}
@@ -165,7 +165,7 @@ function MergeDialog({ group, onClose, onDone }: { group: Row; onClose: () => vo
                 <td><input type="radio" name="keep" aria-label={`Keep ${d.name}`} checked={keep === d.id} onChange={() => { setKeep(d.id); setAbsorb(a => a.filter(x => x !== d.id)); }} /></td>
                 <td><input type="checkbox" aria-label={`Merge in ${d.name}`} disabled={keep === d.id} checked={absorb.includes(d.id)} onChange={e => setAbsorb(a => (e.target.checked ? [...a, d.id] : a.filter(x => x !== d.id)))} /></td>
                 <td>{d.name} <span className="id-tag">{d.id}</span></td>
-                <td>{d.phone}</td>
+                <td>{formatPhone(d.phone)}</td>
                 <td>{d.email}</td>
                 <td>{money(facts(d.id)?.total_given ?? 0)}</td>
                 <td>{facts(d.id)?.gift_count ?? 0}</td>

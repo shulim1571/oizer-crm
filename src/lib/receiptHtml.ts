@@ -1,4 +1,4 @@
-import { money } from './format';
+import { money, formatPhone } from './format';
 import type { Row } from './supabase';
 
 // Receipts and statements are pages the browser prints, which lays out Hebrew right to left properly.
@@ -45,7 +45,7 @@ const STYLE = `
 `;
 
 const footer = (o: OrgDetails) => {
-  const bits = [o.address && `Address: ${esc(o.address)}`, o.phone && `Tel: ${esc(o.phone)}`, o.email && `Email: ${esc(o.email)}`].filter(Boolean);
+  const bits = [o.address && `Address: ${esc(o.address)}`, o.phone && `Tel: ${esc(formatPhone(o.phone))}`, o.email && `Email: ${esc(o.email)}`].filter(Boolean);
   return bits.length ? `<div class="foot">${bits.join(' | ')}</div>` : '';
 };
 const logo = (o: OrgDetails, small = false) =>

@@ -1,4 +1,5 @@
 import { fetchAll, supabase } from './supabase';
+import { formatPhone } from './format';
 
 export interface Option {
   value: string;
@@ -37,7 +38,7 @@ export const managerOptions = () =>
 export const donorOptions = () =>
   cached('donors', async () =>
     (await fetchAll((a, b) => supabase.from('donors').select('id, display_name, phone').order('display_name').range(a, b)))
-      .map(d => ({ value: d.id, label: `${d.display_name}${d.phone ? ` · ${d.phone}` : ''}` })),
+      .map(d => ({ value: d.id, label: `${d.display_name}${d.phone ? ` · ${formatPhone(d.phone)}` : ''}` })),
   );
 
 export const accountOptions = () =>
@@ -80,7 +81,7 @@ export const payoutMethodOptions = () =>
 export const payeeOptions = () =>
   cached('payees', async () =>
     (await fetchAll((a, b) => supabase.from('payees').select('id, name, phone').is('merged_into', null).order('name').range(a, b)))
-      .map(p => ({ value: p.id, label: `${p.name}${p.phone ? ` · ${p.phone}` : ''}` })),
+      .map(p => ({ value: p.id, label: `${p.name}${p.phone ? ` · ${formatPhone(p.phone)}` : ''}` })),
   );
 
 export const EXPENSE_METHODS = ['Check', 'Zelle', 'Account Transfer', 'Credit Card', 'Cash', 'Wire', 'other'].map(v => ({ value: v, label: v }));

@@ -6,7 +6,7 @@ import RecordForm from '../components/RecordForm';
 import SearchSelect from '../components/SearchSelect';
 import { Pill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { dateTime, money } from '../lib/format';
+import { dateTime, money, formatPhone } from '../lib/format';
 import { clearLookups, payeeOptions, type Option } from '../lib/lookups';
 import { payeeFields } from '../lib/schemas';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
@@ -38,7 +38,7 @@ export function PayeesPage() {
         columns={[
           { key: 'name', label: 'Payee', width: 200, render: r => <>{r.name}{r.do_not_pay && <> <Pill tone="red">Do Not Pay</Pill></>}</> },
           { key: 'id', label: 'ID', render: r => <span className="id-tag">{r.id}</span> },
-          { key: 'phone', label: 'Phone' },
+          { key: 'phone', label: 'Phone', render: r => formatPhone(r.phone) },
           { key: 'email', label: 'Email' },
           { key: 'total_paid', label: 'Lifetime paid', render: r => money(r.total_paid), align: 'right' },
           { key: 'payout_count', label: 'Payouts', align: 'right' },
@@ -101,7 +101,7 @@ function PayeeDialog({ id, onClose, onChanged, onMerged }: { id: string; onClose
       </div>
       {q.data?.flag && <div className="error"><b>Do Not Pay.</b> {q.data.flag.reason ?? 'No reason given.'} · {q.data.flag.flagged_by}, {dateTime(q.data.flag.flagged_at)}</div>}
       <dl className="record-facts">
-        {p.phone && <><dt>Phone</dt><dd>{p.phone}</dd></>}
+        {p.phone && <><dt>Phone</dt><dd>{formatPhone(p.phone)}</dd></>}
         {p.email && <><dt>Email</dt><dd>{p.email}</dd></>}
         {p.address && <><dt>Address</dt><dd className="pre-line">{p.address}</dd></>}
         {p.preferred_method && <><dt>Prefers</dt><dd>{p.preferred_method}</dd></>}

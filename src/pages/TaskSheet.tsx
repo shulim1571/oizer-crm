@@ -6,7 +6,7 @@ import SearchSelect from '../components/SearchSelect';
 import { Balance, Pill } from '../components/Pill';
 import RecordForm from '../components/RecordForm';
 import CampaignName from '../components/CampaignName';
-import { dateTime, money } from '../lib/format';
+import { dateTime, money, formatPhone } from '../lib/format';
 import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -395,7 +395,7 @@ function ReceiptRequest({ item, onDone, onHandled }: { item: Row; onDone: () => 
   }
   return (
     <div className="panel-box">
-      <p className="muted small">They asked for it by {[info.to.email && `email to ${info.to.email}`, info.to.phone && `text to ${info.to.phone}`].filter(Boolean).join(' and ')}.
+      <p className="muted small">They asked for it by {[info.to.email && `email to ${info.to.email}`, info.to.phone && `text to ${formatPhone(info.to.phone)}`].filter(Boolean).join(' and ')}.
         {info.receipt ? ` Receipt ${info.receipt.receipt_number} is already issued.` : ' A receipt is issued first.'}</p>
       {error && <div className="error">{error}</div>}
       <div className="form-actions">

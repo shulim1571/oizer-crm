@@ -13,7 +13,7 @@ import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { ALL_TOPICS } from '../lib/live';
 import { CheckSettingsCard } from './Checks';
-import { dateTime, money, yn } from '../lib/format';
+import { dateTime, money, yn, formatPhone } from '../lib/format';
 import { accountFields, personFields, sourceFields } from '../lib/schemas';
 import { STATUS_LABEL, campaignColumns } from './Campaigns';
 import FundraiserControls from './FundraiserControls';
@@ -178,7 +178,7 @@ export function ManagerDetail() {
       {(d.email || d.phone || d.notes) && (
         <div className="info">
           {d.email && <span><Mail size={14} /> {d.email}</span>}
-          {d.phone && <span><Phone size={14} /> {d.phone}</span>}
+          {d.phone && <span><Phone size={14} /> {formatPhone(d.phone)}</span>}
           {d.notes && <span><StickyNote size={14} /> {d.notes}</span>}
         </div>
       )}

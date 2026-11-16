@@ -14,7 +14,7 @@ import { campLabel } from '../components/CrudPage';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
-import { dateTime, money } from '../lib/format';
+import { dateTime, money, formatPhone } from '../lib/format';
 import { donorFields, fundraiserDonorFields, taskFields } from '../lib/schemas';
 import { DONATION_SELECT, donationColumns, isLive } from './donationColumns';
 import { ContactLog, DonorPledges } from './DonorExtras';
@@ -48,7 +48,7 @@ const DONOR_COLUMNS: Column[] = [
   { key: 'open_pledges', label: 'Open Pledges', render: r => money(r.open_pledges), align: 'right', filter: { column: 'open_pledges', type: 'number' } },
   { key: 'id', label: 'Donor ID', optional: true, filter: { column: 'id', type: 'text' } },
   { key: 'country', label: 'Country', optional: true, filter: { column: 'country', type: 'text' } },
-  { key: 'phone', label: 'Phone', filter: { column: 'phone', type: 'text' } },
+  { key: 'phone', label: 'Phone', render: r => formatPhone(r.phone), filter: { column: 'phone', type: 'text' } },
   { key: 'email', label: 'Email', filter: { column: 'email', type: 'text' } },
   { key: 'address', label: 'Address', long: true, optional: true, filter: { column: 'address', type: 'text' } },
   { key: 'campaign_count', label: 'Campaigns', optional: true, align: 'right', filter: { column: 'campaign_count', type: 'number' } },
@@ -196,7 +196,7 @@ function OtherOrgDonors({ q }: { q: string }) {
             <button type="button" key={d.id} onClick={() => add(d)}>
               <b>{d.display_name}</b>
               {d.yiddish_name && d.yiddish_name !== d.display_name && <span className="hebrew"> {d.yiddish_name}</span>}
-              <span className="muted small"> {[d.phone, d.email].filter(Boolean).join(' · ') || `#${d.id}`} · add to my list</span>
+              <span className="muted small"> {[formatPhone(d.phone), d.email].filter(Boolean).join(' · ') || `#${d.id}`} · add to my list</span>
             </button>
           ))}
           {rows.length < total && <button type="button" className="link" onClick={() => load(rows.length)}>Load more ({(total - rows.length).toLocaleString()} left)</button>}
@@ -347,7 +347,7 @@ export function DonorDetail() {
         <div className="card">
           <h3>Contact</h3>
           <dl>
-            <dt>Phone</dt><dd>{d.phone || '—'}</dd>
+            <dt>Phone</dt><dd>{formatPhone(d.phone) || '—'}</dd>
             <dt>Email</dt><dd>{d.email || '—'}</dd>
             <dt>Address</dt><dd>
               <span className="pre-line">{d.address?.trim() || '—'}</span>

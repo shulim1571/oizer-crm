@@ -12,7 +12,7 @@ import { PayoutStatusPill, payoutStatus } from './Payouts';
 import { Balance, Pill, StatusPill } from '../components/Pill';
 import { supabase, type Row } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { dateTime, money, yn } from '../lib/format';
+import { dateTime, money, yn, formatPhone } from '../lib/format';
 import {
   accountFields, expenseFields, newPayoutDefaults, personFields, sourceFields,
 } from '../lib/schemas';
@@ -178,7 +178,7 @@ export function AccountsPage() {
 
 const personColumns = [
   { key: 'full_name', label: 'Name', width: 200, sortValue: (r: Record<string, unknown>) => lastFirst(r, 'full_name') },
-  { key: 'phone', label: 'Phone' },
+  { key: 'phone', label: 'Phone', render: (r: Record<string, unknown>) => formatPhone(r.phone) },
   { key: 'email', label: 'Email' },
   { key: 'notes', label: 'Notes' },
   { key: 'created_at', label: 'Created', render: (r: Record<string, unknown>) => dateTime(r.created_at) },

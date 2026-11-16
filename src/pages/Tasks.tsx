@@ -9,7 +9,7 @@ import RecordForm from '../components/RecordForm';
 import SearchSelect from '../components/SearchSelect';
 import { StatusPill } from '../components/Pill';
 import { useAuth } from '../lib/auth';
-import { localToday, dateTime, download, money, toCsv } from '../lib/format';
+import { localToday, dateTime, download, money, toCsv, formatPhone } from '../lib/format';
 import { campaignOptions, donorOptions, managerOptions, type Option } from '../lib/lookups';
 import { adminTaskFields, taskFields } from '../lib/schemas';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
@@ -267,7 +267,7 @@ function CallListDialog({ id, onClose }: { id: string; onClose: () => void }) {
       <style>body{font:13px sans-serif;margin:24px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:6px 8px;text-align:left}td.box{width:24px}</style>
       <h2>${escapeHtml(t?.title)}</h2>
       <table><tr><th></th><th>Donor</th><th>Phone</th><th>Notes</th></tr>
-      ${items.map(i => `<tr><td class="box">${i.contacted ? '&#10003;' : ''}</td><td>${escapeHtml(i.donors?.display_name)}</td><td>${escapeHtml(i.donors?.phone)}</td><td>${escapeHtml(i.note)}</td></tr>`).join('')}
+      ${items.map(i => `<tr><td class="box">${i.contacted ? '&#10003;' : ''}</td><td>${escapeHtml(i.donors?.display_name)}</td><td>${escapeHtml(formatPhone(i.donors?.phone))}</td><td>${escapeHtml(i.note)}</td></tr>`).join('')}
       </table>`);
     w.document.close();
     w.print();
@@ -293,7 +293,7 @@ function CallListDialog({ id, onClose }: { id: string; onClose: () => void }) {
             <tr key={i.id}>
               <td><input type="checkbox" aria-label={`Reached ${i.donors?.display_name}`} disabled={!canWork} checked={i.contacted} onChange={e => save(i, e.target.checked, i.note ?? '')} /></td>
               <td>{i.donors?.display_name}</td>
-              <td>{i.donors?.phone}</td>
+              <td>{formatPhone(i.donors?.phone)}</td>
               <td><input aria-label={`Note for ${i.donors?.display_name}`} disabled={!canWork} defaultValue={i.note ?? ''} placeholder="Left voicemail…" onBlur={e => { if (e.target.value !== (i.note ?? '')) save(i, i.contacted, e.target.value); }} /></td>
             </tr>
           ))}

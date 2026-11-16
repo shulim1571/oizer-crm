@@ -11,7 +11,7 @@ describe('organization contact on the payment page banner', () => {
     const html = render("office@example.org", "(845) 555-0100");
     expect(html).toContain('href="mailto:office@example.org"');
     expect(html).toContain('href="tel:8455550100"');
-    expect(html).toContain('(845) 555-0100');
+    expect(html).toContain('845-555-0100');   // with dashes (Moshe Henig, 2026-11-16)
   });
   it('hides each one that isn’t set, and the whole line when neither is', () => {
     expect(render("office@example.org", "  ")).not.toContain('tel:');

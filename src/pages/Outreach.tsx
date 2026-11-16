@@ -4,7 +4,7 @@ import { Copy, Mail, MessageSquare, Paperclip, Phone, Send, Trash2, X } from 'lu
 import DataTable, { type Column } from '../components/DataTable';
 import SearchSelect from '../components/SearchSelect';
 import { Pill } from '../components/Pill';
-import { dateTime } from '../lib/format';
+import { dateTime, formatPhone } from '../lib/format';
 import { campaignOptions, donorOptions, managerOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
@@ -115,7 +115,7 @@ export function ShareDialog({ campaign, onClose }: { campaign: Row; onClose: () 
                 <span className="muted small">Fundraiser{fundraiser.full_name ? ` · ${fundraiser.full_name}` : ''}</span>
                 {fundraiser.email && <span className="share-contact-item"><Mail size={14} /> {fundraiser.email}
                   <button type="button" className="btn small" onClick={() => copy(fundraiser.email, setNote)}><Copy size={13} /> Copy</button></span>}
-                {fundraiser.phone && <span className="share-contact-item"><Phone size={14} /> {fundraiser.phone}
+                {fundraiser.phone && <span className="share-contact-item"><Phone size={14} /> {formatPhone(fundraiser.phone)}
                   <button type="button" className="btn small" onClick={() => copy(fundraiser.phone, setNote)}><Copy size={13} /> Copy</button></span>}
               </div>
             )}
@@ -337,7 +337,7 @@ export function OutreachPage() {
             <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Campaign</th><th /></tr></thead>
             <tbody>{recipients.map(r => (
               <tr key={r.key} className={(channel !== 'sms' && !r.email) && (channel !== 'email' && !r.phone) || (channel === 'email' && !r.email) || (channel === 'sms' && !r.phone) ? 'muted' : ''}>
-                <td>{r.name}{r.kind === 'fundraiser' && <> <Pill>Fundraiser</Pill></>}</td><td>{r.email ?? '—'}</td><td>{r.phone ?? '—'}</td><td>{r.campaign_name ?? ''}</td>
+                <td>{r.name}{r.kind === 'fundraiser' && <> <Pill>Fundraiser</Pill></>}</td><td>{r.email ?? '—'}</td><td>{r.phone ? formatPhone(r.phone) : '—'}</td><td>{r.campaign_name ?? ''}</td>
                 <td><button type="button" className="icon-btn" title="Remove" onClick={() => setRecipients(x => x.filter(y => y.key !== r.key))}><X size={15} /></button></td>
               </tr>
             ))}</tbody>

@@ -82,3 +82,22 @@ export function localToday(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+/**
+ * A phone number with dashes, easier to read (Moshe Henig, 2026-11-16): 845-555-1234. A leading 1 is dropped, an
+ * extension is kept (845-555-1234 x12), 7 digits read 555-1234, and anything else (a number from abroad, say) is
+ * shown as it was typed. Display only: what's stored and what's dialed or texted stay as they are.
+ */
+export function formatPhone(p: unknown): string {
+  const raw = String(p ?? '').trim();
+  if (!raw) return '';
+  const m = raw.match(/^(.*?)(?:\s*(?:x|ext\.?|extension|#)\s*(\d{1,6}))?$/i);
+  const main = m?.[1] ?? raw;
+  const ext = m?.[2] ? ` x${m[2]}` : '';
+  if (raw.startsWith('+') && !raw.startsWith('+1')) return raw;
+  let d = main.replace(/\D/g, '');
+  if (d.length === 11 && d.startsWith('1')) d = d.slice(1);
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}${ext}`;
+  if (d.length === 7) return `${d.slice(0, 3)}-${d.slice(3)}${ext}`;
+  return raw;
+}
