@@ -144,7 +144,7 @@ export default function TaskSheetPage() {
   const [version, setVersion] = useState(0);
   const q = useQuery(
     async () => {
-      const tasks = await fetchAll((a, b) => supabase.from('admin_task_sheet').select('*').order('submitted_at').range(a, b) as never);
+      const tasks = await fetchAll((a, b) => supabase.from('admin_task_sheet').select('*').order('submitted_at', { ascending: false }).order('task_key').range(a, b) as never);
       return withSources(await withCampaigns(tasks));
     },
     [version], { live: ALL_TOPICS },
@@ -205,6 +205,8 @@ export default function TaskSheetPage() {
         <DataTable
           title="Task Sheet"
           rows={rows}
+          // Newest first (Moshe Henig, 2026-11-16): the latest tasks open at the top.
+          initialSort={{ key: 'submitted_at', dir: 'desc' }}
           loading={q.loading}
           error={q.error}
           columns={columns}
