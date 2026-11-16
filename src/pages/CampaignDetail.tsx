@@ -94,15 +94,18 @@ export default function CampaignDetail() {
     [id, version],
   );
 
+  // Shared teams: their gifts and payouts are in this campaign's figures, so the lists show them too (readiness #37).
+  const teams = useQuery(async () => ((await supabase.from('campaigns').select('id').eq('parent_campaign_id', id).eq('balance_mode', 'shared').is('deleted_at', null)).data ?? []).map(t => String(t.id)), [id]);
+  const family = [id, ...((teams.data as string[] | null) ?? [])];
   const rows = useQuery(async () => {
     const page = <T,>(q: (a: number, b: number) => PromiseLike<T>) => fetchAll(q as never);
     switch (tab) {
       case 'donations':
-        return page((a, b) => supabase.from('donations').select(DONATION_SELECT).eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
+        return page((a, b) => supabase.from('donations').select(DONATION_SELECT).in('campaign_id', family).order('created_at', { ascending: false }).range(a, b));
       case 'expenses':
         // Fundraisers get the list through a function that leaves out the payee for those who may not see it.
         if (!isAdmin) return (await supabase.rpc('campaign_payouts', { p_campaign: id })).data ?? [];
-        return page((a, b) => supabase.from('expenses').select('*, accounts(name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
+        return page((a, b) => supabase.from('expenses').select('*, accounts(name)').in('campaign_id', family).order('created_at', { ascending: false }).range(a, b));
       case 'transfers':
         // Fundraisers: read-only, through campaign_transfers (Moshe Henig, 2026-11-15).
         if (!isAdmin) return (await supabase.rpc('campaign_transfers', { p_campaign: id })).data ?? [];
@@ -120,7 +123,7 @@ export default function CampaignDetail() {
       case 'vouchers':
         return page((a, b) => supabase.from('voucher_list').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
     }
-  }, [id, tab, version]);
+  }, [id, tab, version, family.join(',')]);
   // The summary (balances) and the open tab update on their own (live refresh, Moshe Henig, 2026-11-15).
   useLiveRefresh(ALL_TOPICS, () => { void summary.reload({ quiet: true }); void rows.reload({ quiet: true }); });
 
@@ -130,6 +133,9 @@ export default function CampaignDetail() {
 
   const saved = () => { setForm(null); setVersion(v => v + 1); };
   const combines = Number(c.combined_raised) !== Number(c.raised);
+  // Teams' gifts or payouts are in the figures (readiness #37): say so on every box that includes them.
+  const withTeams = combines || Number(c.combined_fees) !== Number(c.fees) || Number(c.combined_expenses) !== Number(c.expenses)
+    || Number(c.combined_donations) !== Number(c.donation_count);
   const canAddSub = c.status !== 'closed' && isPrimary;
   // Fundraisers see transfers in and out of their campaign, read-only (Moshe Henig, 2026-11-15).
   const tabs: Tab[] = ['donations', 'expenses', 'transfers', 'tasks', 'pledges', 'vouchers', 'teams', 'sub-campaigns', ...(isPrimary ? ['settings' as Tab] : [])];
@@ -144,12 +150,14 @@ export default function CampaignDetail() {
 
   const tabConfig = {
     donations: {
-      columns: donationColumns({ hideCampaign: true }),
+      // With shared teams, each row says which campaign (this one or a team) it's on.
+      columns: donationColumns({ hideCampaign: family.length < 2 }),
       add: !isAdmin && canEnter ? { table: 'donations', title: 'New payment (held for approval)', fields: fundraiserDonationFields, defaults: { campaign_id: id, source: 'Manual' } } : isAdmin && { table: 'donations', title: 'New Donation', fields: newDonationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() } },
       edit: isAdmin && { table: 'donations', title: 'Edit Donation', fields: editDonationFields },
     },
     expenses: {
       columns: [
+        ...(family.length > 1 ? [{ key: 'campaign_id', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id }] : []),
         { key: 'status', label: 'Status', value: payoutStatus, render: (r: Row) => <PayoutStatusPill row={r} /> },
         { key: 'payee', label: 'To' },
         { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
@@ -272,9 +280,9 @@ export default function CampaignDetail() {
 
       <div className="kpis">
         <Kpi label={combines ? 'Raised, with teams' : 'Raised'} value={money(c.combined_raised)} icon={<TrendingUp size={18} />} tone="green"
-             sub={[combines && `${money(c.raised)} directly`, `${Number(c.combined_donations).toLocaleString()} donations`, c.goal != null && Number(c.goal) > 0 && `${pct(Number(c.combined_raised) / Number(c.goal))} of ${money(c.goal)} goal`].filter(Boolean).join(' · ')} />
-        <Kpi label="Fees" value={money(c.combined_fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(Number(c.combined_raised) ? Number(c.combined_fees) / Number(c.combined_raised) : 0)} of raised`} />
-        <Kpi label="Expenses" value={money(c.combined_expenses)} icon={<Receipt size={18} />} tone="amber" />
+             sub={[combines && `${money(c.raised)} directly`, `${Number(c.combined_donations).toLocaleString()} donations${withTeams ? ' incl. teams' : ''}`, c.goal != null && Number(c.goal) > 0 && `${pct(Number(c.combined_raised) / Number(c.goal))} of ${money(c.goal)} goal`].filter(Boolean).join(' · ')} />
+        <Kpi label={withTeams ? 'Fees, with teams' : 'Fees'} value={money(c.combined_fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(Number(c.combined_raised) ? Number(c.combined_fees) / Number(c.combined_raised) : 0)} of raised`} />
+        <Kpi label={withTeams ? 'Expenses, with teams' : 'Expenses'} value={money(c.combined_expenses)} icon={<Receipt size={18} />} tone="amber" />
         {c.balance_mode === 'shared'
           ? <Kpi label="Balance" value={<span className="muted">Shared</span>} icon={<Scale size={18} />} tone="blue" sub="Counted in the parent's balance" />
           : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} sub={Number(c.sub_count) > 0 ? "Includes its teams; sub-campaigns keep their own balance" : undefined} />}
