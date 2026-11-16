@@ -20,6 +20,7 @@ const methodFields: Field[] = [
   { name: 'category', label: 'Category', type: 'select', options: CATEGORIES, required: true },
   ...feeFields,
   { name: 'account_id', label: 'Bank account', type: 'select', options: accountOptions, help: 'Payments by this method go here unless their campaign has its own. Empty means the default.' },
+  { name: 'is_check', label: 'Is a check', type: 'checkbox', help: 'Shows the check number, date and delivery on gifts by this method.' },
   { name: 'receipt_allowed', label: 'Receipts allowed', type: 'checkbox' },
   { name: 'active', label: 'Active', type: 'checkbox', help: 'Inactive methods stop being offered; past records keep them.' },
 ];

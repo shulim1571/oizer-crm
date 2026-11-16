@@ -59,11 +59,16 @@ export const sourceOptions = () =>
       .map(s => ({ value: s.id, label: s.name })),
   );
 
+/** Methods marked "is a check" (readiness #59), filled in when the methods are loaded for a form. */
+export const CHECK_METHODS = new Set<string>();
+
 export const paymentMethodOptions = () =>
-  cached('paymentMethods', async () =>
-    (await fetchAll((a, b) => supabase.from('payment_methods').select('name').eq('active', true).neq('category', 'Voucher').order('name').range(a, b)))
-      .map(m => ({ value: m.name, label: m.name })),
-  );
+  cached('paymentMethods', async () => {
+    const list = await fetchAll((a, b) => supabase.from('payment_methods').select('name, is_check').eq('active', true).neq('category', 'Voucher').order('name').range(a, b));
+    CHECK_METHODS.clear();
+    for (const m of list) if (m.is_check) CHECK_METHODS.add(String(m.name).toLowerCase());
+    return list.map(m => ({ value: m.name, label: m.name }));
+  });
 
 export const voucherIssuerOptions = () =>
   cached('voucherIssuers', async () =>

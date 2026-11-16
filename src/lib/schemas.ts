@@ -2,7 +2,7 @@ import type { Field } from '../components/RecordForm';
 import type { Row } from './supabase';
 import { localToday } from './format';
 import {
-  activeCampaignOptions, CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, payeeOptions, payoutMethodOptions, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
+  activeCampaignOptions, CHECK_METHODS, CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, payeeOptions, payoutMethodOptions, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
   donorOptions, managerOptions, sourceOptions,
 } from './lookups';
 
@@ -52,7 +52,8 @@ export const newCampaignFields: Field[] = [
 
 /** The payment method, for showing fields that only apply to some methods. */
 const method = (v: Row) => String(v.payment_method ?? '').trim().toLowerCase();
-const isCheck = (v: Row) => method(v).startsWith('check');
+// A check: a method marked "is a check" (readiness #59), or one whose name says so.
+const isCheck = (v: Row) => CHECK_METHODS.has(method(v)) || method(v).startsWith('check');
 const isCashOrCheck = (v: Row) => isCheck(v) || method(v).startsWith('cash');
 const CHECK_ONLY = ['check_number', 'post_dated', 'check_date'];
 
