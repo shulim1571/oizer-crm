@@ -387,12 +387,22 @@ export function GatewayActions({ record, onDone, onCharged }: { record: Row; onD
       ? `Void ${money(record.amount)} at Sola? A void works only before the day's batch is sent; the ${what} is never charged.`
       : sale?.method === 'ach'
         ? `Refund ${money(record.amount)} to the bank account at Sola? A bank refund works only once the debit has settled, and only in full. The net comes off the campaign.`
-        : `Refund ${money(record.amount)} to the card at Sola? Before the day's batch settles Sola voids the charge; after, it refunds it. The net comes off the campaign.`;
-    if (!confirm(text)) return;
+        : `Refund to the card at Sola? Before the day's batch settles Sola voids the charge; after, it refunds it. The net comes off the campaign.`;
+    // A card can be refunded in part (readiness #17): blank or the full amount refunds all of it.
+    let amount: number | null = null;
+    if (action === 'refund' && sale?.method !== 'ach') {
+      const typed = prompt(`${text}\n\nAmount to refund (blank for all ${money(record.amount)}):`, '');
+      if (typed === null) return;
+      if (typed.trim()) {
+        amount = Number(typed.replace(/[$,]/g, ''));
+        if (!(amount > 0)) return setError('Enter the amount to refund, above $0.');
+        if (amount >= Number(record.amount)) amount = null;
+      }
+    } else if (!confirm(text)) return;
     setBusy(true);
     setError(null);
     try {
-      const r = await callPayments({ action, donation_id: record.id });
+      const r = await callPayments({ action, donation_id: record.id, ...(amount ? { amount } : {}) });
       if (r.error) throw new Error(r.error);
       if (r.transaction?.status !== 'approved') {
         throw new Error(`Sola said no: ${r.transaction?.error ?? 'no reason given'}${action === 'void' ? '. If it has settled, refund it instead.' : ''}`);

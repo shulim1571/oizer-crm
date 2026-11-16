@@ -145,7 +145,7 @@ Deno.serve(async req => {
         }, user)
       : b.action === 'save'
         ? await rpc('begin_admin_save', { p_method: b.method, p_donor: b.donor_id, p_name: b.name ?? null, p_ip: ip, p_ach: achConsent(b, !!b.ach_authorized) }, user)
-        : await rpc('begin_card_reversal', { p_donation: b.donation_id, p_kind: b.action }, user);
+        : await rpc('begin_card_reversal', { p_donation: b.donation_id, p_kind: b.action, p_amount: b.action === 'refund' && b.amount ? b.amount : null }, user);
   } catch (e) {
     return reply({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -169,6 +169,10 @@ Deno.serve(async req => {
         xName: fields.xName ?? c.card_name ?? undefined, xEmail: c.email ?? undefined, xBillZip: b.zip || undefined, xBillStreet: b.street || undefined,
         xDescription: c.campaign_label ?? undefined,
       }
+    // Part of a payment (readiness #17): Sola's refund with the amount, checked by the database first (up to what's
+    // left). cc:voidrefund, used for a full refund, voids or refunds the whole charge.
+    : c.kind === 'refund' && b.amount
+    ? { ...base, ...fields, xCommand: c.method === 'ach' ? 'check:refund' : 'cc:refund', xAmount: Number(c.amount).toFixed(2) }
     : { ...base, ...fields };
   let result: Record<string, string>;
   try {

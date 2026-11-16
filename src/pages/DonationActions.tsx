@@ -26,9 +26,41 @@ export default function DonationActions({ record, onDone }: { record: Row; onDon
     onDone(data ?? { ...record, _deleted: true });
   }
 
+  // All or part (readiness #17): a part is its own negative transaction, so the rest keeps counting.
   function refund() {
-    const notes = prompt(`Mark ${money(record.amount)} as refunded? The net comes off the campaign; the fee stays spent. Notes (optional):`);
-    if (notes !== null) run(supabase.rpc('refund_donation', { p_id: record.id, p_date: today(), p_method: null, p_notes: notes || null }));
+    const typed = prompt(`Refund how much of ${money(record.amount)}? Leave blank for all of it. It comes off the campaign; the fee stays spent.`, '');
+    if (typed === null) return;
+    const amount = typed.trim() ? Number(typed.replace(/[$,]/g, '')) : null;
+    if (amount !== null && !(amount > 0)) return setError('Enter the amount refunded, above $0, or leave it blank for all of it.');
+    const notes = prompt('Notes (optional):');
+    if (notes === null) return;
+    run(supabase.rpc('refund_donation', { p_id: record.id, p_date: today(), p_method: null, p_notes: notes || null, p_amount: amount }));
+  }
+
+  // The donor's bank is disputing a card payment: held out of the balance until it's settled (readiness #17).
+  function dispute() {
+    const reason = prompt(`Mark ${money(record.amount)} as disputed? It's held out of the campaign balance until the dispute is settled, and stays on the Task Sheet. Reason (optional):`);
+    if (reason !== null) run(supabase.rpc('mark_disputed', { p_id: record.id, p_reason: reason || null, p_date: today() }));
+  }
+
+  function chargeback() {
+    const typed = prompt(`Record a chargeback on ${money(record.amount)}? It comes off the campaign for good. The processor's chargeback fee (blank for none):`, '');
+    if (typed === null) return;
+    const fee = typed.trim() ? Number(typed.replace(/[$,]/g, '')) : null;
+    if (fee !== null && !(fee >= 0)) return setError('Enter the chargeback fee, $0 or more.');
+    run(supabase.rpc('record_chargeback', { p_id: record.id, p_fee: fee, p_date: today(), p_reason: null }));
+  }
+
+  function settle(won: boolean) {
+    if (won) {
+      if (confirm('The dispute was settled in our favor? The payment goes back into the balance.')) run(supabase.rpc('settle_dispute', { p_id: record.id, p_won: true, p_fee: null, p_notes: null }));
+      return;
+    }
+    const typed = prompt('The dispute was lost: record it as a chargeback. The chargeback fee (blank for none):', '');
+    if (typed === null) return;
+    const fee = typed.trim() ? Number(typed.replace(/[$,]/g, '')) : null;
+    if (fee !== null && !(fee >= 0)) return setError('Enter the chargeback fee, $0 or more.');
+    run(supabase.rpc('settle_dispute', { p_id: record.id, p_won: false, p_fee: fee, p_notes: null }));
   }
 
   function returned() {
@@ -65,6 +97,14 @@ export default function DonationActions({ record, onDone }: { record: Row; onDon
       {done && !record.split_group_id && <button type="button" className="btn" onClick={() => setSplitting(true)}>Split</button>}
       {done && !viaSola && <button type="button" className="btn" onClick={refund}>Refund</button>}
       {done && isCheck && <button type="button" className="btn" onClick={returned}>Returned check</button>}
+      {record.status === 'completed' && !isCheck && <button type="button" className="btn" onClick={dispute}>Disputed</button>}
+      {record.status === 'completed' && !isCheck && <button type="button" className="btn" onClick={chargeback}>Chargeback</button>}
+      {record.status === 'disputed' && (
+        <>
+          <button type="button" className="btn primary" onClick={() => settle(true)}>Dispute won</button>
+          <button type="button" className="btn danger" onClick={() => settle(false)}>Dispute lost</button>
+        </>
+      )}
       <button type="button" className="btn danger" onClick={remove}>Delete</button>
       {error && <div className="error">{error}</div>}
       {splitting && <SplitDialog record={record} onClose={() => setSplitting(false)} onSplit={run} />}

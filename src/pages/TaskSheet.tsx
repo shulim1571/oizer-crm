@@ -56,9 +56,11 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   ach_returned: { label: 'Bank Payment Returned', tone: 'red' },
   bank_move_needed: { label: 'Bank Transfer Needed', tone: 'amber' },
   no_fee_rule: { label: 'No Fee Rule', tone: 'amber' },
+  disputed: { label: 'Disputed Payment', tone: 'red' },
+  chargeback: { label: 'Chargeback', tone: 'red' },
 };
 /** Tasks whose record is a transaction (donation): those can be edited or deleted from the sheet. */
-const TRANSACTION_TASKS = new Set(['pending_payment', 'unattributed', 'returned_check', 'post_dated_due', 'ach_returned', 'receipt_requested']);
+const TRANSACTION_TASKS = new Set(['pending_payment', 'unattributed', 'returned_check', 'post_dated_due', 'ach_returned', 'receipt_requested', 'disputed', 'chargeback']);
 const TypePill = ({ type }: { type: string }) => <Pill tone={TYPES[type]?.tone ?? ''}>{TYPES[type]?.label ?? type}</Pill>;
 
 const age = (at: string) => {
@@ -339,6 +341,15 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
         <>
           <p className="muted">This campaign transfer moved money between campaigns on different bank accounts, so the money has to move between the banks too. Record it under <Link to="/reconciliation">Bank Reconciliation → Between accounts</Link>; this leaves the sheet once it's recorded.</p>
           <div className="donation-actions">{dismiss('Not needed', 'Take this off the sheet without recording a bank transfer? Say why:')}</div>
+        </>
+      )}
+      {item.task_type === 'disputed' && (
+        <p className="muted">Held out of the campaign balance while the donor's bank decides. When it's settled, open the transaction and choose Dispute won (it goes back in) or Dispute lost (a chargeback, with its fee). This leaves the sheet then.</p>
+      )}
+      {item.task_type === 'chargeback' && (
+        <>
+          <p className="muted">The payment is out of the campaign balance for good, and the chargeback fee is counted with the campaign's fees. Follow up with the donor if needed.</p>
+          <div className="donation-actions">{dismiss('Done')}</div>
         </>
       )}
       {item.task_type === 'no_fee_rule' && (
