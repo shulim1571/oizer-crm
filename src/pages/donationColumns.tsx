@@ -18,6 +18,9 @@ const STATUS_LABELS: Record<string, string> = {
 export const NOT_DELIVERED = 'Not delivered';
 export const isUndeliveredCheck = (r: Row) => r.status === 'completed' && r.delivered === false && /check/i.test(r.payment_method ?? '');
 
+/** How a kind reads in lists: a Batch is a "Batch deposit" (readiness #58); the filter keeps the short name. */
+export const kindLabel = (kind: string) => (kind === 'Batch' ? 'Batch deposit' : kind);
+
 /** One word for a donation: its type once completed (or Not delivered for a check not delivered yet), otherwise what
  *  happened to it. */
 export const donationKind = (r: Row): string =>
@@ -55,9 +58,9 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
     },
   },
   { key: 'amount', label: 'Amount', render: r => <b className="num">{money(r.amount)}</b>, align: 'right', filter: { column: 'amount', type: 'number' } },
-  { key: 'type', label: 'Type', value: donationKind, filterOptions: async () => [...Object.keys(DONATION_KINDS), NOT_DELIVERED], render: r => (
+  { key: 'type', label: 'Type', value: r => kindLabel(donationKind(r)), filterOptions: async () => [...Object.keys(DONATION_KINDS), NOT_DELIVERED], render: r => (
     <>
-      <StatusPill value={donationKind(r)} />
+      <StatusPill value={kindLabel(donationKind(r))} />
       {r.split_group_id && <> <StatusPill value="Split" /></>}
       {r.possible_duplicate && <> <StatusPill value="Possible duplicate" /></>}
     </>
@@ -72,7 +75,8 @@ export const donationColumns = (opts: { hideCampaign?: boolean } = {}): Column[]
   { key: 'check_number', label: 'Check #', optional: true, filter: { column: 'check_number', type: 'text' } },
   { key: 'created_at', label: 'Date', render: r => dateTime(r.created_at), width: 170, filter: { column: 'created_at', type: 'date' } },
   // A failed charge took no money, so it shows no fee and no net (the database stores both as zero).
-  { key: 'fee', label: 'Fee', render: r => (r.status === 'failed' ? '' : money(r.fee ?? r.manual_fee)), value: r => (r.status === 'failed' ? null : r.fee ?? r.manual_fee), align: 'right', filter: { column: 'fee', type: 'number' } },
+  // No fee reads $0.00, not a blank (readiness #58).
+  { key: 'fee', label: 'Fee', render: r => (r.status === 'failed' ? '' : money(r.fee ?? r.manual_fee ?? 0)), value: r => (r.status === 'failed' ? null : r.fee ?? r.manual_fee ?? 0), align: 'right', filter: { column: 'fee', type: 'number' } },
   { key: 'chargeback_fee', label: 'Chargeback Fee', optional: true, render: r => (r.chargeback_fee != null ? money(r.chargeback_fee) : ''), align: 'right', filter: { column: 'chargeback_fee', type: 'number' } },
   { key: 'net_donation', label: 'Net', render: r => (r.status === 'failed' ? '' : money(r.net_donation)), value: r => (r.status === 'failed' ? null : r.net_donation), align: 'right', filter: { column: 'net_donation', type: 'number' } },
   {
