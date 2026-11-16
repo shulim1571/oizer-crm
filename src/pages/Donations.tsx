@@ -469,6 +469,8 @@ export function FundraiserNewDonation() {
 
 export function NewDonation() {
   const nav = useNavigate();
+  // Started from a campaign page: that campaign is filled in, and saving goes back there (Moshe Henig, #54).
+  const fromCampaign = new URLSearchParams(useLocation().search).get('campaign');
   const [last, setLast] = useState<Row | null>(null);
   const [key] = useState(0);
   const [charging, setCharging] = useState(false);
@@ -493,10 +495,14 @@ export function NewDonation() {
         title="Donation details"
         saveLabel="Record donation"
         fields={newDonationFields}
-        defaults={{ type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() }}
+        defaults={{ type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString(), ...(fromCampaign ? { campaign_id: fromCampaign } : {}) }}
         onClose={() => nav(-1)}
-        // Recorded: go to the Transactions list, which says what was saved (Moshe Henig, 2026-11-11).
-        onSaved={row => nav('/donations/all', { state: { notice: `Recorded ${money(row.amount)} to campaign ${row.campaign_id}${row.id ? ` (transaction ${row.id})` : ''}.` } })}
+        // Recorded: back to the campaign it was started from, otherwise the Transactions list, saying what was saved
+        // (Moshe Henig, 2026-11-11 and #54).
+        onSaved={row => {
+          const notice = `Recorded ${money(row.amount)} to campaign ${row.campaign_id}${row.id ? ` (transaction ${row.id})` : ''}.`;
+          nav(fromCampaign ? `/campaigns/${encodeURIComponent(fromCampaign)}` : '/donations/all', { state: { notice } });
+        }}
       />
     </section>
   );

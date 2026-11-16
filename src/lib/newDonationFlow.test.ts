@@ -5,10 +5,17 @@ import { describe, expect, it } from 'vitest';
 const src = (...p: string[]) => readFileSync(join(__dirname, '..', ...p), 'utf8');
 
 describe('New Donation (Moshe Henig, 2026-11-11)', () => {
-  it('goes to the Transactions list after recording, which says what was saved', () => {
+  // Moshe Henig, #54 (2026-11-15): from the top New Donation button it goes to Transactions; started from a campaign
+  // page, the campaign is filled in and it goes back to that campaign. Either one says what was saved.
+  it('goes to Transactions after recording, or back to the campaign it was started from, saying what was saved', () => {
     const d = src('pages', 'Donations.tsx');
-    expect(d).toContain("onSaved={row => nav('/donations/all', { state: { notice:");
+    expect(d).toContain("const fromCampaign = new URLSearchParams(useLocation().search).get('campaign');");
+    expect(d).toContain("nav(fromCampaign ? `/campaigns/${encodeURIComponent(fromCampaign)}` : '/donations/all', { state: { notice } });");
+    expect(d).toContain('...(fromCampaign ? { campaign_id: fromCampaign } : {})');
     expect(d).toContain('useState<string | null>(arrived)');
+    const c = src('pages', 'CampaignDetail.tsx');
+    expect(c).toContain('? nav(`/donations/new?campaign=${encodeURIComponent(id)}`)');
+    expect(c).toContain('{arrivedNotice && <div className="notice">{arrivedNotice}</div>}');
   });
 
   // Fundraisers have it too since Moshe Henig, 2026-11-12 (card payments; manual ones with the permission).

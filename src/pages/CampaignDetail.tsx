@@ -1,7 +1,7 @@
 import RowMenu from '../components/RowMenu';
 import { CardChargeDialog } from './Payments';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Clock, CreditCard, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Share2, Star, StickyNote, TrendingUp,
 } from 'lucide-react';
@@ -37,6 +37,8 @@ type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouch
 export default function CampaignDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
+  // A donation recorded from this page comes back here saying so (Moshe Henig, #54).
+  const arrivedNotice = (useLocation().state as { notice?: string } | null)?.notice ?? null;
   const { isAdmin, canWork, permissions, defaultAccountId } = useAuth();
   const [tab, setTab] = useState<Tab>('donations');
   const [charging, setCharging] = useState(false);
@@ -218,6 +220,7 @@ export default function CampaignDetail() {
 
   return (
     <div className="detail">
+      {arrivedNotice && <div className="notice">{arrivedNotice}</div>}
       <div className="detail-head">
         <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={18} /></button>
         <div className="hero-avatar">{(c.internal_name || c.campaign_name || '#')[0]}</div>
@@ -338,8 +341,12 @@ export default function CampaignDetail() {
           : tab === 'donations' ? <>
               {/* The same Charge a card as elsewhere (donor picker, saved cards, recurring), for this campaign. */}
               {isAdmin && c.status !== 'closed' && <button type="button" className="btn" onClick={() => setCharging(true)}><CreditCard size={16} /> Charge a card</button>}
+              {/* Admins: New Donation with this campaign filled in, back here after saving (Moshe Henig, #54; readiness #35).
+                  Fundraisers: the held-for-approval form, right here. */}
               {tabConfig.add && (
-                <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
+                <button className="btn primary" onClick={() => (isAdmin
+                  ? nav(`/donations/new?campaign=${encodeURIComponent(id)}`)
+                  : setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null }))}>
                   <Plus size={16} /> Add donation
                 </button>
               )}
