@@ -114,9 +114,15 @@ input:focus, select:focus, textarea:focus {
 .grid tr.clickable:hover td { background: var(--accent-soft); }
 .grid th, .grid td { position: relative; }
 .grid th.nosort { cursor: default; }
-.grid th.frozen, .grid td.frozen { position: sticky; background: var(--surface); z-index: 1; }
-.grid tbody tr:nth-child(even) td.frozen { background: var(--surface-2); }
-.grid thead th.frozen { z-index: 3; }
+/* Frozen columns are solid and seamless (Moshe Henig, 2026-11-17): each paints its row's colour (plain, striped,
+   hovered, picked, header) and covers the hairline to its right with it, so nothing scrolled shows between them; the
+   last one ends in a divider. */
+.grid th.frozen, .grid td.frozen { position: sticky; z-index: 1; --cell-bg: var(--surface); background: var(--cell-bg); box-shadow: 1px 0 0 var(--cell-bg); }
+.grid tbody tr:nth-child(even) td.frozen { --cell-bg: var(--surface-2); }
+.grid tr.clickable:hover td.frozen { --cell-bg: var(--surface-2); }
+.recon-grid .grid tr.picked td.frozen { --cell-bg: var(--accent-soft); }
+.grid thead th.frozen { z-index: 3; --cell-bg: var(--surface-2); }
+.grid th.frozen-last, .grid td.frozen-last { box-shadow: 1px 0 0 var(--line), 6px 0 8px -6px rgb(0 0 0 / .18); }
 .grid .pick { width: 36px; text-align: center; }
 .grid th .resize { position: absolute; top: 0; right: 0; bottom: 0; width: 6px; cursor: col-resize; }
 .grid th .resize:hover { background: var(--accent-soft); }

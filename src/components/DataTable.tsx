@@ -314,19 +314,30 @@ export default function DataTable(p: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [offsets, setOffsets] = useState<number[]>([]);
   const selectable = !!p.onSelect;
+  // Exact (fractional) widths, measured again whenever a column's width changes (new rows, a resize, fonts loading):
+  // whole-pixel or stale offsets left a see-through gap between frozen columns (Moshe Henig, 2026-11-17).
   useLayoutEffect(() => {
-    if (!freeze || !headRow.current) return setOffsets([]);
-    const cells = [...headRow.current.children] as HTMLElement[];
-    const next: number[] = [];
-    let left = selectable ? cells[0].offsetWidth : 0;
-    for (let i = 0; i < freeze; i++) {
-      next.push(left);
-      left += cells[i + (selectable ? 1 : 0)]?.offsetWidth ?? 0;
-    }
-    setOffsets(next);
-  }, [freeze, selectable, columns, config.widths, shown.length]);
+    const row = headRow.current;
+    if (!freeze || !row) { setOffsets([]); return; }
+    const measure = () => {
+      const cells = [...row.children] as HTMLElement[];
+      const width = (el?: HTMLElement) => (el ? el.getBoundingClientRect().width : 0);
+      const next: number[] = [];
+      let left = selectable ? width(cells[0]) : 0;
+      for (let i = 0; i < freeze; i++) {
+        next.push(left);
+        left += width(cells[i + (selectable ? 1 : 0)]);
+      }
+      setOffsets(prev => (prev.length === next.length && prev.every((v, i) => Math.abs(v - next[i]) < 0.25) ? prev : next));
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    for (const c of [...row.children].slice(0, freeze + (selectable ? 1 : 0))) ro.observe(c);
+    return () => ro.disconnect();
+  }, [freeze, selectable, columns, config.widths, shown]);
   const stick = (i: number) => (i < freeze && offsets[i] != null ? { position: 'sticky' as const, left: offsets[i] } : {});
-  const frozenClass = (i: number) => (i < freeze ? 'frozen' : '');
+  const frozenClass = (i: number) => (i < freeze ? `frozen${i === freeze - 1 ? ' frozen-last' : ''}` : '');
 
   function startResize(e: React.MouseEvent, key: string) {
     e.preventDefault();
