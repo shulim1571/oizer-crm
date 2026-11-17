@@ -2,7 +2,7 @@ import PageTabs, { usePageTab } from '../components/PageTabs';
 import CrudPage, { campLabel } from '../components/CrudPage';
 import type { Field } from '../components/RecordForm';
 import { useAuth } from '../lib/auth';
-import { accountOptions, campaignOptions, paymentMethodIdOptions } from '../lib/lookups';
+import { accountOptions, campaignOptions, paymentMethodIdOptions, paymentMethodNameOptions } from '../lib/lookups';
 import { fetchAll, supabase } from '../lib/supabase';
 import type { Row } from '../lib/supabase';
 
@@ -49,17 +49,15 @@ const processorFields: Field[] = [
 
 // Readiness #14: a Sola card gift and an Elevon card gift can carry different rates. Order: a campaign's own
 // override, then the processor's rate for the method, then the method's rate.
-/** Every method's name, vouchers included (an imported voucher name maps to its voucher method). */
-const paymentMethodNameOptions = async () =>
-  (await fetchAll((a, b) => supabase.from('payment_methods').select('name').order('name').range(a, b) as never) as Row[]).map(m => ({ value: String(m.name), label: String(m.name) }));
 
 const aliasFields: Field[] = [
-  { name: 'alias', label: 'Name as imported', required: true },
-  { name: 'method_name', label: 'Shown as method', type: 'select', options: paymentMethodNameOptions, help: 'Leave empty if it isn\'t a way of giving' },
+  { name: 'alias', label: 'Name as it comes in', required: true, help: 'Exactly as Donary, Sola or an import sends it; capitals don\'t matter' },
+  { name: 'method_name', label: 'Map to method', type: 'select', options: paymentMethodNameOptions,
+    help: 'Gifts that come in with this name are saved under this method, and gifts already on file with it are moved (their fees stay as recorded). Leave empty if it isn\'t a way of giving.' },
   { name: 'not_a_method', label: 'Not a way of giving (a payout or transfer)', type: 'checkbox' },
 ];
 
-const FEE_TABS = [['methods', 'Methods & fees'], ['processors', 'Processor rates'], ['overrides', 'Campaign overrides'], ['aliases', 'Imported names']] as const;
+const FEE_TABS = [['methods', 'Methods & fees'], ['processors', 'Processor rates'], ['overrides', 'Campaign overrides'], ['aliases', 'Method aliases']] as const;
 
 export default function FeesPage() {
   const { permissions } = useAuth();
@@ -99,17 +97,18 @@ export default function FeesPage() {
         ]}
         fields={processorFields}
       />}
-      {/* Readiness #57: imported spellings shown under a standard method on the dashboard chart. */}
+      {/* Method aliases (readiness #57; live 2026-11-17, Shulim): names from webhooks and imports mapped to a method. */}
       {tab === 'aliases' && <CrudPage
-        title="Imported Method Names" noun="Imported name"
+        title="Method Aliases" noun="Alias"
         table="payment_method_aliases"
         order={{ column: 'alias' }}
         canEdit={canEdit}
         defaults={{ not_a_method: false }}
-        extraActions={<span className="muted small">How the dashboard's payment-method chart groups names from imported history. Fees aren't affected.</span>}
+        extraActions={<span className="muted small">Map a payment method name that Donary, Sola or an import sends to one of your methods. Saving an alias moves the gifts already on file with that name (their fees stay as recorded) and maps new ones as they arrive, with the method's fee. A <b>Suggestion</b> only groups the dashboard chart until you open it and save.</span>}
         columns={[
-          { key: 'alias', label: 'Name as imported', width: 240 },
-          { key: 'method_name', label: 'Shown as', value: r => (r.not_a_method ? 'Not a way of giving' : r.method_name) },
+          { key: 'alias', label: 'Name as it comes in', width: 240 },
+          { key: 'method_name', label: 'Mapped to', value: r => (r.not_a_method ? 'Not a way of giving' : r.method_name) },
+          { key: 'applied_at', label: 'Status', value: r => (r.not_a_method ? 'Chart only' : r.applied_at ? `In use since ${new Date(r.applied_at).toLocaleDateString()}${r.applied_by ? ` · ${r.applied_by}` : ''}` : 'Suggestion') },
         ]}
         fields={aliasFields}
       />}

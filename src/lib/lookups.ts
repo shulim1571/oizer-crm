@@ -103,3 +103,8 @@ export const DONATION_STATUSES = [
 ].map(([value, label]) => ({ value, label }));
 export const CAMPAIGN_STATUSES = [['draft', 'Draft'], ['active', 'Active']].map(([value, label]) => ({ value, label }));
 export const TASK_STATUSES = ['Pending', 'In Progress', 'Done'].map(v => ({ value: v, label: v }));
+
+/** Every payment method's name, vouchers included: what a method alias can map to (Fees, Task Sheet). */
+export const paymentMethodNameOptions = async (): Promise<Option[]> =>
+  ((await fetchAll((a, b) => supabase.from('payment_methods').select('name').order('name').range(a, b) as never)) as { name: string }[])
+    .map(m => ({ value: String(m.name), label: String(m.name) }));

@@ -7,9 +7,10 @@ import { Balance, Pill } from '../components/Pill';
 import RecordForm from '../components/RecordForm';
 import CampaignName from '../components/CampaignName';
 import { dateTime, money, formatPhone } from '../lib/format';
-import { campaignOptions, clearLookups, type Option } from '../lib/lookups';
+import { campaignOptions, clearLookups, paymentMethodNameOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useAuth } from '../lib/auth';
 import { ALL_TOPICS } from '../lib/live';
 import { editDonationFields } from '../lib/schemas';
 import { DONATION_SELECT } from './donationColumns';
@@ -235,6 +236,42 @@ export default function TaskSheetPage() {
   );
 }
 
+/**
+ * "Map to existing method" on a No Fee Rule item (Shulim, 2026-11-17): saves the name as a method alias, so these gifts
+ * move to the method (fees kept) and later ones with this name come in under it.
+ */
+function MapMethod({ name, onMapped }: { name: string; onMapped: (moved: number) => void }) {
+  const { permissions } = useAuth();
+  const [method, setMethod] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const methods = useQuery(() => paymentMethodNameOptions(), []);
+  if (!permissions.includes('configure_fees')) {
+    return <p className="muted small">An admin who can change fees can map "{name}" to one of your methods here, or under <Link to="/fees">Payment Methods &amp; Fees → Method aliases</Link>.</p>;
+  }
+  return (
+    <div className="map-method">
+      <label className="field"><span>Map "{name}" to existing method</span>
+        <select value={method} onChange={e => setMethod(e.target.value)} aria-label="Method to map to">
+          <option value="">Choose a method…</option>
+          {(methods.data ?? []).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </label>
+      <p className="muted small">These gifts move to that method and keep their fees as recorded. Gifts that come in later as "{name}" are saved under it, with its fee. You can change this under Payment Methods &amp; Fees → Method aliases.</p>
+      {error && <div className="error">{error}</div>}
+      <div className="donation-actions">
+        <button type="button" className="btn primary" disabled={!method || busy} onClick={async () => {
+          setBusy(true); setError(null);
+          const { data, error: e } = await supabase.rpc('map_payment_method', { p_alias: name, p_method: method });
+          setBusy(false);
+          if (e) return setError(e.message);
+          onMapped(Number(data ?? 0));
+        }}>{busy ? 'Mapping…' : 'Map to existing method'}</button>
+      </div>
+    </div>
+  );
+}
+
 function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: () => void; onDone: () => void; onChanged: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const log = (action: string, note?: string | null) =>
@@ -364,6 +401,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
       {item.task_type === 'no_fee_rule' && (
         <>
           <p className="muted">These completed gifts have no fee because {item.record_id ? <>"{item.record_id}" isn't</> : <>they have no payment method, and no method is</>} on the list of payment methods. Add it under <Link to="/fees">Payment Methods & Fees</Link> with its fee, or change these gifts to a listed method (<Link to={`/donations/all`}>Transactions</Link>). This leaves the sheet by itself once that's done.</p>
+          {item.record_id && <MapMethod name={String(item.record_id)} onMapped={n => { void log('mapped', `${n} gift${n === 1 ? '' : 's'} moved`).then(onDone); }} />}
           <div className="donation-actions">{dismiss('Leave as is', 'Take this off the sheet and leave these gifts without a fee? Say why:')}</div>
         </>
       )}
