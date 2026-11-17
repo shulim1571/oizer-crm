@@ -45,7 +45,7 @@ jobs:
           --config p/default --config p/typescript --config p/react --config p/secrets --config p/github-actions
           --json-output=semgrep.json .
       - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: semgrep-report
           path: semgrep.json
@@ -68,7 +68,7 @@ jobs:
       - name: Scan the whole history (values redacted in the output)
         run: ./gitleaks git --redact --no-banner --config .gitleaks.toml --report-format sarif --report-path gitleaks.sarif .
       - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gitleaks-report
           path: gitleaks.sarif
