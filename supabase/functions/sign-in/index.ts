@@ -1,6 +1,7 @@
 // Password sign-in with the spec's lockout: five wrong passwords in a row lock an account for an
 // hour. Deployed with JWT verification off, since callers aren't signed in yet; the password is the
 // authentication. Answers 200 with { session } or { error } so the app can show the message as is.
+import { apiHeaders, publishableKey } from '../_shared/keys.ts';
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-org-id',
@@ -10,15 +11,13 @@ const CORS = {
 const LOCKED = 'Too many failed attempts. Please try again in 1 hour, or reset your password.';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const reply = (body: unknown) => Response.json(body, { headers: CORS });
 
 async function rpc(name: string, args: unknown): Promise<unknown> {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   if (!res.ok) throw new Error(`${name}: ${res.status}`);
@@ -49,7 +48,7 @@ Deno.serve(async req => {
 
   const auth = await fetch(`${url}/auth/v1/token?grant_type=password`, {
     method: 'POST',
-    headers: { apikey: anonKey, 'Content-Type': 'application/json' },
+    headers: { apikey: publishableKey(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
   const body = await auth.json().catch(() => ({}));

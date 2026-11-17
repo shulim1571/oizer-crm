@@ -18,7 +18,7 @@ function call(params: Record<string, string>, query = '') {
 
 beforeAll(async () => {
   (globalThis as any).Deno = {
-    env: { get: (k: string) => ({ SUPABASE_URL: BASE, SUPABASE_SERVICE_ROLE_KEY: 'svc', TWILIO_AUTH_TOKEN: TOKEN } as Record<string, string>)[k] },
+    env: { get: (k: string) => ({ SUPABASE_URL: BASE, SUPABASE_SECRET_KEYS: '{"default":"sb_secret_test"}', TWILIO_AUTH_TOKEN: TOKEN } as Record<string, string>)[k] },
     serve: (h: typeof handler) => { handler = h; },
   };
   vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {

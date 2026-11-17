@@ -11,10 +11,9 @@
 //          app by the router Worker. 100 hostnames included, then $0.10 per hostname per month.
 // Nothing happens until CF_DOMAINS_TOKEN is set. JWT verification is off so the scheduled job can call it;
 // people are checked by the database with their own token.
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const cfToken = Deno.env.get('CF_DOMAINS_TOKEN') ?? '';
 const account = Deno.env.get('CF_ACCOUNT_ID') ?? '';
 const project = Deno.env.get('CF_PAGES_PROJECT') ?? 'oizer-drm';
@@ -33,8 +32,7 @@ async function rpc(name: string, args: unknown, auth: { token: string; org?: str
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
-      apikey: auth ? anonKey : serviceKey,
-      Authorization: `Bearer ${auth ? auth.token : serviceKey}`,
+      ...apiHeaders(auth?.token),
       'Content-Type': 'application/json',
       ...(auth?.org ? { 'x-org-id': auth.org } : {}),
     },

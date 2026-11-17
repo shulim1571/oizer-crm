@@ -12,7 +12,9 @@ import { page } from './page';
 interface Env {
   STATUS: KVNamespace;
   SUPABASE_URL: string;
-  SUPABASE_ANON_KEY: string;
+  /** The project's sb_publishable_… key (2026-11-17). SUPABASE_ANON_KEY is the older name, read only if this is unset. */
+  SUPABASE_PUBLISHABLE_KEY?: string;
+  SUPABASE_ANON_KEY?: string;
   APP_URLS: string;          // comma-separated
   TITLE: string;
   ALERT_EMAIL?: string;
@@ -21,12 +23,14 @@ interface Env {
 }
 
 function checks(env: Env): Check[] {
-  const api = { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` };
+  // The publishable key goes on apikey only: it isn't a JWT, and the health function accepts it there.
+  const key = (env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || '').trim();
+  const api = { apikey: key };
   return [
     ...env.APP_URLS.split(',').map(u => u.trim()).filter(Boolean).map(u => ({ name: `App (${new URL(u).hostname})`, url: u })),
     { name: 'Database and scheduled jobs', url: `${env.SUPABASE_URL}/functions/v1/health`, headers: api,
       expect: (s, b) => s === 200 && /"status"\s*:\s*"ok"/.test(b) },
-    { name: 'Sign-in', url: `${env.SUPABASE_URL}/auth/v1/health`, headers: { apikey: env.SUPABASE_ANON_KEY } },
+    { name: 'Sign-in', url: `${env.SUPABASE_URL}/auth/v1/health`, headers: { apikey: key } },
     { name: 'Public API', url: `${env.SUPABASE_URL}/functions/v1/api/v1` },
   ];
 }

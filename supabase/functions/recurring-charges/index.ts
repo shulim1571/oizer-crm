@@ -4,14 +4,14 @@
 // the donation, and the schedule moved on or its retry set.
 
 import { fundCvvOk, fundCvvProblem } from '../_shared/fundCards.ts';
+import { apiHeaders } from '../_shared/keys.ts';
 const url = Deno.env.get('SUPABASE_URL')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const GATEWAY = 'https://x1.cardknox.com/gatewayjson';
 
 async function rpc(name: string, args: unknown) {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   const body = await res.json().catch(() => null);

@@ -2,9 +2,9 @@
 // queueing and once a minute, with a token only it knows. Deployed with JWT verification off.
 // Each organization's own SendGrid and Twilio keys are used when it has set them (Messaging Settings);
 // otherwise the platform's, which are Edge Function secrets: SENDGRID_API_KEY, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN.
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const platform = {
   sendgridKey: Deno.env.get('SENDGRID_API_KEY') ?? null,
   twilioSid: Deno.env.get('TWILIO_ACCOUNT_SID') ?? null,
@@ -23,7 +23,7 @@ interface Result { ok: boolean; providerId?: string; error?: string; optedOut?: 
 async function rpc(name: string, args: unknown): Promise<unknown> {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   if (!res.ok) throw new Error(`${name}: ${res.status} ${await res.text()}`);

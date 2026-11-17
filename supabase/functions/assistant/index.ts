@@ -6,10 +6,9 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk@1.8.0';
 import { modelOptions, shapeMessages, SYSTEM_PROMPT } from '../_shared/assistant.ts';
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -22,8 +21,7 @@ async function rpc(name: string, args: unknown, auth: { token: string; org?: str
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
-      apikey: auth ? anonKey : serviceKey,
-      Authorization: `Bearer ${auth ? auth.token : serviceKey}`,
+      ...apiHeaders(auth?.token),
       'Content-Type': 'application/json',
       ...(auth?.org ? { 'x-org-id': auth.org } : {}),
     },

@@ -11,10 +11,16 @@ export interface GateEnv {
   PER_IP: Limiter;          // each donor connection
   PER_CAMPAIGN: Limiter;    // each organization's campaign, against card testing spread over many IPs
   SUPABASE_URL: string;
-  SUPABASE_ANON_KEY: string;
+  /** The project's sb_publishable_… key (2026-11-17). SUPABASE_ANON_KEY is the older name, read only if this is unset. */
+  SUPABASE_PUBLISHABLE_KEY?: string;
+  SUPABASE_ANON_KEY?: string;
   GIVE_GATE_SECRET: string;
   ALLOWED_ORIGINS: string;  // comma-separated; a leading "*." allows subdomains
 }
+
+/** The key to call Supabase with: the publishable key, on the apikey header only (it isn't a JWT). */
+export const supabaseKey = (env: Pick<GateEnv, 'SUPABASE_PUBLISHABLE_KEY' | 'SUPABASE_ANON_KEY'>) =>
+  (env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || '').trim();
 
 const json = (body: unknown, status: number, headers: Record<string, string>) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
@@ -83,7 +89,7 @@ export async function handle(req: Request, env: GateEnv, fetcher: typeof fetch =
   const res = await fetcher(`${env.SUPABASE_URL.replace(/\/$/, '')}/functions/v1/give`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json', apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json', apikey: supabaseKey(env),
       'x-give-gate': env.GIVE_GATE_SECRET, 'x-oizer-client-ip': ip,
     },
     body: raw,

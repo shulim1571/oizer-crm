@@ -11,16 +11,16 @@
 // While the organization's phone line is off, calls are rejected, which Twilio doesn't bill. Card payments by
 // phone are not here: they wait for the decision on Twilio <Pay> (see docs/PLATFORM_ROADMAP.md, Phase 10).
 // With &org=<id> and that organization's own Twilio keys, its auth token checks the signature instead.
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const platformTwilioToken = Deno.env.get('TWILIO_AUTH_TOKEN') ?? null;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function rpc(name: string, args: unknown) {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   if (!res.ok) throw new Error(`${name}: ${res.status}`);

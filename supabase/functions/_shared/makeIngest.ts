@@ -14,7 +14,7 @@ export function makeRpc(url: string, serviceKey: string, f: typeof fetch = fetch
   return async (name, args) => {
     const res = await f(`${url}/rest/v1/rpc/${name}`, {
       method: 'POST',
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+      headers: { apikey: serviceKey, 'Content-Type': 'application/json' },   // sb_secret_… goes on apikey only
       body: JSON.stringify(args),
     });
     const text = await res.text();

@@ -16,7 +16,7 @@ const give = (body: Record<string, unknown>) =>
 
 beforeAll(async () => {
   (globalThis as any).Deno = {
-    env: { get: (k: string) => ({ SUPABASE_URL: BASE, SUPABASE_SERVICE_ROLE_KEY: 'svc', GIVE_GATE_SECRET: 'gate-secret', TURNSTILE_SECRET_KEY: 'ts' } as Record<string, string>)[k] },
+    env: { get: (k: string) => ({ SUPABASE_URL: BASE, SUPABASE_SECRET_KEYS: '{"default":"sb_secret_test"}', GIVE_GATE_SECRET: 'gate-secret', TURNSTILE_SECRET_KEY: 'ts' } as Record<string, string>)[k] },
     serve: (h: typeof handler) => { handler = h; },
   };
   vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {

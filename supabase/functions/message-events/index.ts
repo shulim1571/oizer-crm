@@ -3,9 +3,9 @@
 //   ?provider=twilio    Twilio delivery reports and texts to the organization's number, signed with TWILIO_AUTH_TOKEN.
 // With &org=<id> and that organization's own keys on file, the request is checked with its keys instead and
 // can only touch that organization's messages. Without its own keys the platform's are used, as before.
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const platformSendgridKey = Deno.env.get('SENDGRID_WEBHOOK_PUBLIC_KEY') ?? null;
 const platformTwilioToken = Deno.env.get('TWILIO_AUTH_TOKEN') ?? null;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,7 +13,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function rpc(name: string, args: unknown) {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   if (!res.ok) throw new Error(`${name}: ${res.status} ${await res.text()}`);

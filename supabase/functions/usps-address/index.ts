@@ -3,10 +3,9 @@
 // alone reads that organization's own USPS credentials (stored encrypted, set by its Super Admin), asks USPS's
 // Addresses API, and returns the standardized address. Nothing is saved: the person decides whether to use it.
 import { addressQuery, deliverability, formatUsAddress, parseUsAddress, USPS_HOSTS, type UspsEnvironment } from '../_shared/usps.ts';
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-org-id',
@@ -18,7 +17,7 @@ async function rpc(name: string, args: unknown, auth: { token: string; org: stri
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
-      apikey: auth ? anonKey : serviceKey, Authorization: `Bearer ${auth ? auth.token : serviceKey}`, 'Content-Type': 'application/json',
+      ...apiHeaders(auth?.token), 'Content-Type': 'application/json',
       ...(auth ? { 'x-org-id': auth.org } : {}),
     },
     body: JSON.stringify(args),

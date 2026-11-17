@@ -5,10 +5,9 @@
 // Plaid and records the result with the service role. Keys are read from secrets only and never logged.
 
 import { plaidConfig, plaidDays, plaidError, toSyncLines, type PlaidTxn } from '../_shared/plaid.ts';
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,8 +20,7 @@ async function rpc(name: string, args: unknown, auth: { token: string; org?: str
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
-      apikey: auth ? anonKey : serviceKey,
-      Authorization: `Bearer ${auth ? auth.token : serviceKey}`,
+      ...apiHeaders(auth?.token),
       'Content-Type': 'application/json',
       ...(auth?.org ? { 'x-org-id': auth.org } : {}),
     },
@@ -125,7 +123,7 @@ Deno.serve(async req => {
       case 'link_token': {
         // The organization's own choice of history (plaid_days_requested, 30 to 730 days, default 365).
         const setting = await fetch(`${url}/rest/v1/settings?select=value&org_id=eq.${encodeURIComponent(org)}&key=eq.plaid_days_requested`, {
-          headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+          headers: apiHeaders(),
         }).then(r => (r.ok ? r.json() : [])).catch(() => []) as { value: unknown }[];
         const days = plaidDays(setting[0]?.value);
         const r = await plaid('/link/token/create', {

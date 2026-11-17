@@ -5,10 +5,9 @@
 // browser or logged. Checking the code is done by the database directly (mfa_phone_verify).
 
 import { callTwiml, MFA_FROM, smsBody } from '../_shared/phoneCode.ts';
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID') ?? null;
 const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN') ?? null;
 
@@ -22,7 +21,7 @@ const reply = (body: unknown, status = 200) => Response.json(body, { status, hea
 async function rpc(name: string, args: unknown, token: string | null) {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: { apikey: token ? anonKey : serviceKey, Authorization: `Bearer ${token ?? serviceKey}`, 'Content-Type': 'application/json' },
+    headers: { ...apiHeaders(token), 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   const body = await res.json().catch(() => null);

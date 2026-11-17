@@ -2,16 +2,16 @@
 // (PUT /v1/External/Save{Donor,Collector,Campaign,Reason}, header APIKey). The database queues each change and
 // builds what is sent; this only delivers it and reports Donary's answer. Called every 5 minutes by the database
 // with the cron token. JWT verification is off.
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const DONARY = (Deno.env.get('DONARY_API_BASE') ?? 'https://webapi.donary.com').replace(/\/$/, '');
 const PATH: Record<string, string> = { donor: 'SaveDonor', collector: 'SaveCollector', campaign: 'SaveCampaign', reason: 'SaveReason' };
 
 async function rpc(name: string, args: unknown) {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   if (!res.ok) throw new Error(`${name}: ${res.status} ${await res.text()}`);

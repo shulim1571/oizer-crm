@@ -6,9 +6,9 @@
 // the connection's recent attempts, and the organization's own Sola key charges the gift.
 import { fundCardMessage, fundCvvOk, fundCvvProblem } from '../_shared/fundCards.ts';
 import { botCheckDecision, donorProblem, gateCheck } from '../_shared/giveGuard.ts';
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const platformTurnstileSecret = Deno.env.get('TURNSTILE_SECRET_KEY') ?? null;
 const gateSecret = Deno.env.get('GIVE_GATE_SECRET') ?? null;
 const GATEWAY = 'https://x1.cardknox.com/gatewayjson';
@@ -23,7 +23,7 @@ const reply = (body: unknown) => Response.json(body, { headers: CORS });
 async function rpc(name: string, args: unknown) {
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
-    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify(args),
   });
   const body = await res.json().catch(() => null);

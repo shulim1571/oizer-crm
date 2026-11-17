@@ -9,9 +9,9 @@
 // JWT verification is off: the key is the credential. The database checks the key, its scopes and the rate
 // limit (60 a minute per key) and returns only that organization's records. No CORS: keys belong on servers,
 // not in web pages.
+import { apiHeaders } from '../_shared/keys.ts';
 
 const url = Deno.env.get('SUPABASE_URL')!;
-const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const STATUS: Record<string, number> = { PT401: 401, PT403: 403, PT404: 404, PT422: 422, PT429: 429 };
 const PARAMS = ['limit', 'after', 'updated_since', 'campaign_id', 'donor_id'];
@@ -40,7 +40,7 @@ Deno.serve(async req => {
   try {
     res = await fetch(`${url}/rest/v1/rpc/api_request`, {
       method: 'POST',
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+      headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_key: key, p_resource: resource, p_params: params }),
     });
   } catch {

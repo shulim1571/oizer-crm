@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedOrigin, handle, ipKey, type GateEnv, type Limiter } from './gate';
+import { allowedOrigin, handle, ipKey, type GateEnv, type Limiter, supabaseKey } from './gate';
 
 /** A limiter that allows `max` calls per key, like the binding within one location. */
 const limiter = (max: number): Limiter & { seen: string[] } => {
@@ -8,7 +8,7 @@ const limiter = (max: number): Limiter & { seen: string[] } => {
   return { seen, async limit({ key }) { seen.push(key); const n = (counts.get(key) ?? 0) + 1; counts.set(key, n); return { success: n <= max }; } };
 };
 const env = (over: Partial<GateEnv> = {}): GateEnv => ({
-  PER_IP: limiter(8), PER_CAMPAIGN: limiter(60), SUPABASE_URL: 'https://example.supabase.co/', SUPABASE_ANON_KEY: 'anon',
+  PER_IP: limiter(8), PER_CAMPAIGN: limiter(60), SUPABASE_URL: 'https://example.supabase.co/', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
   GIVE_GATE_SECRET: 'gate-secret', ALLOWED_ORIGINS: 'oizer.trubase.org,*.oizer-drm.pages.dev,localhost', ...over,
 });
 const post = (body: object, ip = '1.2.3.4', origin = 'https://oizer.trubase.org') =>
@@ -27,6 +27,9 @@ describe('give gate', () => {
     const h = calls[0].init.headers as Record<string, string>;
     expect(h['x-give-gate']).toBe('gate-secret');
     expect(h['x-oizer-client-ip']).toBe('1.2.3.4');
+    // The publishable key, on apikey only (2026-11-17): no legacy anon JWT, nothing on Authorization.
+    expect(h.apikey).toBe('sb_publishable_test');
+    expect(h.Authorization).toBeUndefined();
     expect(JSON.parse(String(calls[0].init.body))).toEqual(GIFT);
   });
 
@@ -105,5 +108,12 @@ describe('gifts passed on by the payment page’s own site (Moshe Henig, 2026-11
     const e = env();
     await handle(viaSite('wrong', '9.9.9.9'), e, ok);
     expect((e.PER_IP as ReturnType<typeof limiter>).seen).toEqual(['ip:172.66.0.1']);
+  });
+});
+
+describe('the Supabase key the gate sends', () => {
+  it('prefers SUPABASE_PUBLISHABLE_KEY, reading the older SUPABASE_ANON_KEY name only when it is unset', () => {
+    expect(supabaseKey({ SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_a', SUPABASE_ANON_KEY: 'old' })).toBe('sb_publishable_a');
+    expect(supabaseKey({ SUPABASE_ANON_KEY: 'sb_publishable_b' })).toBe('sb_publishable_b');
   });
 });

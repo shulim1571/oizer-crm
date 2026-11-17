@@ -103,7 +103,11 @@ so confirmation and password-reset emails link back to it.
 - **Scheduled jobs:** pg_cron calls `run_job(name)`, and every run is recorded in `job_runs`. New jobs go in `run_job`
   plus a `cron.schedule` line.
 - **Health check:** the `health` Edge Function answers 200 when the database responds and the hourly heartbeat is
-  recent, otherwise 503. Callers must send the project's legacy anon key as a bearer token.
+  recent, otherwise 503. Callers send the project's publishable key (`sb_publishable_…`) on the `apikey` header.
+- **API keys (2026-11-17):** Edge Functions use only the new keys, which Supabase provides as `SUPABASE_SECRET_KEYS` and
+  `SUPABASE_PUBLISHABLE_KEYS` (see `supabase/functions/_shared/keys.ts`); they never read the legacy
+  `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY`. The new keys go on the `apikey` header; `Authorization` carries
+  only a signed-in person's token. The app, the Pages functions and the Workers use the publishable key.
 
 ## Staging
 

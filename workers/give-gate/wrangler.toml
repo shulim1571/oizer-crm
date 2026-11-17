@@ -1,6 +1,6 @@
 # Rate-limiting gate in front of the public give function (Oizer payment pages). Free on the Workers Free plan:
 # the Workers rate-limit binding needs no add-on.
-#   npx wrangler secret put SUPABASE_ANON_KEY
+#   npx wrangler secret put SUPABASE_PUBLISHABLE_KEY   (the project's sb_publishable_… key; never the legacy anon JWT)
 #   npx wrangler secret put GIVE_GATE_SECRET      (the same value as the give function's GIVE_GATE_SECRET)
 #   npx wrangler deploy
 name = "oizer-give-gate"
