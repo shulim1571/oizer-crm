@@ -21,6 +21,9 @@ describe('formatted descriptions', () => {
     expect(isRichText('Just a story\nwith lines')).toBe(false);
     expect(isRichText('<p>Formatted</p>')).toBe(true);
     expect(plainText('<p><b>Help</b> us &amp; them</p><ul><li>one</li></ul>')).toBe('Help us & them\none');
+    // Nested pieces that rebuild a tag after one pass are stripped too, and stray brackets don't survive.
+    expect(plainText('<p><scr<b>ipt>alert(1)</p>')).not.toMatch(/<|>/);
+    expect(plainText('<p>a &lt;b&gt; c</p>')).toBe('a <b> c');
     expect(textToHtml('a < b\nnext\n\npara')).toBe('<p>a &lt; b<br>next</p><p>para</p>');
   });
 });

@@ -163,7 +163,7 @@ export function report(findings) {
   const n = l => findings.filter(f => f.level === l).length;
   const lines = [`## Cloud configuration check`, '', `${n('fail')} failing, ${n('warn')} warnings, ${n('ok')} passing`, '',
     '| | Area | Check | Detail |', '|---|---|---|---|',
-    ...sorted.map(f => `| ${icon[f.level]} | ${f.area} | ${f.check} | ${String(f.detail).replace(/\|/g, '\\|')} |`)];
+    ...sorted.map(f => `| ${icon[f.level]} | ${f.area} | ${f.check} | ${String(f.detail).replace(/\\/g, '\\\\').replace(/\|/g, '\\|')} |`)];
   return { markdown: lines.join('\n'), failed: n('fail') > 0 };
 }
 

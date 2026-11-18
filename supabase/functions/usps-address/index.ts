@@ -11,6 +11,17 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-org-id',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+// The database's own refusals that are meant for the person; anything else is logged and replaced with a fixed message,
+// so internal errors (and their stack traces) never reach the browser.
+const SAY_AS_IS = [
+  'Sign in to check addresses', 'USPS address checks aren\'t set up for this organization yet',
+  'USPS didn\'t accept this organization\'s consumer key and secret',
+];
+function failed(where: string, e: unknown, fallback: string) {
+  const text = e instanceof Error ? e.message : String(e);
+  console.error(`usps-address ${where}:`, e);
+  return SAY_AS_IS.find(m => m === text) ?? fallback;
+}
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
 async function rpc(name: string, args: unknown, auth: { token: string; org: string } | null) {
@@ -59,9 +70,9 @@ Deno.serve(async req => {
   if (!parts) return reply({ error: 'Write the address as a street line, then city, state and ZIP (for example "123 Main St, Brooklyn NY 11219").' });
 
   let org: string;
-  try { org = await rpc('usps_check_allowed', {}, { token, org: b.org }); } catch (e) { return reply({ error: e instanceof Error ? e.message : String(e) }, 403); }
+  try { org = await rpc('usps_check_allowed', {}, { token, org: b.org }); } catch (e) { return reply({ error: failed('permission check', e, 'You can\'t check addresses for this organization.') }, 403); }
   let keys: { consumer_key: string; consumer_secret: string; environment: UspsEnvironment } | undefined;
-  try { [keys] = await rpc('org_usps_keys', { p_org: org }, null); } catch (e) { return reply({ error: e instanceof Error ? e.message : String(e) }); }
+  try { [keys] = await rpc('org_usps_keys', { p_org: org }, null); } catch (e) { return reply({ error: failed('reading keys', e, 'USPS address checks aren\'t available right now. Please try again.') }); }
   if (!keys?.consumer_key || !keys.consumer_secret) return reply({ error: 'USPS address checks aren\'t set up for this organization yet' });
   const host = USPS_HOSTS[keys.environment] ?? USPS_HOSTS.production;
 
@@ -88,6 +99,6 @@ Deno.serve(async req => {
       matches: Array.isArray(data.matches) ? data.matches.map((m: { text?: string }) => m.text).filter(Boolean) : [],
     });
   } catch (e) {
-    return reply({ error: e instanceof Error ? e.message : String(e), sent: parts });
+    return reply({ error: failed('USPS request', e, 'Couldn\'t reach USPS. Please try again.'), sent: parts });
   }
 });

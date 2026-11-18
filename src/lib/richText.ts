@@ -73,9 +73,12 @@ export function sanitizeHtml(html: string): string {
 export function plainText(text: string | null | undefined): string {
   const t = String(text ?? '');
   if (!isRichText(t)) return t;
-  return t
-    .replace(/<(br|\/p|\/div|\/li|\/h3|\/h4|\/blockquote)\b[^>]*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
+  let bare = t.replace(/<(br|\/p|\/div|\/li|\/h3|\/h4|\/blockquote)\b[^>]*>/gi, '\n');
+  // Strip tags until none are left: one pass can leave "<script" behind from nested pieces like "<scr<b>ipt".
+  for (let before = ''; before !== bare;) { before = bare; bare = bare.replace(/<[^>]*>/g, ''); }
+  // Angle brackets that survive are stray text, not markup; drop them before the entities are decoded.
+  bare = bare.replace(/[<>]/g, '');
+  return bare
     .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
     .replace(/\n{3,}/g, '\n\n').trim();
 }

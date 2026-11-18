@@ -6,6 +6,10 @@ on:
     branches: ['**']
   pull_request:
 
+# Read-only: the build and tests only check out and read the code.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
