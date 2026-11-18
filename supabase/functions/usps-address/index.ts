@@ -19,7 +19,7 @@ const SAY_AS_IS = [
 ];
 function failed(where: string, e: unknown, fallback: string) {
   const text = e instanceof Error ? e.message : String(e);
-  console.error(`usps-address ${where}:`, e);
+  console.error('usps-address %s:', where, e);   // a fixed format string: `where` never becomes the format (semgrep)
   return SAY_AS_IS.find(m => m === text) ?? fallback;
 }
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
