@@ -5,7 +5,15 @@ import { describe, expect, it } from 'vitest';
 // field sat at the bottom of the screen, including the one being typed in above the keyboard. Desktop layout is
 // held (#44) and left as it was.
 const css = readFileSync('src/styles.css', 'utf8');
-const rules = (sel: string) => [...css.matchAll(new RegExp(`(^|\\n)\\s*${sel.replace(/[.*]/g, '\\$&')}\\s*\\{([^}]*)\\}`, 'g'))].map(m => m[2]);
+/** The bodies of every rule whose selector starts its own line, read as plain text (no regex built from a string). */
+const rules = (sel: string) => css.split('}').flatMap((block, i) => {
+  const parts = block.split('{');
+  if (parts.length < 2) return [];
+  const head = parts[parts.length - 2];
+  const nl = head.lastIndexOf('\n');
+  if (nl < 0 && !(i === 0 && parts.length === 2)) return [];
+  return head.slice(nl + 1).trim() === sel ? [parts[parts.length - 1]] : [];
+});
 
 describe('payment page on phones', () => {
   it('puts the Donate button after the last field instead of over the fields', () => {
