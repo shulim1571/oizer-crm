@@ -80,9 +80,9 @@ id = "GHSA-85c8-ppgw-ccpr"
 ignoreUntil = 2027-01-31
 reason = "tinypool via vitest 3: needs attacker-controlled run() options; only the repository's own tests run. Upgrade to vitest 4+ planned."
 
-# picomatch 4.0.7 via vitest 3 (and tinyglobby): ReDoS from crafted extglob patterns. No fixed release exists yet
-# (reviewed 2026-11-17). Only the test runner uses it, with the glob patterns in the repository's own config.
+# picomatch 4.0.7 (via vitest and tinyglobby): no fixed release exists yet (4.0.7 is the newest, and even vitest 5.1
+# requires it). Approved by Shulim 2026-11-18; short expiry so it fails again if picomatch is still unfixed by then.
 [[IgnoredVulns]]
 id = "GHSA-fc5q-39xc-vjpf"
-ignoreUntil = 2027-01-31
-reason = "picomatch via vitest 3 (dev only): needs attacker-supplied glob patterns; only the repository's own test globs are used. No fixed version yet."
+ignoreUntil = 2026-12-31
+reason = "Test runner only (vitest/tinyglobby), not part of the deployed site. The ReDoS needs attacker-supplied glob patterns; only the repository's own test globs are matched. Update picomatch once a fixed release ships."

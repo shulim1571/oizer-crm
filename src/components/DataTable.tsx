@@ -318,7 +318,9 @@ export default function DataTable(p: Props) {
   // whole-pixel or stale offsets left a see-through gap between frozen columns (Moshe Henig, 2026-11-17).
   useLayoutEffect(() => {
     const row = headRow.current;
-    if (!freeze || !row) { setOffsets([]); return; }
+    // Never set state that's already there: this runs after renders, so a fresh [] each time looped forever on lists
+    // with no frozen columns (React error #185 on the Task Sheet, 2026-11-18).
+    if (!freeze || !row) { setOffsets(prev => (prev.length ? [] : prev)); return; }
     const measure = () => {
       const cells = [...row.children] as HTMLElement[];
       const width = (el?: HTMLElement) => (el ? el.getBoundingClientRect().width : 0);
@@ -335,7 +337,9 @@ export default function DataTable(p: Props) {
     const ro = new ResizeObserver(measure);
     for (const c of [...row.children].slice(0, freeze + (selectable ? 1 : 0))) ro.observe(c);
     return () => ro.disconnect();
-  }, [freeze, selectable, columns, config.widths, shown]);
+    // Row changes that move a column's width are caught by the ResizeObserver; the count is enough here (a new rows
+    // array every render must not re-run this).
+  }, [freeze, selectable, columns, config.widths, shown.length]);
   const stick = (i: number) => (i < freeze && offsets[i] != null ? { position: 'sticky' as const, left: offsets[i] } : {});
   const frozenClass = (i: number) => (i < freeze ? `frozen${i === freeze - 1 ? ' frozen-last' : ''}` : '');
 
