@@ -8,3 +8,6 @@ data/
 *.tsbuildinfo
 supabase/.temp/
 functions/_config.ts
+
+# Sample receipt with the organization's real letterhead (tax ID, address, phone): kept local, never committed.
+docs/review/receipt-letterhead-sample-*.pdf
