@@ -22,9 +22,6 @@ const today = () => localToday();
 const isOverdue = (r: Row) => r.status !== 'Done' && r.due_date && r.due_date < today();
 const statusOf = (r: Row) => (isOverdue(r) ? 'Overdue' : r.status);
 
-/** Overdue first, then by due date, undated next, and finished ones last. */
-const rank = (r: Row) => (r.status === 'Done' ? 3 : isOverdue(r) ? 0 : r.due_date ? 1 : 2);
-const byDue = (a: Row, b: Row) => rank(a) - rank(b) || String(a.due_date ?? '').localeCompare(String(b.due_date ?? ''));
 
 const columns = (showOwner: boolean): Column[] => [
   {
@@ -55,14 +52,15 @@ export default function TasksPage() {
   const [pledge, setPledge] = useState<string | null>(null);
 
   const q = useQuery(
-    () => fetchAll((a, b) => supabase.from('tasks').select(SELECT).order('created_at', { ascending: false }).range(a, b) as never),
+    () => fetchAll((a, b) => supabase.from('tasks').select(SELECT).order('created_at', { ascending: false }).order('id').range(a, b) as never),
     [version],
   );
   const suggested = useQuery(
     async () => (isAdmin ? [] : (await supabase.from('pledge_list').select('*').eq('status', 'overdue').order('expected_date')).data ?? []) as Row[],
     [isAdmin, version],
   );
-  const all = useMemo(() => [...((q.data as Row[]) ?? [])].sort(byDue), [q.data]);
+  // Newest first (Moshe Henig, 2026-11-18), as loaded; overdue ones still say Overdue, and Due sorts by date.
+  const all = useMemo(() => (q.data as Row[]) ?? [], [q.data]);
   const fundraisers = [...new Set(all.map(r => r.owner?.full_name).filter(Boolean))].sort();
   const rows = all.filter(r => (!hideDone || r.status !== 'Done') && (!fundraiser || r.owner?.full_name === fundraiser));
   const refresh = () => setVersion(v => v + 1);
@@ -94,6 +92,7 @@ export default function TasksPage() {
       <DataTable
         title={isAdmin ? 'Tasks' : 'My Tasks'}
         rows={rows}
+        initialSort={{ key: 'created_at', dir: 'desc' }}
         loading={q.loading}
         error={q.error}
         columns={columns(isAdmin)}
