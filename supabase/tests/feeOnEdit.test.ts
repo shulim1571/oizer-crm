@@ -2,7 +2,8 @@ import type { PGlite } from '@electric-sql/pglite';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ADMIN, as, rows, seededDb } from './harness';
 
-// Readiness #1 (2026-11-15): editing amount, method or campaign recalculates the fee; manual fees are untouched.
+// Moshe, 2026-11-18 (was readiness #1): only a changed payment method recalculates the fee; editing the amount,
+// campaign or anything else keeps the fee the gift came in with. Manual fees are untouched.
 const sql = (db: PGlite, q: string, params: unknown[] = []) => as(db, ADMIN, tx => tx.query(q, params));
 const fees = async (db: PGlite, id: string) =>
   (await rows<{ fee: string | null; net: string }>(db, ADMIN, `select fee::text, net_donation::text net from public.donations where id = $1`, [id]))[0];
@@ -19,11 +20,19 @@ describe('fee when a donation is edited', () => {
   const add = (id: string, amount: number, method: string, manual: number | null = null) =>
     sql(db, `insert into public.donations (id, campaign_id, type, status, amount, payment_method, manual_fee) values ($1, '1001', 'Payment', 'completed', $2, $3, $4)`, [id, amount, method, manual]);
 
-  it('recalculates when the amount changes: 18 to 1,000 on 2.9% + 0.30', async () => {
+  it('keeps the saved fee when the amount changes (net follows the amount)', async () => {
     await add('fe-1', 18, 'Card Test');
     expect(await fees(db, 'fe-1')).toEqual({ fee: '0.83', net: '17.17' });
     await sql(db, `update public.donations set amount = 1000 where id = 'fe-1'`);
-    expect(await fees(db, 'fe-1')).toEqual({ fee: '29.30', net: '970.70' });
+    expect(await fees(db, 'fe-1')).toEqual({ fee: '0.83', net: '999.17' });
+  });
+
+  it('keeps the saved fee when the campaign, notes or other fields change, even if the method\'s rate changed since', async () => {
+    await add('fe-1b', 100, 'Card Test');
+    expect((await fees(db, 'fe-1b')).fee).toBe('3.20');
+    await sql(db, `update public.payment_methods set fee_percent = 5 where name = 'Card Test'`);
+    await sql(db, `update public.donations set campaign_id = '1002', notes = 'moved' where id = 'fe-1b'`);
+    expect(await fees(db, 'fe-1b')).toEqual({ fee: '3.20', net: '96.80' });
   });
 
   it('recalculates when the method changes: Cash to Card', async () => {
