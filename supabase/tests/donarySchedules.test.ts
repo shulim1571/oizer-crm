@@ -59,6 +59,14 @@ describe('Donary schedules', () => {
     expect(s).toMatchObject({ payments_seen: 2, paid: '20.00', payments_left: 8, next_expected: '2027-01-08' });
   });
 
+  it('keeps the collector Donary names on a gift that comes in directly (as the Make feed does)', async () => {
+    const r = await webhook(db, 'charge', charge('C-1', { collectorInfo: { collectorNumber: 7, collectorName: 'Sample Collector' } }));
+    const plain = await webhook(db, 'charge', charge('C-2'));
+    const c = async (id: string) => (await db.query<{ c: string | null }>(`select collector_label c from public.donations where id = $1`, [id])).rows[0].c;
+    expect(await c(r.donation_id)).toBe('Sample Collector');
+    expect(await c(plain.donation_id)).toBeNull();
+  });
+
   it('keeps a schedule that starts later, with nothing paid yet', async () => {
     await webhook(db, 'schedule', schedule('S-3', { firstPayment: undefined, scheduleStartDate: '2026-12-01 00:00:00', frequency: 'Weekly' }));
     const [s] = await list(db);
