@@ -11,6 +11,8 @@
 import PostalMime from 'npm:postal-mime@4.1.4';
 import { apiHeaders } from '../_shared/keys.ts';
 import { authenticity, envelopeFrom, htmlToText, inboxRecipients, isForwardingConfirmation, maskCards, safeName, tokenMatches } from '../_shared/inbound.ts';
+import { detect, readChase, readOjcAch, readOjcSubmission, readPledgerAch, readPledgerBatch, rowsFromItems, type Deposit } from '../_shared/readers.ts';
+import { getDocumentProxy } from 'npm:unpdf@2.1.0';
 
 const url = Deno.env.get('SUPABASE_URL')!;
 const notFound = () => new Response(null, { status: 404 });
@@ -35,6 +37,35 @@ const sha256 = async (bytes: Uint8Array<ArrayBuffer>) =>
   [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
 
 /** An attachment's bytes, as a plain (ArrayBuffer-backed) copy whatever the parser handed back. */
+/** Text rows of a PDF, rebuilt from where each piece of text sits on the page (pages kept apart). */
+async function pdfRows(bytes: Uint8Array<ArrayBuffer>): Promise<string[]> {
+  const pdf = await getDocumentProxy(new Uint8Array(bytes));
+  const items: { str: string; x: number; y: number }[] = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const content = await (await pdf.getPage(p)).getTextContent();
+    for (const it of content.items as { str?: string; transform?: number[] }[]) {
+      if (it.str && it.transform) items.push({ str: it.str, x: it.transform[4], y: it.transform[5] + (pdf.numPages - p) * 100000 });
+    }
+  }
+  return rowsFromItems(items);
+}
+
+/** Runs the reader that fits (if any) and records what it read as a deposit with suggested matches. Never posts. */
+async function read(org: string, email: string, reportType: string | null, subject: string, text: string, pdfs: Uint8Array<ArrayBuffer>[]) {
+  const kind = detect(reportType, subject, text, pdfs.length > 0);
+  if (!kind) return null;
+  let dep: Deposit;
+  if (kind === 'bank_check_deposit') dep = readChase(text);
+  else if (kind === 'ojc_ach') dep = readOjcAch(text);
+  else if (kind === 'ojc_submission') dep = readOjcSubmission(text);
+  else {
+    if (!pdfs.length) return null;
+    const rows = await pdfRows(pdfs[0]);
+    dep = kind === 'pledger_ach' ? readPledgerAch(rows, subject) : readPledgerBatch(rows, subject);
+  }
+  return await rpc<string>('inbox_record_deposit', { p_org: org, p_email: email, p: dep });
+}
+
 const bytesOf = (c: unknown): Uint8Array<ArrayBuffer> =>
   c instanceof Uint8Array ? new Uint8Array(c) : c instanceof ArrayBuffer ? new Uint8Array(c.slice(0)) : new TextEncoder().encode(String(c ?? ''));
 
@@ -68,17 +99,24 @@ async function receive(req: Request): Promise<Response> {
     const dir = `${r.org_id}/${r.email_id}`;
     await upload(`${dir}/message.eml`, raw, 'message/rfc822');
     const files = [];
+    const pdfs: Uint8Array<ArrayBuffer>[] = [];
     for (const [i, a] of (mail.attachments ?? []).entries()) {
       const bytes = bytesOf(a.content);
+      if ((a.mimeType ?? '').toLowerCase() === 'application/pdf' || /\.pdf$/i.test(a.filename ?? '')) pdfs.push(bytes);
       const path = `${dir}/${safeName(a.filename, i + 1)}`;
       await upload(path, bytes, a.mimeType);
       files.push({ filename: a.filename ?? null, mime: a.mimeType ?? null, size_bytes: bytes.length, sha256: await sha256(bytes), storage_path: path });
     }
-    await rpc('inbox_finish', {
+    const done = await rpc<{ status: string; report_type: string | null }>('inbox_finish', {
       p_org: r.org_id, p_email: r.email_id, p_raw_path: `${dir}/message.eml`, p_body_text: text, p_authentic: auth.authentic,
       p_auth_reason: auth.reason, p_attachments: files, p_forwarding_confirmation: confirm,
     });
     stored++;
+    // Readers run only for trusted, authentic mail (status "to review"); a reader problem never loses the email.
+    if (done?.status === 'to_review' && !confirm) {
+      try { await read(r.org_id, r.email_id, done.report_type, mail.subject ?? '', mail.text?.trim() ? mail.text : htmlToText(mail.html ?? ''), pdfs); }
+      catch (e) { console.error('inbox: reader failed', e instanceof Error ? e.message : String(e)); }
+    }
   }
   return Response.json({ ok: true, stored });
 }

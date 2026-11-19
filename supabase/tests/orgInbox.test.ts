@@ -16,7 +16,7 @@ const meta = (over: Record<string, unknown> = {}) => JSON.stringify({ message_id
 async function receive(db: PGlite, local: string, m = meta(), authentic = true, confirm = false) {
   const [r] = await svc<{ org_id: string | null; email_id: string | null; retry: boolean; outcome: string }>(db, `select * from public.inbox_receive($1, $2::jsonb)`, [local, m]);
   if (!r.email_id) return { ...r, status: null as string | null };
-  const [{ s }] = await svc<{ s: string }>(db, `select public.inbox_finish($1, $2, $3, $4, $5, $6, $7::jsonb, $8) s`,
+  const [{ s }] = await svc<{ s: string }>(db, `select public.inbox_finish($1, $2, $3, $4, $5, $6, $7::jsonb, $8) ->> 'status' s`,
     [r.org_id, r.email_id, `${r.org_id}/${r.email_id}/message.eml`, 'Sample body', authentic, authentic ? 'DKIM pass, aligned' : 'no aligned pass',
      JSON.stringify([{ filename: 'ACH.pdf', mime: 'application/pdf', size_bytes: 1000, sha256: 'ab', storage_path: `${r.org_id}/${r.email_id}/1-ACH.pdf` }]), confirm]);
   return { ...r, status: s };
