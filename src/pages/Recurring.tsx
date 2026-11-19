@@ -274,8 +274,36 @@ export function RecurringPage() {
       <DataTable title="Recurring Donations" subtitle="Charged on their dates with the donor's saved card. A failed charge is retried after 3 days, then 7."
         rows={rows} loading={q.loading} error={q.error} columns={columns} exportName="recurring" onOpen={r => setOpen(r.id)}
         actions={<select value={show} onChange={e => setShow(e.target.value as 'live' | 'all')}><option value="live">Active and paused</option><option value="all">All, including ended</option></select>} />
+      <DonarySchedules />
       {open && <RecurringDialog id={open} onClose={() => setOpen(null)} onChanged={() => setVersion(v => v + 1)} />}
     </section>
+  );
+}
+
+/**
+ * Donary schedules (AppSheet gap review #6, 2026-11-19): recurring gifts Donary charges itself. Shown here read-only,
+ * with the payments seen so far and when the next is expected; each payment arrives as its own donation.
+ */
+function DonarySchedules() {
+  const [show, setShow] = useState<'live' | 'all'>('live');
+  const q = useQuery(() => fetchAll((a, b) => supabase.from('donary_schedule_list').select('*').order('next_expected', { ascending: true, nullsFirst: false }).order('id').range(a, b) as never), [], { live: ['gifts'] });
+  const all = (q.data as Row[]) ?? [];
+  if (!q.loading && all.length === 0) return null;
+  const rows = show === 'live' ? all.filter(r => r.status === 'active') : all;
+  const columns: Column[] = [
+    { key: 'donor_name', label: 'Donor', width: 170 },
+    { key: 'campaign_label', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id, width: 200 },
+    { key: 'amount', label: 'Each', align: 'right', render: r => (r.amount != null ? money(r.amount) : '—'), value: r => Number(r.amount ?? 0) },
+    { key: 'frequency', label: 'How often', value: r => r.frequency ?? '—' },
+    { key: 'payments', label: 'Payments', value: r => (r.payments_total != null ? `${r.payments_seen} of ${r.payments_total}` : String(r.payments_seen)) },
+    { key: 'paid', label: 'Paid so far', align: 'right', render: r => money(r.paid), value: r => Number(r.paid ?? 0) },
+    { key: 'next_expected', label: 'Next expected', render: r => day(r.next_expected), value: r => r.next_expected ?? '' },
+    { key: 'status', label: 'Status', render: r => <Pill tone={STATUS[r.status]?.[1] ?? ''}>{STATUS[r.status]?.[0] ?? r.status}</Pill>, value: r => r.status },
+  ];
+  return (
+    <DataTable title="Donary Schedules" subtitle="Recurring gifts that Donary charges itself. Shown here to follow; each payment arrives as its own donation."
+      viewKey="donary-schedules" rows={rows} loading={q.loading} error={q.error} columns={columns} exportName="donary-schedules"
+      actions={<select value={show} onChange={e => setShow(e.target.value as 'live' | 'all')}><option value="live">Active</option><option value="all">All, including ended</option></select>} />
   );
 }
 
