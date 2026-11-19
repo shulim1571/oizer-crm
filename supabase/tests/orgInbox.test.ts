@@ -40,7 +40,10 @@ describe('organization inbox', () => {
 
   it('gives each organization its own random address at the inbox domain, and only inbox managers may', async () => {
     const a = await newAddress();
-    expect(a).toMatch(new RegExp(`^[a-z0-9]{20}@${DOMAIN.replace(/\./g, '\\.')}$`));
+    const [user, host, ...rest] = a.split('@');
+    expect(user).toMatch(/^[a-z0-9]{20}$/);
+    expect(host).toBe(DOMAIN);
+    expect(rest).toEqual([]);
     expect((await q(db, `select address, status from public.inbox_status()`))[0]).toEqual({ address: a, status: 'active' });
     const b = await newAddress(OTHER_ADMIN, OTHER);
     expect(local(b)).not.toBe(local(a));
