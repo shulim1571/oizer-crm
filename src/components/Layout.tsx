@@ -121,7 +121,7 @@ const NAV: NavSection[] = [
         tabs: [{ to: '/payments-settings', label: 'Card Processing' }, { to: '/fees', label: 'Methods & Fees' },
           { to: '/payout-methods', label: 'Payout Methods' }, { to: '/accounts', label: 'Bank Accounts' }] },
       { to: '/messaging-settings', label: 'Messaging', icon: <MessageSquare size={I} />, admin: true,
-        tabs: [{ to: '/messaging-settings', label: 'Email & Text' }, { to: '/phone-lookup', label: 'Phone & Text Lookup' }, { to: '/receipt-text', label: 'Receipt Text' }] },
+        tabs: [{ to: '/messaging-settings', label: 'Email & Text' }, { to: '/phone-lookup', label: 'Phone & Text Lookup' }, { to: '/receipt-text', label: 'Receipt Text' }, { to: '/email-inbox', label: 'Email Inbox' }] },
       // Donary machines are sources now (Shulim, 2026-11-13): they're on the Sources & machines list.
       { to: '/donary', label: 'Donary', icon: <Smartphone size={I} />, admin: true,
         tabs: [{ to: '/donary', label: 'Donary Connection' }, { to: '/sources', label: 'Machines (Sources)' }] },

@@ -43,6 +43,8 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   stale_check: { label: 'Stale Check', tone: 'amber' },
   check_to_print: { label: 'Check To Print', tone: 'amber' },
   check_unprinted: { label: 'Check Not Printed', tone: 'amber' },
+  inbox_review: { label: 'Inbox: To Review', tone: 'blue' },
+  inbox_cap: { label: 'Inbox Limit Reached', tone: 'amber' },
   inactive_campaign: { label: 'Inactive Campaign', tone: '' },
   bank_reassign: { label: 'Bank Account Reassignment Needed', tone: 'red' },
   machine_booking: { label: 'Machine Request', tone: 'blue' },
@@ -414,6 +416,18 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
           <p className="muted">These completed gifts have no fee because {item.record_id ? <>"{item.record_id}" isn't</> : <>they have no payment method, and no method is</>} on the list of payment methods. Add it under <Link to="/fees">Payment Methods & Fees</Link> with its fee, or change these gifts to a listed method (<Link to={`/donations/all`}>Transactions</Link>). This leaves the sheet by itself once that's done.</p>
           {item.record_id && <MapMethod name={String(item.record_id)} onMapped={n => { void log('mapped', `${n} gift${n === 1 ? '' : 's'} moved`).then(onDone); }} />}
           <div className="donation-actions">{dismiss('Leave as is', 'Take this off the sheet and leave these gifts without a fee? Say why:')}</div>
+        </>
+      )}
+      {item.task_type === 'inbox_review' && (
+        <>
+          <p className="muted">An email to the organization's email inbox from a trusted sender, or a possible duplicate. Open it to read it and its attachments; nothing was posted from it. Mark it reviewed (or ignored) there, and this leaves the sheet.</p>
+          <div className="donation-actions"><Link to={`/email-inbox?email=${encodeURIComponent(String(item.record_id))}`} className="btn primary">Open in Email Inbox</Link></div>
+        </>
+      )}
+      {item.task_type === 'inbox_cap' && (
+        <>
+          <p className="muted">The inbox stopped keeping new mail for the rest of the day, so senders may need to send again. Raise the daily limit under Messaging → Email Inbox if this is expected.</p>
+          <div className="donation-actions">{dismiss('Done')}</div>
         </>
       )}
       {item.task_type === 'bank_reassign' && (

@@ -28,6 +28,7 @@ const PERMISSION_GROUPS: { group: string; items: { key: string; short: string; f
     { key: 'configure_fees', short: 'Fees', full: 'Configure processing fees' },
     { key: 'change_default_bank', short: 'Default bank', full: 'Change the default bank account' },
     { key: 'manage_api_keys', short: 'API keys', full: 'Create and revoke API keys' },
+    { key: 'manage_inbox', short: 'Inbox', full: "See and manage the organization's email inbox: its address, trusted senders and the emails received" },
   ] },
 ];
 

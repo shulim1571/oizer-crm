@@ -13,6 +13,7 @@ import ActivityPage from './pages/Activity';
 import WebAddressesPage from './pages/WebAddresses';
 import ApiKeysPage from './pages/ApiKeys';
 import PhoneLookupPage from './pages/PhoneLookup';
+import EmailInboxPage from './pages/EmailInbox';
 import DonaryPage from './pages/Donary';
 import OrganizationPage from './pages/Organization';
 import PlatformPage from './pages/Platform';
@@ -274,6 +275,7 @@ export default function App() {
         <Route path="web-addresses" element={<AdminOnly><WebAddressesPage /></AdminOnly>} />
         <Route path="api-keys" element={<AdminOnly><ApiKeysPage /></AdminOnly>} />
         <Route path="phone-lookup" element={<AdminOnly><PhoneLookupPage /></AdminOnly>} />
+        <Route path="email-inbox" element={<AdminOnly><EmailInboxPage /></AdminOnly>} />
         <Route path="donary" element={<AdminOnly><DonaryPage /></AdminOnly>} />
         {isPlatformOwner && <Route path="platform" element={<PlatformPage />} />}
         <Route path="*" element={<Navigate to={isAdmin ? '/task-sheet' : '/dashboard'} replace />} />
