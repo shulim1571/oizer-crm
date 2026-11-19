@@ -113,6 +113,10 @@ describe('platform operations', () => {
       const key = await newKey(db, ['campaigns']);
       const other = await newKey(db, ['campaigns']);
       let last: any;
+      // The window is the clock minute: if the 60 calls would run past the end of this one, the count would start
+      // over mid-loop. Near the end of a minute, wait for the next one first.
+      const sec = new Date().getSeconds();
+      if (sec > 40) await new Promise(r => setTimeout(r, (61 - sec) * 1000));
       for (let i = 0; i < 60; i++) last = await call(db, key, 'campaigns', { limit: 1 });
       expect(last.rate).toMatchObject({ limit: 60, remaining: 0 });
       expect(await sqlstate(call(db, key, 'campaigns'))).toBe('PT429');
