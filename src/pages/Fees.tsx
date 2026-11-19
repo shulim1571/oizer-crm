@@ -4,6 +4,8 @@ import type { Field } from '../components/RecordForm';
 import { useAuth } from '../lib/auth';
 import { accountOptions, campaignOptions, paymentMethodIdOptions, paymentMethodNameOptions } from '../lib/lookups';
 import { fetchAll, supabase } from '../lib/supabase';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { progressText, runAliasMove, type MoveProgress } from '../lib/aliasMoves';
 import type { Row } from '../lib/supabase';
 
 const FEE_TYPES = [['none', 'None'], ['flat', 'Flat $'], ['percent', '% rate'], ['percent_flat', '% rate + flat $']].map(([value, label]) => ({ value, label }));
@@ -63,6 +65,8 @@ export default function FeesPage() {
   const { permissions } = useAuth();
   const canEdit = permissions.includes('configure_fees');
   const [tab, setTab] = usePageTab(FEE_TABS.map(([k]) => k));
+  const [aliasKey, setAliasKey] = useState(0);
+  const aliasesMoved = useCallback(() => setAliasKey(k => k + 1), []);   // re-read the list once a move finishes
   return (
     <>
       <div className="page-tabs-wrap"><PageTabs tabs={FEE_TABS} value={tab} onChange={setTab} /></div>
@@ -98,8 +102,10 @@ export default function FeesPage() {
         fields={processorFields}
       />}
       {/* Method aliases (readiness #57; live 2026-11-17, Shulim): names from webhooks and imports mapped to a method. */}
-      {tab === 'aliases' && <CrudPage
+      {tab === 'aliases' && <AliasMoves onDone={aliasesMoved} />}
+      {tab === 'aliases' && <CrudPage key={`aliases-${aliasKey}`}
         title="Method Aliases" noun="Alias"
+        live={['gifts']}
         table="payment_method_aliases"
         order={{ column: 'alias' }}
         canEdit={canEdit}
@@ -108,7 +114,8 @@ export default function FeesPage() {
         columns={[
           { key: 'alias', label: 'Name as it comes in', width: 240 },
           { key: 'method_name', label: 'Mapped to', value: r => (r.not_a_method ? 'Not a way of giving' : r.method_name) },
-          { key: 'applied_at', label: 'Status', value: r => (r.not_a_method ? 'Chart only' : r.applied_at ? `In use since ${new Date(r.applied_at).toLocaleDateString()}${r.applied_by ? ` · ${r.applied_by}` : ''}` : 'Suggestion') },
+          { key: 'applied_at', label: 'Status', value: r => (r.not_a_method ? 'Chart only' : r.move_pending ? `Moving gifts… ${Number(r.moved_count).toLocaleString()} so far`
+            : r.applied_at ? `In use since ${new Date(r.applied_at).toLocaleDateString()}${r.applied_by ? ` · ${r.applied_by}` : ''}` : 'Suggestion') },
         ]}
         fields={aliasFields}
       />}
@@ -127,5 +134,48 @@ export default function FeesPage() {
         fields={overrideFields}
       />}
     </>
+  );
+}
+
+/**
+ * Moving an alias's gifts after it's saved (Shulim, 2026-11-19): saving is instant, and the gifts move here in batches
+ * with a progress line, fees kept as recorded. It looks for pending moves every few seconds while this tab is open; a
+ * job every minute finishes any move if the page is closed.
+ */
+function AliasMoves({ onDone }: { onDone: () => void }) {
+  const [current, setCurrent] = useState<{ alias: string; method: string; p: MoveProgress } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const running = useRef(false);
+  useEffect(() => {
+    let alive = true;
+    const check = async () => {
+      if (running.current || !alive) return;
+      const { data } = await supabase.from('payment_method_aliases').select('id, alias, method_name, moved_count').eq('move_pending', true).order('move_started_at');
+      const pending = (data ?? []) as Row[];
+      if (!pending.length) return;
+      running.current = true;
+      setError(null);
+      try {
+        for (const a of pending) {
+          if (!alive) break;
+          await runAliasMove(String(a.id), p => alive && setCurrent({ alias: String(a.alias), method: String(a.method_name), p }));
+        }
+        if (alive) onDone();
+      } catch (e) {
+        if (alive) setError(`Moving the gifts stopped (${e instanceof Error ? e.message : String(e)}). It carries on by itself within a minute.`);
+      } finally {
+        running.current = false;
+      }
+    };
+    void check();
+    const t = window.setInterval(() => void check(), 3000);
+    return () => { alive = false; window.clearInterval(t); };
+  }, [onDone]);
+  if (error) return <div className="error">{error}</div>;
+  if (!current) return null;
+  return (
+    <div className="notice" role="status">
+      "{current.alias}" → {current.method}: {progressText(current.p)}
+    </div>
   );
 }

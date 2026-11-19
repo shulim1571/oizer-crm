@@ -11,6 +11,7 @@ import { campaignOptions, clearLookups, paymentMethodNameOptions, type Option } 
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
+import { progressText, runAliasMove, type MoveProgress } from '../lib/aliasMoves';
 import { ALL_TOPICS } from '../lib/live';
 import { editDonationFields } from '../lib/schemas';
 import { DONATION_SELECT } from './donationColumns';
@@ -244,6 +245,7 @@ function MapMethod({ name, onMapped }: { name: string; onMapped: (moved: number)
   const { permissions } = useAuth();
   const [method, setMethod] = useState('');
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<MoveProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const methods = useQuery(() => paymentMethodNameOptions(), []);
   if (!permissions.includes('configure_fees')) {
@@ -258,15 +260,24 @@ function MapMethod({ name, onMapped }: { name: string; onMapped: (moved: number)
         </select>
       </label>
       <p className="muted small">These gifts move to that method and keep their fees as recorded. Gifts that come in later as "{name}" are saved under it, with its fee. You can change this under Payment Methods &amp; Fees → Method aliases.</p>
+      {progress && <div className="notice" role="status">{progressText(progress)}</div>}
       {error && <div className="error">{error}</div>}
       <div className="donation-actions">
         <button type="button" className="btn primary" disabled={!method || busy} onClick={async () => {
-          setBusy(true); setError(null);
+          setBusy(true); setError(null); setProgress(null);
           const { data, error: e } = await supabase.rpc('map_payment_method', { p_alias: name, p_method: method });
-          setBusy(false);
-          if (e) return setError(e.message);
-          onMapped(Number(data ?? 0));
-        }}>{busy ? 'Mapping…' : 'Map to existing method'}</button>
+          if (e) { setBusy(false); return setError(e.message); }
+          const saved = ((data ?? []) as { alias_id: string; to_move: number }[])[0];
+          try {
+            // Large names move in batches, with progress; fees stay as recorded.
+            const done = await runAliasMove(saved.alias_id, setProgress);
+            setBusy(false);
+            onMapped(done.moved);
+          } catch (err) {
+            setBusy(false);
+            setError(`The mapping is saved. Moving the gifts stopped (${err instanceof Error ? err.message : String(err)}); it carries on by itself within a minute.`);
+          }
+        }}>{busy ? (progress ? 'Moving gifts…' : 'Mapping…') : 'Map to existing method'}</button>
       </div>
     </div>
   );
