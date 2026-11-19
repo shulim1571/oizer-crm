@@ -11,6 +11,7 @@ import { campaignOptions, clearLookups, paymentMethodNameOptions, type Option } 
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
 import { useAuth } from '../lib/auth';
+import { FeeReviewActions } from './Deposits';
 import { progressText, runAliasMove, type MoveProgress } from '../lib/aliasMoves';
 import { ALL_TOPICS } from '../lib/live';
 import { editDonationFields } from '../lib/schemas';
@@ -45,6 +46,8 @@ const TYPES: Record<string, { label: string; tone: Tone }> = {
   check_unprinted: { label: 'Check Not Printed', tone: 'amber' },
   inbox_review: { label: 'Inbox: To Review', tone: 'blue' },
   inbox_cap: { label: 'Inbox Limit Reached', tone: 'amber' },
+  deposit_review: { label: 'Deposit To Review', tone: 'blue' },
+  fee_review: { label: 'Fee To Review', tone: 'amber' },
   inactive_campaign: { label: 'Inactive Campaign', tone: '' },
   bank_reassign: { label: 'Bank Account Reassignment Needed', tone: 'red' },
   machine_booking: { label: 'Machine Request', tone: 'blue' },
@@ -424,6 +427,13 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
           <div className="donation-actions"><Link to={`/email-inbox?email=${encodeURIComponent(String(item.record_id))}`} className="btn primary">Open in Email Inbox</Link></div>
         </>
       )}
+      {item.task_type === 'deposit_review' && (
+        <>
+          <p className="muted">A deposit read from an email, with suggested matches for its lines. Nothing is recorded until you decide each line and confirm the deposit.</p>
+          <div className="donation-actions"><Link to={`/deposits?deposit=${encodeURIComponent(String(item.record_id))}`} className="btn primary">Open deposit</Link></div>
+        </>
+      )}
+      {item.task_type === 'fee_review' && <FeeReviewTask donationId={String(item.record_id)} onDone={onDone} />}
       {item.task_type === 'inbox_cap' && (
         <>
           <p className="muted">The inbox stopped keeping new mail for the rest of the day, so senders may need to send again. Raise the daily limit under Messaging → Email Inbox if this is expected.</p>
@@ -639,5 +649,19 @@ function CampaignBalanceFacts({ campaignId }: { campaignId: string }) {
         <dt>Last gift</dt><dd>{c.last_donation_at ? dateTime(c.last_donation_at) : 'None yet'}</dd>
       </dl>
     </div>
+  );
+}
+
+/** A fee a deposit report showed that differs from the gift's: use it, or keep the recorded one. */
+function FeeReviewTask({ donationId, onDone }: { donationId: string; onDone: () => void }) {
+  const q = useQuery(async () => (await supabase.from('fee_reviews').select('*').eq('donation_id', donationId).eq('status', 'open').maybeSingle()).data as Row | null, [donationId]);
+  const r = q.data as Row | null;
+  if (q.loading) return <p className="muted">Loading…</p>;
+  if (!r) return <p className="muted">This fee review was already decided.</p>;
+  return (
+    <>
+      <p className="muted">A deposit report ({r.source ?? 'a report'}) shows a fee of <b>{money(r.reported_fee)}</b> for gift {r.donation_id}; its recorded fee is {r.recorded_fee != null ? money(r.recorded_fee) : 'none'} (the payment method's). Nothing changes until you decide.</p>
+      <div className="donation-actions"><FeeReviewActions review={r} onDone={onDone} /><Link to="/deposits?tab=fees" className="btn">All fee reviews</Link></div>
+    </>
   );
 }

@@ -239,6 +239,7 @@ export function VoucherDialog({ id, onClose, onChanged }: { id: string; onClose:
           </tbody>
         </table></div>
       )}
+      {isAdmin && <CertificateLines voucherId={id} />}
     </>
   );
 
@@ -299,5 +300,68 @@ function FundPanel({ voucher: v, onDone, onCancel, onOverage }: { voucher: Row; 
         <button type="button" className="btn primary" disabled={busy || n <= 0 || !date} onClick={save}>Record funding</button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Certificate lines under a voucher batch (Shulim, 2026-11-19): each certificate in the batch, so an issuer's deposit
+ * report can be matched to it certificate by certificate. Submission emails can fill them in (Deposits); they can also
+ * be typed here.
+ */
+const CERT_STATUS: Record<string, string> = { submitted: 'Submitted', in_review: 'In review', pending: 'Pending', rejected: 'Rejected', funded: 'Funded' };
+function CertificateLines({ voucherId }: { voucherId: string }) {
+  const [version, setVersion] = useState(0);
+  const q = useQuery(async () => ((await supabase.from('voucher_lines').select('*').eq('voucher_id', voucherId).order('cert_number')).data ?? []) as Row[], [voucherId, version]);
+  const [cert, setCert] = useState('');
+  const [amount, setAmount] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const lines = (q.data as Row[]) ?? [];
+  async function add() {
+    setError(null);
+    const { error: e } = await supabase.from('voucher_lines').insert({ voucher_id: voucherId, cert_number: cert.trim(), amount: Number(amount) });
+    if (e) return setError(/voucher_lines_once/.test(e.message) ? 'That certificate is already on this batch.' : e.message);
+    setCert(''); setAmount(''); setVersion(n => n + 1);
+  }
+  async function setStatus(l: Row, status: string) {
+    const { error: e } = await supabase.from('voucher_lines').update({ status, updated_at: new Date().toISOString() }).eq('id', l.id);
+    if (e) return setError(e.message);
+    setVersion(n => n + 1);
+  }
+  async function remove(l: Row) {
+    if (!confirm(`Take certificate ${l.cert_number} off this batch?`)) return;
+    const { error: e } = await supabase.from('voucher_lines').delete().eq('id', l.id);
+    if (e) return setError(e.message);
+    setVersion(n => n + 1);
+  }
+  const total = lines.reduce((t, l) => t + Number(l.amount), 0);
+  return (
+    <>
+      <h3 className="dialog-section">Certificates</h3>
+      {lines.length === 0 ? <p className="muted">No certificates listed. Add them here, or confirm the issuer's submission email under Bank Reconciliation → Deposits.</p> : (
+        <div className="table-wrap dialog-table"><table className="grid">
+          <thead><tr><th>Certificate #</th><th>Amount</th><th>Donor acct</th><th>Status</th><th>Fee reported</th><th /></tr></thead>
+          <tbody>
+            {lines.map(l => (
+              <tr key={l.id}>
+                <td>{l.cert_number}</td><td>{money(l.amount)}</td><td>{l.donor_account ?? '—'}</td>
+                <td>{l.status === 'funded' ? CERT_STATUS.funded : (
+                  <select aria-label={`Status of ${l.cert_number}`} value={l.status} onChange={e => void setStatus(l, e.target.value)}>
+                    {Object.entries(CERT_STATUS).filter(([k]) => k !== 'funded').map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                  </select>)}</td>
+                <td>{l.reported_fee != null ? money(l.reported_fee) : '—'}</td>
+                <td>{l.status !== 'funded' && <button type="button" className="link" onClick={() => void remove(l)}>Remove</button>}</td>
+              </tr>
+            ))}
+            <tr><td><b>{lines.length} listed</b></td><td><b>{money(total)}</b></td><td colSpan={4} /></tr>
+          </tbody>
+        </table></div>
+      )}
+      <div className="donation-actions">
+        <input aria-label="Certificate number" placeholder="Certificate #" value={cert} onChange={e => setCert(e.target.value)} />
+        <input aria-label="Amount" placeholder="Amount" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value.replace(/[^0-9.]/g, ''))} />
+        <button type="button" className="btn" disabled={!cert.trim() || !(Number(amount) > 0)} onClick={() => void add()}>Add certificate</button>
+      </div>
+      {error && <div className="error">{error}</div>}
+    </>
   );
 }

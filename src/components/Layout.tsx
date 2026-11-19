@@ -104,7 +104,8 @@ const NAV: NavSection[] = [
         // Check Register is a tab between Payouts and Requests, admins only (Moshe Henig, 2026-11-11).
         tabs: [{ to: '/expenses', label: 'Payouts' }, { to: '/checks', label: 'Check Register', admin: true }, { to: '/payout-requests', label: 'Requests' }] },
       { to: '/transfers', label: 'Transfers', icon: <ArrowLeftRight size={I} />, admin: true },
-      { to: '/reconciliation', label: 'Bank Reconciliation', icon: <Scale size={I} />, admin: true },
+      { to: '/reconciliation', label: 'Bank Reconciliation', icon: <Scale size={I} />, admin: true,
+        tabs: [{ to: '/reconciliation', label: 'Bank Reconciliation' }, { to: '/deposits', label: 'Deposits' }] },
     ],
   },
   {

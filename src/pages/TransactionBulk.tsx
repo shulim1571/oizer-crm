@@ -53,6 +53,15 @@ export default function TransactionBulk({ selected, onClear, onDone, onSelectAll
     onDone(`${done} ${plural(Number(data))}.`);
   }
 
+  // Deposit slips (Shulim, 2026-11-19): the checks going to the bank together, so the bank's deposit notice matches one slip.
+  async function makeSlip() {
+    if (!confirm(`Put ${count} totaling ${money(total)} on a new deposit slip?`)) return;
+    const { error: e } = await supabase.rpc('make_deposit_slip', { p_donations: ids });
+    if (e) return alert(e.message);
+    onClear();
+    onDone(`Deposit slip made: ${count}, ${money(total)}. See Bank Reconciliation → Deposits → Deposit slips to print it.`);
+  }
+
   if (!ids.length) return null;
 
   return (
@@ -60,6 +69,7 @@ export default function TransactionBulk({ selected, onClear, onDone, onSelectAll
       <b>{count} selected</b> · {money(total)}
       {ids.length < matching && <button className="link" onClick={onSelectAll}>Select all {matching.toLocaleString()} matching</button>}
       <span className="spacer" />
+      <button className="btn" onClick={() => void makeSlip()} title="Group the selected checks for one bank deposit">Make deposit slip</button>
       <button className="btn" onClick={() => { setError(null); setAction('edit'); }}>Bulk edit</button>
       <button className="btn" onClick={() => { setError(null); setAction('void'); }}>Void</button>
       <button className="btn danger" onClick={() => { setError(null); setAction('delete'); }}>Delete</button>

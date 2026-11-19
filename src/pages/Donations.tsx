@@ -373,7 +373,7 @@ export function PagedDonations({ title, filter }: { title: string; filter?: { co
               )}
             </div>
             {searching && <p className="muted small">Searching all dates: the date range is set aside while you search.</p>}
-            {cardIds !== null && <p className="muted small">Card ending {card}: {cardIds.length ? `${cardIds.length} transaction${cardIds.length === 1 ? '' : 's'}` : 'none found'}. Only card payments taken through Sola carry the card's last 4 digits; imported ones don't.</p>}
+            {cardIds !== null && <p className="muted small">Card ending {card}: {cardIds.length ? `${cardIds.length} transaction${cardIds.length === 1 ? '' : 's'}` : 'none found'}. Card payments from Sola, Donary and Elevon carry the card's last 4 digits (and deposit reports can add them); older imported ones don't.</p>}
             {cardError && <div className="error">{cardError}</div>}
             {notice && <div className="notice">{notice}</div>}
             {isAdmin && (
