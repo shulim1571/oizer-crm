@@ -1,6 +1,6 @@
 # Per-organization email inbox: plan
 
-Written 2026-11-19 for Shulim, updated the same day with Moshe's donations-mailbox survey (`review/donations-mailbox-reconciliation-2026-11-18.md`) and Shulim's decisions on it. **Plan only.** Nothing was built, and no Cloudflare, DNS, SendGrid or Supabase setting was changed. Cloudflare and SendGrid facts come from their docs, read 2026-11-19.
+Written 2026-11-19 for Shulim, updated the same day with Moshe's donations-mailbox survey (`review/donations-mailbox-reconciliation-2026-11-18.md`), Shulim's decisions on it, and the choice of SendGrid Inbound Parse. **Plan only.** Nothing was built, and no DNS, SendGrid, Cloudflare or Supabase setting was changed. SendGrid and Cloudflare facts come from their docs, and Shulim's read-only look at the SendGrid console, 2026-11-19.
 
 ## What it does
 
@@ -11,53 +11,90 @@ Written 2026-11-19 for Shulim, updated the same day with Moshe's donations-mailb
   - Zelle and wire notices become **To review** items with the fields filled in.
 - **Nothing posts by itself.** A person confirms every match or new gift.
 
-## One change from the brief: the inbox domain
+## The inbox host: SendGrid Inbound Parse (chosen)
 
-**`in.trubase.org` can't be used for a catch-all.**
-- Cloudflare: "Catch-all rules are only available for the apex domain."
-- trubase.org's DNS is on Google Cloud DNS, and its mail is Google Workspace (checked 2026-11-19).
-- Giving just `in.trubase.org` to Cloudflare ("subdomain setup") is Enterprise-only.
+**Decision (Shulim, 2026-11-19):** SendGrid Inbound Parse on a subdomain of `mail.trubase.org`, instead of buying a domain. It's free:
+- **Plan:** Donor Base's SendGrid plan, Email API Essentials 50K (already paid for), includes Inbound Parse with no upgrade. No parse hosts are set up yet.
+- **Authenticated domain:** the only one in SendGrid is `mail.trubase.org` (return path `em9078.mail.trubase.org` verified, link branding `url3910.mail.trubase.org`). So the Add Host dropdown offers only `mail.trubase.org`, with an optional subdomain.
 
-The options:
+Checked read-only in the SendGrid console (by Shulim) and in public DNS (2026-11-19).
 
-| Option | How it works | Cost | Notes |
+**Suggested host: `inbox.mail.trubase.org`** (receiving domain `mail.trubase.org`, subdomain `inbox`).
+- **Free to use:** the name doesn't exist in DNS today.
+- **No loop:** `mail.trubase.org` itself has no MX record; it's used only for sending. Receiving on a different host than the sending domain avoids the loop SendGrid warns about, so Automatic Security on the sending domain can stay as it is.
+- **Google Workspace mail is untouched:** it lives on trubase.org's own MX records, and only a new record for `inbox.mail` is added.
+- **Addresses** look like `k7f3q9xw2m4t8p1z6c0d@inbox.mail.trubase.org`.
+
+**The domain is a setting, never code.** `INBOX_DOMAIN` (e.g. `inbox.mail.trubase.org`) is an Edge Function secret, and the app reads it from the platform's settings. Moving to another host later means changing the setting and the MX record, nothing else.
+
+### To add later (once the build is approved). Not done now.
+
+**1. DNS (Google Cloud DNS, zone trubase.org).** One record:
+
+| Name | Type | TTL | Data |
 |---|---|---|---|
-| **A. A small domain just for inboxes (recommended)** | Register a domain on Cloudflare, e.g. `donorbase-mail.com` (Shulim picks the name). Catch-all on its apex goes to the Worker. | ≈ $10–15 a year (Cloudflare Registrar charges cost price; I didn't check today's price for any particular name) | Nothing touches trubase.org or its Google mail. Unlimited addresses, all from one rule. |
-| B. Move trubase.org's DNS to Cloudflare | `in.trubase.org` on Cloudflare, one literal rule per address, made through the API | Free | Moves the DNS for every trubase.org service, including Google Workspace mail records. Limited to 200 rules, so about 200 organizations. Riskier, and outside Oizer. Not recommended. |
-| C. A trubase.org subdomain delegated to Cloudflare | — | Enterprise plan | Not practical. |
+| `inbox.mail.trubase.org.` | MX | 3600 | `10 mx.sendgrid.net.` |
 
-The domain is never written into code. It's a setting (`INBOX_DOMAIN`) read by the Worker, the Edge Function and the app.
+In the Google Cloud console, the record set's DNS name is `inbox.mail` in the trubase.org zone. Nothing else in the zone changes. SendGrid's docs say not to change this record afterwards; changing it stops the host receiving mail.
 
-### Free options, checked before buying a domain
+**2. SendGrid → Settings → Inbound Parse → Add Host & URL:**
 
-Shulim asked whether anything free works without touching trubase.org's Google Workspace mail. Checked 2026-11-19:
+| Setting | Value |
+|---|---|
+| Receiving domain | `mail.trubase.org`, subdomain `inbox` |
+| Destination URL | `https://wwaknikpdquwnphhwzsm.supabase.co/functions/v1/email-inbound/<INBOUND_PARSE_TOKEN>` (the token is made at build time and given to Shulim privately, never in chat or the repo) |
+| Check incoming emails for spam | **On** (adds `spam_score` / `spam_report` for messages up to 2.5 MB; shown in the inbox, never decides anything alone) |
+| POST the raw, full MIME message | **On** (Donor Base keeps the original `.eml` and reads the attachments itself, so nothing is lost or re-encoded) |
 
-| Free option | Works? | What it needs | Catch |
-|---|---|---|---|
-| **S. SendGrid Inbound Parse on `in.trubase.org`** | **Yes, probably free. Best free option.** | One MX record for `in.trubase.org` → `mx.sendgrid.net`, added in Google Cloud DNS. trubase.org's own MX records, which carry Google Workspace mail, aren't touched; the subdomain has its own. Inbound Parse then POSTs every message for any address at that host straight to a Donor Base Edge Function (no Worker needed), up to 30 MB with attachments, and retries for 3 days if Donor Base is down. | SendGrid only allows Inbound Parse on a domain already verified in SendGrid. Is trubase.org verified for sending? If not, verifying adds a few CNAME records (SendGrid's own DKIM names, not Google's), still without touching Google mail. Its pricing page doesn't clearly show which plans include Inbound Parse; Shulim checks the SendGrid console (Settings → Inbound Parse). The webhook isn't signed, so the address it posts to carries a long secret, and each message's SPF/DKIM results are checked. |
-| G. One Gmail account with "+token" addresses (`donorbase.inbox+k7f3…@gmail.com`) | Works, free | A new Gmail account, Gmail API access, a poller or Google Pub/Sub push | Every organization's mail would sit in one consumer mailbox, which is weaker separation for financial mail. Google can lock an automated account. Some forwarding set-ups reject "+" addresses. Not recommended. |
-| Cloudflare Email Routing on a domain Oizer already owns | No | trubase.org and congoizer.org are both on Google DNS with Google mail; a catch-all would mean moving their DNS and mail | Touches Google mail; and congoizer.org belongs to one organization. |
-| A free domain (e.g. eu.org) on Cloudflare | Works, free | Weeks for approval | Weak reputation for financial mail; can be withdrawn. Not recommended. |
-| AWS SES receiving on `in.trubase.org` | Works, not quite free | MX on the subdomain, an AWS account, S3 | About $0.10 per 1,000 messages plus S3, so pennies a month. A second cloud account to look after. |
+**3. Supabase:** deploy `email-inbound` with JWT verification **off** (SendGrid can't send a Supabase login). Set its secrets:
+- `INBOUND_PARSE_TOKEN`
+- `INBOX_DOMAIN`
+- `INBOUND_PARSE_TOKEN_NEXT`, empty except while the token is being changed.
 
-**Recommendation:** if the SendGrid console shows Inbound Parse on Donor Base's current SendGrid plan, use **option S**. It's free, uses the `in.trubase.org` name Shulim wanted, needs no Worker and no new account, and leaves Google Workspace mail alone. Otherwise, buy the small domain (option A, about $10–15 a year). The rest of this plan works the same with either: only the first hop changes.
+### Other options considered
+
+| Option | Why not |
+|---|---|
+| Buy a small domain on Cloudflare, with Email Routing and a Worker (≈ $10–15 a year) | Not needed now that Inbound Parse is free on the current plan. It stays the fallback if SendGrid is ever dropped. |
+| `in.trubase.org` on Cloudflare | A catch-all works only on a domain's apex. trubase.org's DNS is on Google, and putting only a subdomain on Cloudflare is Enterprise-only. |
+| `in.trubase.org` with SendGrid | Only `mail.trubase.org` is authenticated in SendGrid, so a host must sit under it. Authenticating trubase.org too would add records for no gain. |
+| One Gmail account with "+token" addresses | Every organization's mail in one consumer mailbox; weaker separation. |
+| A free domain (eu.org) / AWS SES | Weak reputation / a second cloud account to run. |
 
 ## How mail flows
 
-1. **Cloudflare Email Routing** (free) has one catch-all rule on the inbox domain that sends every message to the **inbox Worker**.
-2. **The Worker** does as little as possible:
-   - It reads the recipient address and Cloudflare's `Authentication-Results` header (SPF, DKIM, DMARC).
-   - It streams the raw message, up to Cloudflare's 25 MiB limit, to a Donor Base Edge Function, `email-inbound`, signed with a shared secret (HMAC).
-   - It doesn't parse the message, which keeps it inside the Workers Free plan's 10 ms CPU limit.
-   - It rejects the message (`setReject`) when the Edge Function answers that the address is unknown or turned off.
+1. **The sender** (OJC, Pledger, Chase…), or a Gmail auto-forward, delivers to `<random>@inbox.mail.trubase.org`. DNS sends it to SendGrid's MX.
+2. **SendGrid Inbound Parse** POSTs the message (raw MIME, plus its fields) to `email-inbound` at the secret URL. Limits: 30 MB per message with attachments. A `5xx` answer is retried for up to 3 days; a `2xx` ends it. SendGrid doesn't follow redirects. It accepts any local part except `abuse`, `postmaster` and `unsubscribe`.
 3. **The Edge Function `email-inbound`:**
-   1. Checks the signature, then finds the organization from the address (`org_inboxes`). The address is the only key; nothing else picks the organization.
-   2. Saves the raw `.eml` and each attachment in a private Supabase Storage bucket under `inbox/<org_id>/<email_id>/…`.
-   3. Writes an `inbound_emails` row (sender, subject, time, Message-ID, authentication results, size) and one `inbound_attachments` row per file (name, type, size, SHA-256).
-   4. Only when the sender is on the organization's trusted list **and** DMARC passed: runs the matching step for that sender's report type.
-   5. Ignores a message it has already seen (same Message-ID for that organization).
+   1. **Secret check.** The last part of the URL must equal `INBOUND_PARSE_TOKEN` (or `INBOUND_PARSE_TOKEN_NEXT` while rotating), compared in constant time. Anything else gets `404` with no body, and nothing is stored or logged beyond the attempt.
+   2. **Address → organization.** It reads the recipients from SendGrid's `envelope` field (`to`), keeps only addresses at `INBOX_DOMAIN`, and looks each local part up in `org_inboxes`. The address is the only key; nothing else picks the organization. Unknown or turned-off addresses: answered `200` (so SendGrid doesn't retry) and dropped, with a count kept for the platform.
+   3. Saves the raw `.eml` (SendGrid's `email` field) and each attachment, parsed from the MIME, in a private Supabase Storage bucket under `inbox/<org_id>/<email_id>/…`.
+   4. Writes an `inbound_emails` row and one `inbound_attachments` row per file:
+      - the row holds sender, subject, time, Message-ID, size, spam score, and the SPF/DKIM results below;
+      - each attachment row holds name, type, size and SHA-256.
+   5. **Authenticity** (below) decides whether it may be read as a trusted report.
+   6. Only for a **trusted sender whose mail authenticated**: runs the reader for that sender's report type.
+   7. A second copy (same Message-ID, or the same issuer deposit id) is kept and marked **possible duplicate**, never silently skipped.
+   8. Answers `200` once stored. A storage or database failure answers `500`, so SendGrid retries.
 
-(With option S, steps 1–2 are replaced by SendGrid Inbound Parse posting each message, raw, to `email-inbound` at a secret address; the function checks SendGrid's SPF/DKIM results instead of Cloudflare's header. Everything from step 3 on is the same.)
+### How authenticity is checked (SPF and DKIM)
+
+SendGrid doesn't sign its webhook and doesn't report DMARC. So:
+- **The secret URL** proves the POST came through Donor Base's Inbound Parse set-up.
+- **The message's own authentication** proves who sent it:
+  - **DKIM.** SendGrid's `dkim` field lists each signature's domain and result, e.g. `{@ojcfund.org : pass}`. Donor Base also re-verifies the DKIM signature from the raw message itself, so it doesn't rely on that field alone.
+  - **SPF.** The `SPF` field (`pass`, `fail`, `softfail`, `none`…) for the envelope sender, from `envelope.from`.
+- **The rule (DMARC-style alignment), worked out by Donor Base.** A message counts as **authentic** when DKIM passes for a domain that matches or is a parent of the **From:** header's domain, or SPF passes for an envelope-from domain that matches the From: domain.
+- **Trusted senders** need **authentic + on the organization's trusted list**. Anything else is stored as *not trusted*: shown, never read automatically.
+- **Forwarded mail:** most of Oizer's mail arrives by Gmail auto-forward (`congoizer@gmail.com` → the inbox). Forwarding changes the envelope sender, so SPF then reflects Google, not OJC. The original **DKIM signature usually survives** an unchanged forward, so OJC's `ojcfund.org` signature still passes and aligns with From. That's why DKIM is the main check. If a forwarder breaks DKIM, the message lands under *not trusted* with the reason shown, and an admin can look and allow it once.
+
+### Changing the token
+
+1. Make a new token and set it as `INBOUND_PARSE_TOKEN_NEXT`; both work.
+2. Change the Destination URL in SendGrid.
+3. After a day, move the new token to `INBOUND_PARSE_TOKEN` and clear `_NEXT`.
+
+No mail is lost.
 
 ## Data (all per organization, with row-level security like every other table)
 
@@ -151,31 +188,32 @@ From the survey of donations@congoizer.org (2.5 days old, 39 messages): OJC and 
 
 ## Safety
 
-- **Spoofing:** matching runs only for trusted senders whose mail **passed DMARC**. A message that fails DMARC is stored as "not trusted" and flagged.
+- **Spoofing:** readers run only for trusted senders whose mail is **authentic** (DKIM or SPF aligned with From:, as above). Anything else is stored as "not trusted", with the reason shown.
+- **The webhook:** only POSTs to the secret URL are accepted. A wrong or missing token gets `404` and nothing is stored.
 - **Tenant isolation:** the address decides the organization, row-level security on every table, and storage paths scoped by org. Addresses are long and random, so they can't be guessed. Replacing one retires the old.
 - **Attachments:** PDF, CSV, XLSX and images are read for matching. Anything else is kept but not opened. There's no virus scanning; files are only downloaded by an admin who chooses to.
 - **Size and volume:**
-  - 25 MiB per message (Cloudflare's limit).
-  - A per-organization cap, e.g. 500 messages a day. Past it, mail is refused and the Task Sheet says so.
-- **Secrets:** the HMAC secret is in the Worker's secrets and the Edge Function's secrets. The inbox domain is a setting. Nothing is hardcoded or committed.
+  - 30 MB per message (SendGrid's limit); larger mail is refused by SendGrid.
+  - A per-organization cap, e.g. 500 messages a day. Past it, messages are acknowledged but not stored, and the Task Sheet says so. Inbound Parse can't refuse mail after accepting it, so this is the closest equivalent.
+- **Secrets:** `INBOUND_PARSE_TOKEN` (and `_NEXT` while rotating) live only in the Edge Function's secrets and in SendGrid's Destination URL. `INBOX_DOMAIN` is a setting. Nothing is hardcoded or committed, and the token never appears in logs (the function logs "token ok/bad", not the path).
 - **Card data:** a bank notice that contains a full card number has it masked before anything is saved in the database. The raw `.eml` stays only in private storage.
 
 ## Costs
 
 | Item | Cost |
 |---|---|
-| First hop, option S (SendGrid Inbound Parse on `in.trubase.org`) | **$0** if the current SendGrid plan includes Inbound Parse (to confirm in the console); no Worker or domain needed |
-| First hop, option A instead | Domain ≈ $10–15 a year; Cloudflare Email Routing free; Worker on the free plan ($5 a month only if it ever needs the Paid plan) |
+| SendGrid Inbound Parse on `inbox.mail.trubase.org` | **$0**: included in the Email API Essentials 50K plan Shulim already pays for (confirmed in the console). SendGrid doesn't state a per-message charge for inbound mail. No domain, Worker or Cloudflare account needed |
+| DNS | $0: one record in the existing Google Cloud DNS zone |
 | Storage | Supabase Storage on the existing project: 1 GB on Free, 100 GB included on Pro. R2 isn't needed; if wanted later, 10 GB free, then $0.015 per GB-month. |
 | Edge Function | Within the existing Supabase plan |
 
-**Expected total: $0 with option S** (if SendGrid's plan includes it), **otherwise about $10–15 a year.** Storage for 7 years of mail stays well inside the current Supabase plan at this volume (about 15 messages a day, mostly under 100 KB).
+**Expected total: $0.** The domain purchase (≈ $10–15 a year) isn't needed. Storage for 7 years of mail stays well inside the current Supabase plan at this volume (about 15 messages a day, mostly under 100 KB).
 
 ## Build order, once approved
 
 1. Tables (inbox, trusted senders, emails, attachments, `voucher_lines`, `deposits`/`deposit_lines`, `deposit_slips`, `fee_reviews`, `donations.card_last4`), the permission, the storage bucket, the retention setting. Settings screen. Tests for tenant isolation.
 2. `email-inbound` Edge Function: authenticity check, storing, possible-duplicate flag, the inbox list. Tested with sample `.eml` files built from the survey's formats (no real data).
-3. The first hop: option S (MX for `in.trubase.org` and Inbound Parse, both in Shulim's accounts) or option A (domain, Email Routing, Worker). End to end with a sample message.
+3. Turn on the host (Shulim, with the values in "To add later"): the MX record for `inbox.mail.trubase.org` in Google Cloud DNS, then the Inbound Parse host in SendGrid with the secret URL. End to end: send a sample message to a test organization's address, check it lands only there, then a wrong-token POST gets 404.
 4. Card last 4 from Donary, Sola and Elevon on new gifts.
 5. OJC and Pledger ACH readers, with the deposit match-and-confirm screen, create-missing-donation and fee review.
 6. Certificate submission readers, with certificate lines on voucher batches.
@@ -185,14 +223,14 @@ From the survey of donations@congoizer.org (2.5 days old, 39 messages): OJC and 
 
 ## Needed from Shulim
 
-1. **Check the SendGrid console** (Settings → Inbound Parse):
-   - Is Inbound Parse available on Donor Base's plan?
-   - Is trubase.org a verified ("authenticated") domain there?
-   If both are yes, option S is free: Shulim adds one MX record for `in.trubase.org` in Google Cloud DNS, and sets up the Inbound Parse host, with the secret address I'll give, in SendGrid. If not, choose option A and its name.
-2. **For option A only:** a Cloudflare API token scoped to that domain (Email Routing edit, DNS edit, Workers Scripts edit). Today's token only covers Pages. Shulim saves it in the private folder; it's never pasted in chat.
+1. ~~Inbox host~~: decided, SendGrid Inbound Parse. Please confirm the host name `inbox.mail.trubase.org`, or pick another subdomain under `mail.trubase.org`.
+2. **When the build reaches step 3:**
+   - Add the MX record (table above) in Google Cloud DNS.
+   - Add the Inbound Parse host in SendGrid, with the Destination URL I'll hand over privately (the token goes into the private folder, never chat).
+   - No Cloudflare token is needed.
 3. **Sample emails** still missing (the survey covers OJC, Pledger and Chase), sanitized or sample data: Donors Fund and Matbia deposit reports, a Sola settlement report, a Zelle notice from each bank Oizer uses, a wire notice. Plus: is the second forward, `donations.oizer@gmail.com`, confirmed, and what does it receive?
 4. **Who may manage the inbox:** Super Admin only, or admins with the new *Manage inbox* permission (suggested).
 5. ~~How long to keep emails~~: decided, a per-organization setting, default 7 years. Still open: may an admin delete a single email before then? The default is no.
 6. **Confirm that fees-by-method replaces readiness #14's processor rates** (with Moshe), and whether any method genuinely needs two prices.
 7. **AB Charity** (Moshe): a payment method or a source, and is there a payout export?
-8. **Approval of the costs** above ($0 with option S).
+8. ~~Costs~~: $0, nothing to buy.
