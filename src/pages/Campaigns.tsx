@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { clearLookups } from '../lib/lookups';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Plus, Receipt, Scale, TrendingUp } from 'lucide-react';
+import { Clock, ExternalLink, Plus, Receipt, Scale, TrendingUp } from 'lucide-react';
 import DataTable, { type Column } from '../components/DataTable';
 import RecordForm from '../components/RecordForm';
 import Kpi from '../components/Kpi';
@@ -8,82 +9,116 @@ import AdminLink from '../components/AdminLink';
 import { Balance, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useLiveRefresh } from '../lib/live';
 import { useAuth } from '../lib/auth';
 import { money, pct } from '../lib/format';
-import { campaignFields } from '../lib/schemas';
+import { newCampaignFields } from '../lib/schemas';
+import { TemplateStep } from './Templates';
+import CampaignName from '../components/CampaignName';
+import { paymentUrl } from './Outreach';
 
 export const campaignColumns: Column[] = [
   {
-    key: 'real_name', label: 'Campaign', width: 200,
-    render: r => (
-      <div>
-        <div>{r.real_name || r.campaign_name}</div>
-        {r.friendly_name && r.friendly_name !== r.real_name && <div className="muted small">{r.friendly_name}</div>}
-      </div>
-    ),
+    key: 'internal_name', label: 'Campaign', width: 200,
+    render: r => <CampaignName c={r} />,
   },
   { key: 'id', label: 'ID', value: r => Number(r.id) || r.id, render: r => <span className="id-tag">{r.id}</span> },
   {
-    key: 'manager_name', label: 'Manager', width: 140,
+    key: 'manager_name', label: 'Primary Fundraiser', width: 140,
     render: r => r.manager_id && <AdminLink to={`/managers/${encodeURIComponent(r.manager_id)}`}>{r.manager_name}</AdminLink>,
   },
   { key: 'raised', label: 'Raised', render: r => money(r.raised), align: 'right' },
   { key: 'fees', label: 'Fees', render: r => money(r.fees), align: 'right' },
-  { key: 'fee_percent', label: 'Fee %', render: r => pct(r.fee_percent), align: 'right' },
+  { key: 'fee_percent', label: 'Fee %', optional: true, render: r => pct(r.fee_percent), align: 'right' },
   { key: 'expenses', label: 'Expenses', render: r => money(r.expenses), align: 'right' },
-  { key: 'balance', label: 'Balance', render: r => <Balance value={r.balance} />, align: 'right' },
+  // A team's money is in its parent's balance (readiness #38): say where, rather than $0.00.
+  { key: 'balance', label: 'Balance', render: r => (r.balance_mode === 'shared'
+      ? <span className="muted">Shared (in parent #{r.parent_campaign_id})</span>
+      : <Balance value={r.balance} />), align: 'right' },
   { key: 'pending_balance', label: 'Pending', render: r => money(r.pending_balance), align: 'right' },
-  { key: 'pin', label: 'Pin' },
+  { key: 'parent_campaign_id', label: 'Under', optional: true, render: r => r.parent_campaign_id && <span className="id-tag">{r.parent_campaign_id}</span> },
 ];
 
-type Mode = 'active' | 'all' | 'exchange';
-const TITLES: Record<Mode, string> = { active: 'Active Campaigns', all: 'All Campaigns', exchange: 'Exchange' };
+export const STATUS_LABEL: Record<string, string> = { draft: 'Draft', active: 'Active', archived: 'Archived', closed: 'Closed' };
+
+type Mode = 'active' | 'all' | 'archived' | 'closed';
+const TITLES: Record<Mode, string> = { active: 'Active Campaigns', all: 'All Campaigns', archived: 'Archived Campaigns', closed: 'Closed Campaigns' };
 
 export default function Campaigns({ mode }: { mode: Mode }) {
   const { isAdmin } = useAuth();
   const nav = useNavigate();
   const [adding, setAdding] = useState(false);
+  const [choice, setChoice] = useState<{ template: Row | null; settings: Row | null; name?: string } | null>(null);
+  // The next campaign number, asked for when the form opens; the admin may change it (Moshe Henig, 2026-11-15).
+  const [nextId, setNextId] = useState<string | null | undefined>(undefined);
+  // "Below zero": only campaigns whose balance is under zero (readiness #38).
+  const [belowZero, setBelowZero] = useState(false);
+  useEffect(() => {
+    if (!choice) { setNextId(undefined); return; }
+    supabase.rpc('next_campaign_id').then(({ data }) => setNextId((data as string | null) ?? null), () => setNextId(null));
+  }, [choice]);
 
-  const { data, error, loading } = useQuery(
+  const { data, error, loading, reload } = useQuery(
     () => fetchAll((a, b) => {
-      let q = supabase.from('campaign_summary').select('*').order('real_name');
-      if (mode === 'active') q = q.is('archived_at', null);
-      if (mode === 'exchange') q = q.eq('exchange', true);
+      let q = supabase.from('campaign_summary').select('*').order('featured', { ascending: false }).order('internal_name');
+      if (mode === 'active' || mode === 'archived' || mode === 'closed') q = q.eq('status', mode);
       return q.range(a, b);
     }),
     [mode],
   );
+  // Balances update on their own (live refresh, Moshe Henig, 2026-11-15).
+  useLiveRefresh(['gifts', 'payouts', 'transfers', 'pledges', 'campaigns'], () => void reload({ quiet: true }));
 
+  // Every campaign gets a button to its payment page (Moshe Henig). Closed campaigns take no gifts, so none there.
+  const payColumn: Column = {
+    key: 'payment_page', label: 'Payment page', value: () => '',
+    render: (r: Row) => r.status === 'closed' ? null : (
+      <a className="btn small" href={paymentUrl(r)} target="_blank" rel="noopener noreferrer" title="Open this campaign's payment page"
+        onClick={e => e.stopPropagation()}><ExternalLink size={14} /> Payment page</a>
+    ),
+  };
   const columns = mode === 'all'
     ? [...campaignColumns, {
         key: 'status', label: 'Status',
-        value: (r: Row) => (r.archived_at ? 'Archived' : 'Active'),
-        render: (r: Row) => <StatusPill value={r.archived_at ? 'Archived' : 'Active'} />,
-      }]
-    : campaignColumns;
+        value: (r: Row) => STATUS_LABEL[r.status],
+        render: (r: Row) => <StatusPill value={STATUS_LABEL[r.status]} />,
+      }, payColumn]
+    : [...campaignColumns, payColumn];
 
   return (
     <>
       <DataTable
         title={TITLES[mode]}
-        rows={data ?? []}
+        rows={(data ?? []).filter(r => !belowZero || (r.balance_mode !== 'shared' && Number(r.balance) < 0))}
         loading={loading}
         error={error}
         columns={columns}
-        groupBy={{ label: 'Manager', value: r => r.manager_name ?? '' }}
+        groupBy={{ label: 'Fundraiser', value: r => r.manager_name ?? '' }}
         onOpen={r => nav(`/campaigns/${encodeURIComponent(r.id)}`)}
-        summary={data && <Totals rows={data} />}
-        actions={isAdmin && (
-          <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New campaign</button>
-        )}
+        summary={data && <Totals rows={(data ?? []).filter(r => !belowZero || (r.balance_mode !== 'shared' && Number(r.balance) < 0))} />}
+        actions={<>
+          <button type="button" className={`btn ${belowZero ? 'primary' : ''}`} aria-pressed={belowZero} onClick={() => setBelowZero(b => !b)}>
+            Below zero{data ? ` (${data.filter(r => r.balance_mode !== 'shared' && Number(r.balance) < 0).length})` : ''}
+          </button>
+          {isAdmin && <button className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New campaign</button>}
+        </>}
       />
-      {adding && (
+      {adding && !choice && <TemplateStep onClose={() => setAdding(false)} onNext={setChoice} />}
+      {adding && choice && nextId !== undefined && (
         <RecordForm
           table="campaigns"
-          title="New Campaign"
-          fields={campaignFields}
-          onClose={() => setAdding(false)}
-          onSaved={r => nav(`/campaigns/${encodeURIComponent(r.id)}`)}
+          title={choice.template ? `New campaign from ${choice.template.name}` : 'New Campaign'}
+          fields={newCampaignFields}
+          defaults={{ status: 'active', account_id: choice.template?.account_id ?? undefined, id: nextId ?? undefined, internal_name: choice.name || undefined }}
+          onClose={() => { setAdding(false); setChoice(null); }}
+          onSaved={async r => {
+            const { error: e } = await supabase.rpc('save_campaign_settings', { p_campaign: r.id, p_settings: choice.settings, p_template: choice.template?.id ?? null });
+            if (e) alert(`The campaign was created, but its page settings weren't saved: ${e.message}`);
+            // In every campaign box and in this list straight away, not after a reload (readiness #52).
+            clearLookups();
+            void reload({ quiet: true });
+            nav(`/campaigns/${encodeURIComponent(r.id)}`);
+          }}
         />
       )}
     </>
@@ -97,11 +132,12 @@ function Totals({ rows }: { rows: Row[] }) {
   const negative = rows.filter(r => Number(r.balance) < 0).length;
   return (
     <div className="kpis">
-      <Kpi label="Raised" value={money(raised)} icon={<TrendingUp size={18} />} tone="green"
-           sub={`${pct(raised ? fees / raised : 0)} in fees`} />
-      <Kpi label="Expenses" value={money(sum('expenses'))} icon={<Receipt size={18} />} tone="amber" />
+      <Kpi label="Raised" value={money(raised)} icon={<TrendingUp size={18} />} tone="green" sub="Gifts and transfers in" />
+      <Kpi label="Fees" value={money(fees)} icon={<Receipt size={18} />} tone="violet" sub={`${pct(raised ? fees / raised : 0)} of raised`} />
+      <Kpi label="Expenses" value={money(sum('expenses'))} icon={<Receipt size={18} />} tone="amber" sub="Payouts and transfers out" />
+      {/* Raised - Fees - Expenses = Balance over the list (readiness #38). */}
       <Kpi label="Balance" value={<Balance value={sum('balance')} />} icon={<Scale size={18} />} tone="violet"
-           sub={negative ? `${negative} campaign${negative === 1 ? '' : 's'} below zero` : 'All campaigns positive'} />
+           sub={`= raised − fees − expenses${negative ? ` · ${negative} below zero` : ''}`} />
       <Kpi label="Pending" value={money(sum('pending_balance'))} icon={<Clock size={18} />} tone="blue" />
     </div>
   );

@@ -1,22 +1,29 @@
 name: CI
 
+# Every push to any branch, including the working branch deploys are made from (readiness #7, 2026-11-15), and PRs.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
+
+# Read-only: the build and tests only check out and read the code.
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Publishable key: safe in the browser; data is protected by row-level security. Set for the whole job:
+    # tests that load the Supabase client need them as much as the build does.
+    env:
+      VITE_SUPABASE_URL: https://wwaknikpdquwnphhwzsm.supabase.co
+      VITE_SUPABASE_ANON_KEY: sb_publishable_0hWyFay7_Y_HwXdZQ2GnlQ__Z3gX5GH
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test
       - run: npm run build
-        env:
-          # Publishable key: safe in the browser; data is protected by row-level security.
-          VITE_SUPABASE_URL: https://poymxghhjisendozqgkm.supabase.co
-          VITE_SUPABASE_ANON_KEY: sb_publishable_deHBO_6wJSzo2sAVwTU6AQ_p6XJoSIQ

@@ -5,6 +5,7 @@ import DataTable, { type Column, type GroupBy } from './DataTable';
 import RecordForm, { type Field } from './RecordForm';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { useLiveRefresh, type LiveTopic } from '../lib/live';
 import { useAuth } from '../lib/auth';
 
 interface Props {
@@ -12,6 +13,10 @@ interface Props {
   /** Singular name for buttons and form titles; defaults to the title. */
   noun?: string;
   table: string;
+  /** Topics that make the list update on its own when they change (live refresh). */
+  live?: LiveTopic[];
+  /** Quick filters shown as buttons above the list (one at a time; click again for all). */
+  presets?: { label: string; test: (row: Row) => boolean }[];
   select?: string;
   order?: { column: string; ascending?: boolean };
   columns: Column[];
@@ -26,15 +31,18 @@ interface Props {
   view?: string;
   /** Click a row to open this path (e.g. a detail page) instead of the edit form. */
   openPath?: (row: Row) => string;
+  /** Records that are deactivated rather than deleted. */
+  noDelete?: boolean;
 }
 
 export default function CrudPage(p: Props) {
   const { isAdmin } = useAuth();
   const canEdit = p.canEdit ?? isAdmin;
   const [editing, setEditing] = useState<Row | null | undefined>(undefined);
+  const [preset, setPreset] = useState<string | null>(null);
   const nav = useNavigate();
 
-  const { data, error, loading, setData } = useQuery(
+  const { data, error, loading, setData, reload } = useQuery(
     () => fetchAll((a, b) => {
       let q = supabase.from(p.view ?? p.table).select(p.select ?? '*');
       if (p.order) q = q.order(p.order.column, { ascending: p.order.ascending ?? true });
@@ -42,6 +50,7 @@ export default function CrudPage(p: Props) {
     }),
     [p.table, p.view, p.select],
   );
+  useLiveRefresh(p.live ?? [], () => void reload({ quiet: true }), !!p.live?.length);
 
   const pk = p.pk ?? 'id';
   const onSaved = async (row: Row) => {
@@ -60,7 +69,7 @@ export default function CrudPage(p: Props) {
     <>
       <DataTable
         title={p.title}
-        rows={data ?? []}
+        rows={(data ?? []).filter(r => !preset || (p.presets?.find(x => x.label === preset)?.test(r) ?? true))}
         loading={loading}
         error={error}
         columns={p.columns}
@@ -68,6 +77,12 @@ export default function CrudPage(p: Props) {
         onOpen={p.openPath ? r => nav(p.openPath!(r)) : canEdit ? r => setEditing(r) : undefined}
         actions={
           <>
+            {p.presets?.map(x => (
+              <button key={x.label} type="button" className={`btn ${preset === x.label ? 'primary' : ''}`} aria-pressed={preset === x.label}
+                onClick={() => setPreset(v => (v === x.label ? null : x.label))}>
+                {x.label}{data ? ` (${data.filter(x.test).length})` : ''}
+              </button>
+            ))}
             {p.extraActions}
             {canEdit && (
               <button className="btn primary" onClick={() => setEditing(null)}><Plus size={16} /> New {(p.noun ?? p.title).toLowerCase()}</button>
@@ -85,7 +100,7 @@ export default function CrudPage(p: Props) {
           defaults={p.defaults}
           onClose={() => setEditing(undefined)}
           onSaved={onSaved}
-          allowDelete={isAdmin}
+          allowDelete={isAdmin && !p.noDelete}
         />
       )}
     </>
@@ -93,4 +108,4 @@ export default function CrudPage(p: Props) {
 }
 
 export const campLabel = (c: Row | null | undefined) =>
-  c ? `${c.real_name || c.campaign_name || c.friendly_name || ''} - ${c.id}` : '';
+  c ? `${c.internal_name || c.campaign_name || c.external_name || ''} - ${c.id}` : '';

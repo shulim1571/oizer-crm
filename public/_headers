@@ -1,0 +1,30 @@
+# Cloudflare Pages response headers. The CRM is private, so search engines are told to stay away.
+# The microphone is allowed for the CRM's own pages, for voice messages.
+/*
+  X-Robots-Tag: noindex, nofollow
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(self), geolocation=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# The donate widget's page is meant to sit inside other organizations' websites.
+/embed
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors *
+
+/embed.html
+  ! X-Frame-Options
+  Content-Security-Policy: frame-ancestors *
+
+# A campaign's payment page address: always fetched fresh, so its name and preview never lag behind an edit
+# (Moshe Henig, 2026-11-11). The campaign details themselves are read live by the page.
+/give/*
+  Cache-Control: no-cache
+
+/widget.js
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
