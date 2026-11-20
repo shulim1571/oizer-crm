@@ -11,7 +11,7 @@
 import PostalMime from 'npm:postal-mime@4.1.4';
 import { apiHeaders } from '../_shared/keys.ts';
 import { authenticity, envelopeFrom, htmlToText, inboxRecipients, isForwardingConfirmation, maskCards, safeName, tokenMatches } from '../_shared/inbound.ts';
-import { detect, readChase, readOjcAch, readOjcSubmission, readPledgerAch, readPledgerBatch, rowsFromItems, type Deposit } from '../_shared/readers.ts';
+import { detect, readAbCharity, readChase, readOjcAch, readOjcSubmission, readPledgerAch, readPledgerBatch, rowsFromItems, type Deposit } from '../_shared/readers.ts';
 import { getDocumentProxy } from 'npm:unpdf@2.1.0';
 
 const url = Deno.env.get('SUPABASE_URL')!;
@@ -56,6 +56,7 @@ async function read(org: string, email: string, reportType: string | null, subje
   if (!kind) return null;
   let dep: Deposit;
   if (kind === 'bank_check_deposit') dep = readChase(text);
+  else if (kind === 'ab_charity') dep = readAbCharity(text);
   else if (kind === 'ojc_ach') dep = readOjcAch(text);
   else if (kind === 'ojc_submission') dep = readOjcSubmission(text);
   else {

@@ -19,7 +19,7 @@ import { Overlay } from './Pledges';
  */
 
 const KIND: Record<string, string> = { ojc_ach: 'ACH deposit', pledger_ach: 'ACH deposit', ojc_submission: 'Certificate submission',
-  pledger_batch: 'Batch submission', bank_check_deposit: 'Check deposit' };
+  pledger_batch: 'Batch submission', bank_check_deposit: 'Check deposit', ab_charity: 'Payout (total only)' };
 const STATUS: Record<string, [string, 'green' | 'amber' | 'red' | 'blue' | '']> = {
   to_review: ['To review', 'blue'], possible_duplicate: ['Possible duplicate', 'amber'], confirmed: ['Confirmed', 'green'], dismissed: ['Dismissed', ''],
   open: ['Open', 'blue'], matched: ['Matched', 'green'], created: ['Gift created', 'green'], skipped: ['Skipped', ''],

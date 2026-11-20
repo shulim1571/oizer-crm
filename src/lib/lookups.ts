@@ -47,10 +47,17 @@ export const donorOptions = () =>
       .map(d => ({ value: d.id, label: `${d.display_name}${d.phone ? ` · ${formatPhone(d.phone)}` : ''}` })),
   );
 
+/** Every account; credit cards say so ("Sample Card ···4242 (card)"), so a payout can be charged to the card. */
 export const accountOptions = () =>
   cached('accounts', async () =>
-    (await fetchAll((a, b) => supabase.from('accounts').select('id, name').order('name').range(a, b)))
-      .map(a => ({ value: a.id, label: a.name })),
+    (await fetchAll((a, b) => supabase.from('accounts').select('id, name, kind, card_last4').order('name').range(a, b)))
+      .map(a => ({ value: a.id, label: a.kind === 'credit_card' ? `${a.name}${a.card_last4 ? ` ···${a.card_last4}` : ''} (card)` : a.name })),
+  );
+/** Bank accounts only (where a card's bill is paid from). */
+export const bankAccountOptions = () =>
+  cached('bank-accounts', async () =>
+    (await fetchAll((a, b) => supabase.from('accounts').select('id, name, kind').order('name').range(a, b)))
+      .filter(a => a.kind !== 'credit_card').map(a => ({ value: a.id, label: a.name })),
   );
 
 export const sourceOptions = () =>

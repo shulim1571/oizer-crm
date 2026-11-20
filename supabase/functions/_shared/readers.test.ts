@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detect, isoDate, readChase, readOjcAch, readOjcSubmission, readPledgerAch, readPledgerBatch, rowsFromItems } from './readers';
+import { detect, isoDate, readAbCharity, readChase, readOjcAch, readOjcSubmission, readPledgerAch, readPledgerBatch, rowsFromItems } from './readers';
 
 // The inbox readers (2026-11-19). Every sample here is made up: no real donors, certificates, accounts or amounts.
 const CHASE = `---------- Forwarded message ---------
@@ -48,6 +48,12 @@ describe('which reader fits', () => {
 });
 
 describe('readers', () => {
+  it('reads an AB Charity payout as a total-only deposit (made-up values)', () => {
+    const text = `AB Charity - Payouts Are On The Way\nOrganization Account #: 99999\nDate: 11/19/2026 3:15 PM\nGross Payout total: $1,250.00\nTo: Sample Bank account ending in 1234`;
+    expect(detect('other', 'AB Charity - Payouts Are On The Way', text, false)).toBe('ab_charity');
+    expect(readAbCharity(text)).toEqual({ kind: 'ab_charity', issuer: 'AB Charity', deposit_date: '2026-11-19', gross: 1250, net: 1250, account_last4: '1234', notes: null, lines: [] });
+  });
+
   it('reads a Chase check-deposit notice (layout of the real one, made-up values)', () => {
     expect(readChase(CHASE)).toMatchObject({ kind: 'bank_check_deposit', issuer: 'Chase', deposit_date: '2026-11-18', net: 412.5, account_last4: '1234', notes: null, lines: [] });
     expect(readChase('Nothing useful').notes).toMatch(/amount.*date/);

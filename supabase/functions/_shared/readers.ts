@@ -7,7 +7,7 @@
 // descriptions until real ones arrive. Pledger's reports are PDFs: their text rows are rebuilt from text positions
 // (see pdfRows in email-inbound) before reaching readPledger*.
 
-export type Kind = 'ojc_ach' | 'pledger_ach' | 'ojc_submission' | 'pledger_batch' | 'bank_check_deposit';
+export type Kind = 'ojc_ach' | 'pledger_ach' | 'ojc_submission' | 'pledger_batch' | 'bank_check_deposit' | 'ab_charity';
 export interface Line {
   kind: 'certificate' | 'card' | 'web' | 'other';
   ref?: string | null; amount?: number | null; fee?: number | null; line_date?: string | null;
@@ -62,11 +62,12 @@ const accountIn = (row: string, without: string) => {
  *  organization's own forwarding mailbox), by what the message says. */
 export function detect(reportType: string | null | undefined, subject: string, text: string, hasPdf: boolean): Kind | null {
   const typed: Record<string, Kind> = { ojc_ach: 'ojc_ach', pledger_ach: 'pledger_ach', ojc_submission: 'ojc_submission',
-    pledger_batch: 'pledger_batch', bank_check_deposit: 'bank_check_deposit' };
+    pledger_batch: 'pledger_batch', bank_check_deposit: 'bank_check_deposit', ab_charity: 'ab_charity' };
   if (reportType && typed[reportType]) return typed[reportType];
   if (reportType && reportType !== 'other') return null;
   const s = subject.toLowerCase();
   if (/(we received|we accepted) your check deposit/.test(s) && /chase/i.test(text)) return 'bank_check_deposit';
+  if (/ab charity/.test(s) && /payouts? (are|is) on (the|its) way/.test(s)) return 'ab_charity';
   if (/certificates? submission received/.test(s)) return 'ojc_submission';
   if (/\bach deposit\b/.test(s) && /amount funded/i.test(text)) return 'ojc_ach';
   if (/batch submission confirmation/.test(s) && hasPdf) return 'pledger_batch';
@@ -81,6 +82,16 @@ export function readChase(text: string): Deposit {
   const acct = /Account\s*\(\.*\s*(\d{4})\)/i.exec(text)?.[1] ?? null;
   const notes = [amount == null && 'Couldn\'t read the amount', date == null && 'Couldn\'t read the date'].filter(Boolean).join('; ') || null;
   return { kind: 'bank_check_deposit', issuer: 'Chase', deposit_date: date, net: amount, gross: amount, account_last4: acct, notes, lines: [] };
+}
+
+/** AB Charity "Payouts Are On The Way" (Moshe, 2026-11-20): total-only (AB Charity has no gift-level export), so a deposit
+ *  with no lines: the gross payout, its date and the bank account's last 4, matched to a bank deposit by amount and date. */
+export function readAbCharity(text: string): Deposit {
+  const amount = money(after(text, /Gross Payout(?: total| amount)?/i)) ?? money(after(text, /Payout (?:total|amount)/i));
+  const date = isoDate(after(text, /\b(Date|Payout date|Sent)\b/i)) ?? isoDate(text);
+  const acct = /(?:ending(?: in)?|last 4|account)[^0-9]{0,20}(\d{4})\b/i.exec(text)?.[1] ?? null;
+  const notes = [amount == null && 'Couldn\'t read the payout amount', date == null && 'Couldn\'t read the date'].filter(Boolean).join('; ') || null;
+  return { kind: 'ab_charity', issuer: 'AB Charity', deposit_date: date, gross: amount, net: amount, account_last4: acct, notes, lines: [] };
 }
 
 /** OJC "ACH Deposit": totals by label, and one line per row holding a certificate (8 digits) or transaction (10 digits). */

@@ -3,8 +3,7 @@ import type { Row } from './supabase';
 import { localToday } from './format';
 import {
   activeCampaignOptions, CHECK_METHODS, CAMPAIGN_STATUSES, DONATION_STATUSES, DONATION_TYPES, payeeOptions, payoutMethodOptions, paymentMethodOptions, voucherIssuerOptions, TASK_STATUSES, accountOptions, campaignOptions,
-  donorOptions, managerOptions, sourceOptions,
-} from './lookups';
+  donorOptions, managerOptions, sourceOptions, bankAccountOptions } from './lookups';
 
 
 /** A manual fee runs from $0 to the amount; blank means "use the preset" (readiness #16). */
@@ -45,8 +44,9 @@ export const campaignFields: Field[] = [
 export const newCampaignFields: Field[] = [
   // Prefilled with the next number, and editable while creating; permanent after (Moshe Henig, 2026-11-15).
   { name: 'id', label: 'Campaign ID', help: 'Suggested: the next number. You can change it: letters, numbers and dashes, not one already used. It can\'t be changed later. Leave it empty for the next number.' },
-  // A new campaign needs its Primary Fundraiser (readiness #52); one can be added right from the box.
-  ...campaignFields.map(f => (f.name === 'manager_id' ? { ...f, required: true, help: 'Who runs this campaign. Not on the list? Create them from here.' } : f)),
+  // Primary Fundraiser is optional (Moshe, 2026-11-20: a campaign can exist without a fundraiser; readiness #52 had made it
+  // required). One can still be added right from the box.
+  ...campaignFields.map(f => (f.name === 'manager_id' ? { ...f, help: 'Optional: who runs this campaign. Leave empty if no fundraiser runs it. Not on the list? Create them from here.' } : f)),
   { name: 'status', label: 'Status', type: 'select', options: CAMPAIGN_STATUSES, required: true },
 ];
 
@@ -288,8 +288,17 @@ export const sourceFields: Field[] = [
   { name: 'number', label: 'Number' },
 ];
 
+const isCard = (v: Row) => v.kind === 'credit_card';
+/** Bank accounts and credit cards (Moshe, 2026-11-20: each card is its own account). */
 export const accountFields: Field[] = [
   { name: 'name', label: 'Account', required: true },
+  { name: 'kind', label: 'Type', type: 'select', required: true, options: [{ value: 'bank', label: 'Bank account' }, { value: 'credit_card', label: 'Credit card' }],
+    help: 'A credit card is its own account: payouts charged to it are recorded against the card, and its bill is paid from a bank account.' },
+  { name: 'card_last4', label: 'Card last 4', showIf: isCard, validate: v => (!v || /^\d{4}$/.test(String(v)) ? null : 'Enter the last 4 digits of the card') },
+  { name: 'pays_from_account_id', label: 'Bill paid from', type: 'select', showIf: isCard, options: bankAccountOptions,
+    help: "What's owed on the card is shown as earmarked on this bank account until the bill is paid." },
+  { name: 'bill_due_day', label: 'Bill due on day', type: 'number', showIf: isCard, help: 'Day of the month the bill is due (optional)',
+    validate: v => (v == null || v === '' || (Number(v) >= 1 && Number(v) <= 31 && Number.isInteger(Number(v))) ? null : 'A day from 1 to 31') },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
 

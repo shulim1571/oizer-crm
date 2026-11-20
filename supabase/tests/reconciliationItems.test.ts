@@ -116,6 +116,18 @@ describe('reconciliation items', () => {
       .toEqual([{ cert_number: 'PC-1', amount: '100.00', status: 'submitted' }, { cert_number: 'PC-2', amount: '200.00', status: 'pending' }]);
   });
 
+  it('records an AB Charity payout total-only and suggests the bank deposit with that amount and date (Moshe, 2026-11-20)', async () => {
+    expect((await q(db, `select category, receipt_allowed from public.payment_methods where name = 'AB Charity'`))[0]).toEqual({ category: 'DAF', receipt_allowed: false });
+    await db.query(`insert into public.bank_lines (org_id, id, account_id, posted_date, amount, description, source, fingerprint) values
+      ($1, 'bl-ab', 'a1', '2026-11-21', 1250, 'AB CHARITY PAYOUT (sample)', 'manual', 'fp-ab-1'),
+      ($1, 'bl-other', 'a1', '2026-11-21', 999, 'Something else', 'manual', 'fp-ab-2')`, [OIZER]);
+    const dep = await record(db, { kind: 'ab_charity', issuer: 'AB Charity', deposit_date: '2026-11-19', gross: 1250, net: 1250, lines: [] });
+    expect((await q(db, `select suggested_bank_line, status from public.deposits where id = $1`, [dep]))[0]).toEqual({ suggested_bank_line: 'bl-ab', status: 'to_review' });
+    expect((await db.query<{ s: string }>(`select summary s from public.task_items where task_key = $1`, [`deposit_review:${dep}`])).rows[0].s).toMatch(/AB Charity payout/);
+    await q(db, `select public.deposit_decide($1, 'confirm')`, [dep]);
+    expect((await q(db, `select status from public.deposits where id = $1`, [dep]))[0].status).toBe('confirmed');
+  });
+
   it('keeps decisions to admins, fee decisions to those who can change fees, and the reader function to the server', async () => {
     const dep = await record(db, { kind: 'ojc_ach', issuer: 'OJC', issuer_ref: 'X', net: 1, lines: [{ kind: 'card', amount: 1 }] });
     const [l] = await lines(db, dep);

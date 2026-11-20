@@ -1,4 +1,5 @@
 import { FundraiserPhones } from './PhoneLookup';
+import { PayCardBill } from './CardBills';
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -89,8 +90,12 @@ export function AccountDetail() {
   const nav = useNavigate();
   const [version, setVersion] = useState(0);
   const [editing, setEditing] = useState(false);
-  const [tab, setTab] = useState<'donations' | 'expenses'>('donations');
+  const [tab, setTab] = useState<'donations' | 'expenses' | 'bills'>('donations');
+  const [paying, setPaying] = useState(false);
   const a = useSummary('account_summary', id, version);
+  // Card bill payments into this card, or out of this bank account (Moshe, 2026-11-20).
+  const bills = useQuery(async () => ((await supabase.from('account_transfers').select('*').is('deleted_at', null)
+    .or(`to_account_id.eq.${id},from_account_id.eq.${id}`).order('paid_on', { ascending: false })).data ?? []) as Row[], [id, version]);
   const expenses = useQuery(
     () => fetchAll((x, y) => supabase.from('expenses').select('*, campaigns(id, internal_name, campaign_name)')
       .eq('account_id', id).order('created_at', { ascending: false }).range(x, y)),
@@ -105,6 +110,26 @@ export function AccountDetail() {
     <div className="detail">
       <DetailHead title={d.name} initial={d.name[0]} onEdit={() => setEditing(true)}
                   sub={<>{d.notes && <span>{d.notes}</span>}</>} />
+      {d.kind === 'credit_card' ? (
+        <div className="kpis">
+          <Kpi label="Owed on the card" value={money(d.card_owed)} icon={<Scale size={18} />} tone="amber"
+               sub={d.bill_due_day ? `Bill due on day ${d.bill_due_day}` : 'Charged payouts, less bills paid'} />
+          <Kpi label="Charged" value={money(d.expenses_total)} icon={<Receipt size={18} />} tone="violet" sub={`${Number(d.expense_count).toLocaleString()} card payouts`} />
+          <Kpi label="Bills paid" value={money(d.transfers_in)} icon={<TrendingUp size={18} />} tone="green" />
+        </div>
+      ) : Number(d.earmarked_for_cards) > 0 || Number(d.transfers_out) > 0 ? (
+        <div className="kpis">
+          <Kpi label="Book balance" value={<Balance value={d.book_balance} />} icon={<Scale size={18} />} tone="blue" sub="Gifts in, less payouts and card bills paid" />
+          <Kpi label="Earmarked for card bills" value={money(d.earmarked_for_cards)} icon={<Receipt size={18} />} tone="amber" />
+          <Kpi label="After card bills" value={<Balance value={d.available_after_cards} />} icon={<Scale size={18} />} tone="green" />
+        </div>
+      ) : null}
+      {d.kind === 'credit_card' && (
+        <div className="donation-actions">
+          <button type="button" className="btn primary" onClick={() => setPaying(true)}>Pay the bill</button>
+        </div>
+      )}
+      {paying && <PayCardBill card={d} onClose={() => setPaying(false)} onDone={() => { setPaying(false); setVersion(v => v + 1); }} />}
       <div className="kpis">
         <Kpi label="Donations in" value={money(d.donations_total)} icon={<TrendingUp size={18} />} tone="green"
              sub={`${Number(d.donation_count).toLocaleString()} donations`} />
@@ -117,8 +142,25 @@ export function AccountDetail() {
       <div className="tabs">
         <button className={tab === 'donations' ? 'active' : ''} onClick={() => setTab('donations')}>Donations</button>
         <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}>Payouts</button>
+        {((bills.data as Row[]) ?? []).length > 0 && <button className={tab === 'bills' ? 'active' : ''} onClick={() => setTab('bills')}>Card bill payments</button>}
       </div>
-      {tab === 'donations'
+      {tab === 'bills' && (
+        <DataTable title="Card bill payments" rows={(bills.data as Row[]) ?? []} loading={bills.loading} error={bills.error} exportName={`account-${d.name}-card-bills`}
+          columns={[
+            { key: 'paid_on', label: 'Paid on' },
+            { key: 'direction', label: '', value: r => (r.to_account_id === d.id ? 'Paid to this card' : 'Paid from this account') },
+            { key: 'amount', label: 'Amount', align: 'right', render: r => money(r.amount) },
+            { key: 'reference', label: 'Reference' },
+            { key: 'created_by', label: 'By' },
+            { key: 'undo', label: '', render: r => <button type="button" className="link" onClick={async e => {
+              e.stopPropagation();
+              if (!confirm(`Remove this ${money(r.amount)} bill payment? The card owes it again.`)) return;
+              const { error } = await supabase.rpc('delete_account_transfer', { p_id: r.id });
+              if (error) alert(error.message); else setVersion(v => v + 1);
+            }}>Remove</button> },
+          ]} />
+      )}
+      {tab === 'bills' ? null : tab === 'donations'
         ? <PagedDonations title="Donations into this account" filter={{ column: 'account_id', value: d.id }} />
         : (
           <DataTable

@@ -4,7 +4,9 @@ import { MachineDialog } from './Machines';
 import { lastFirst } from '../lib/nameSort';
 import { useNavigate } from 'react-router-dom';
 import { RequestPayoutDialog } from './Payouts';
-import { Plus } from 'lucide-react';
+import { CreditCard, Plus, Scale } from 'lucide-react';
+import Kpi from '../components/Kpi';
+import { PayCardBill } from './CardBills';
 import CrudPage, { campLabel } from '../components/CrudPage';
 import AdminLink from '../components/AdminLink';
 import { useState } from 'react';
@@ -145,6 +147,11 @@ export function SourcesPage() {
 export function AccountsPage() {
   const { defaultAccountId, permissions, refresh } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [paying, setPaying] = useState<Row | null>(null);
+  const [version, setVersion] = useState(0);
+  // Bank balances next to what their cards owe (Moshe, 2026-11-20): the card bills are earmarked on the bank that pays them.
+  const totals = useQuery(async () => ((await supabase.from('account_summary').select('kind, book_balance, earmarked_for_cards, available_after_cards')).data ?? []) as Row[], [version]);
+  const sum = (k: string) => ((totals.data as Row[]) ?? []).filter(r => r.kind === 'bank').reduce((t, r) => t + Number(r[k] ?? 0), 0);
   async function makeDefault(id: string, name: string) {
     if (!confirm(`Make ${name} the default bank account? Payments go here unless their campaign or payment method says otherwise.`)) return;
     setError(null);
@@ -155,9 +162,17 @@ export function AccountsPage() {
   return (
     <>
     {error && <div className="error">{error}</div>}
+    <div className="kpis">
+      <Kpi label="Bank balances (book)" value={money(sum('book_balance'))} icon={<Scale size={18} />} tone="blue" sub="Gifts in, less payouts and card bills paid" />
+      <Kpi label="Earmarked for card bills" value={money(sum('earmarked_for_cards'))} icon={<CreditCard size={18} />} tone="amber" sub="What the cards owe, until their bills are paid" />
+      <Kpi label="After card bills" value={money(sum('available_after_cards'))} icon={<Scale size={18} />} tone="green" />
+    </div>
+    {paying && <PayCardBill card={paying} onClose={() => setPaying(null)} onDone={() => { setPaying(null); setVersion(v => v + 1); }} />}
     <CrudPage
+      key={version}
       title="Accounts" noun="Account"
       table="accounts"
+      defaults={{ kind: 'bank' }}
       view="account_summary"
       order={{ column: 'name' }}
       openPath={r => `/accounts/${encodeURIComponent(r.id)}`}
@@ -174,6 +189,13 @@ export function AccountsPage() {
             </>
           ),
         },
+        { key: 'kind', label: 'Type', value: r => (r.kind === 'credit_card' ? `Credit card${r.card_last4 ? ` ···${r.card_last4}` : ''}` : 'Bank') },
+        { key: 'balance', label: 'Balance', align: 'right', value: r => Number(r.kind === 'credit_card' ? r.card_owed : r.book_balance) || 0,
+          render: r => (r.kind === 'credit_card'
+            ? <span>{money(r.card_owed)} owed{Number(r.card_owed) > 0 && <> <button type="button" className="link" onClick={e => { e.stopPropagation(); setPaying(r); }}>Pay bill</button></>}</span>
+            : money(r.book_balance)) },
+        { key: 'earmarked_for_cards', label: 'Earmarked for cards', align: 'right', render: r => (r.kind === 'bank' && Number(r.earmarked_for_cards) ? money(r.earmarked_for_cards) : '') },
+        { key: 'available_after_cards', label: 'After card bills', align: 'right', render: r => (r.kind === 'bank' && Number(r.earmarked_for_cards) ? money(r.available_after_cards) : '') },
         { key: 'donations_total', label: 'Donations in', render: r => money(r.donations_total), align: 'right' },
         // Always positive (readiness #61); money that came back as payouts below zero is its own column.
         { key: 'payouts_out', label: 'Payouts out', render: r => money(r.payouts_out), align: 'right' },
