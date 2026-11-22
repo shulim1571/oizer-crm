@@ -53,7 +53,7 @@ describe('receipt letterhead', () => {
 
 // Moshe's receipt design (2026-11-22): the text is printed on the template; only the blanks are filled, each placed by
 // its baseline so values line up with the printed words ("Amount", "Date" on the stub). Sample data only.
-import { estimatedWidth, fieldText, isLetterhead as isLetterheadFill, letterheadPage as page } from './receiptLetterhead';
+import { estimatedWidth, fieldText, isLetterhead as isLetterheadFill, LETTERHEAD_FONTS, letterheadPage as page } from './receiptLetterhead';
 describe('fill-in receipt template', () => {
   const layout = { style: 'letterhead', mode: 'fill', enabled: false, hebrew: { left: 0, right: 0, lines: [] }, english: { left: 0, lines: [] }, stub: { amount: [0, 0], date: [0, 0] },
     fields: [
@@ -118,13 +118,19 @@ describe('receipt wording on the letterhead', () => {
   });
 });
 
-// Moshe, 2026-11-22: "I don't like the hebrew bold font" — Hebrew on receipts is regular weight; English keeps bold.
-describe('Hebrew weight on receipts', () => {
-  it('sets all Hebrew in the regular weight, on the letterhead and the standard receipt', async () => {
+// Moshe, 2026-11-22: no bold Hebrew. Shulim, 2026-11-22: Hebrew in the closest free look-alike of the template's
+// Fb Astrobol (Noto Sans Hebrew), Regular for the text and Medium where the template is heavier.
+describe('Hebrew font on receipts', () => {
+  it('uses Noto Sans Hebrew Regular for the text and Medium where the template is heavier, never bold', async () => {
     const { readFileSync } = await import('node:fs');
     const lh = readFileSync('src/lib/receiptLetterhead.ts', 'utf8');
-    expect(lh).toContain('.letterhead .he-body .sal { font-weight: 400;');
-    expect(lh).toMatch(/\.letterhead \.he-body, \.letterhead \.he-body b, \.letterhead \.he-body \.fill,[^{]*\.letterhead \.fill-layer text\.he\.b \{ font-weight: 400; \}/);
+    expect(LETTERHEAD_FONTS).toContain('family=Noto+Sans+Hebrew:wght@400;500');
+    expect(LETTERHEAD_FONTS).not.toContain('Heebo');
+    expect(lh).toContain("font-family: 'Noto Sans Hebrew'");
+    expect(lh).toContain('.letterhead .he-body .sal { font-weight: 500;');
+    expect(lh).toMatch(/\.letterhead \.he-body, \.letterhead \.he-body \.fill,[^{]*\{ font-weight: 400; \}/);
+    expect(lh).toMatch(/\.letterhead \.he-body b,[^{]*text\.he\.b \{ font-weight: 500; \}/);
+    expect(lh).not.toMatch(/\.he[^{}]*\{[^}]*font-weight: (700|bold)/);
     expect(readFileSync('src/lib/receiptHtml.ts', 'utf8')).toContain('.he, .he b { font-weight: normal; }');
   });
 });
