@@ -2,7 +2,7 @@ import OrgContact from '../components/OrgContact';
 import { PoweredBy } from '../components/PoweredBy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, Users } from 'lucide-react';
-import { resolveOrg } from '../lib/org';
+import { applyOrg, resolveOrg } from '../lib/org';
 import { sharpLogoUrl } from '../lib/sharpLogo';
 import { isRichText, plainText, sanitizeHtml } from '../lib/richText';
 import { supabase, type Row } from '../lib/supabase';
@@ -118,6 +118,9 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
     // Not found on a refresh keeps the page already open; only the first load shows "not found".
     if (!org) { setOrgId(o => (o === undefined ? null : o)); return setData(d => (d === undefined ? null : d)); }
     setOrgId(org.id);
+    // The page runs without the sign-in machinery now (2026-11-22), so it applies the organization's settings
+    // (brand color, time zone, request header) itself, as sign-in used to.
+    applyOrg(org);
     const { data: p, error } = await supabase.rpc('public_give_page', { p_org: org.id, p_campaign: campaignId });
     // A refresh that fails (on returning to the tab, say) keeps the page as it is, with whatever the donor typed.
     if (error) { setData(d => (d === undefined ? null : d)); return; }

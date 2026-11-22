@@ -1,3 +1,4 @@
+import { IFIELDS, warmIfields } from '../lib/ifields';
 import DonorPicker from '../components/DonorPicker';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -25,8 +26,7 @@ export const OFFICE_PAY = { ...PAY_EN, ach_agree: 'The donor authorized this deb
 // Card payments through Sola Payments, each organization with its own Sola account. Card number and CVV
 // are typed into Sola's iFields, frames served by Sola, and come back to us only as single-use tokens.
 
-const IFIELDS_VERSION = '3.5.2607.1401';
-const IFIELDS = `https://cdn.cardknox.com/ifields/${IFIELDS_VERSION}`;
+export { warmIfields };
 
 type IfieldsWindow = Window & {
   setAccount?: (key: string, software: string, version: string) => void;
@@ -54,7 +54,8 @@ export interface PaymentConfig {
   ifields_key: string | null; sandbox: boolean; api_key_set: boolean; pin_set: boolean; updated_at?: string; updated_by?: string;
   ach_enabled: boolean; daf_programs: string[]; ach_authorization: string | null; ach_authorization_text: string | null;
 }
-export const usePaymentConfig = () => useQuery(async () => (((await supabase.rpc('payment_config')).data ?? []) as PaymentConfig[])[0] ?? null, []);
+// The office's card screens load this before showing card fields: start Sola's script downloading at the same time.
+export const usePaymentConfig = () => { warmIfields(); return useQuery(async () => (((await supabase.rpc('payment_config')).data ?? []) as PaymentConfig[])[0] ?? null, []); };
 
 /** Calls the payments function for this organization. */
 export async function callPayments(body: Row) {

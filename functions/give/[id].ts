@@ -75,6 +75,8 @@ export async function onRequestGet({ request, params, env }: Ctx) {
       // No preview details: the page still works.
     }
   }
+  // Open the connection to Sola's server (the card fields) while the app itself loads (Shulim, 2026-11-22).
+  html = html.replace('</head>', '    <link rel="preconnect" href="https://cdn.cardknox.com" />\n  </head>');
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',

@@ -43,6 +43,7 @@ import NotificationsPage from './pages/Notifications';
 import InboxPage from './pages/Inbox';
 import { PaymentsSettingsPage } from './pages/Payments';
 import GivePage from './pages/Give';
+import { giveCampaignId } from './lib/publicRoute';
 import { RecurringPage } from './pages/Recurring';
 import { OutreachHistoryPage, OutreachPage, OutreachTemplatesPage, UnsubscribePage } from './pages/Outreach';
 import { FundraiserDirectoryPage, SourceReportPage } from './pages/Reports';
@@ -65,11 +66,8 @@ const sharedToken = /^#\/d\/([0-9a-f]{20,})$/.exec(window.location.hash)?.[1] ??
 const unsubscribeToken = /^#\/u\/([0-9a-f]{32})$/.exec(window.location.hash)?.[1] ?? null;
 // The page other websites may frame for the donate widget.
 const embedded = /\/embed(\.html)?$/.test(window.location.pathname);
-// A campaign's public payment page.
-// A campaign's public payment page: #/give/<campaign>, or /give/<campaign>, the address shared links use so
-// that link previews (served by functions/give/[id].ts) can show the campaign.
-const giveCampaign = /^#\/give\/([A-Za-z0-9-]{1,40})\/?$/.exec(window.location.hash)?.[1]
-  ?? (!window.location.hash || window.location.hash === '#' ? /^\/give\/([A-Za-z0-9-]{1,40})\/?$/.exec(window.location.pathname)?.[1] : undefined) ?? null;
+// A campaign's public payment page (detected in lib/publicRoute; main.tsx shows it without the sign-in machinery).
+const giveCampaign = giveCampaignId;
 
 function AdminOnly({ children }: { children: ReactNode }) {
   const { isAdmin } = useAuth();
