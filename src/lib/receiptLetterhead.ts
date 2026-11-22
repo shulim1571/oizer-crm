@@ -14,9 +14,23 @@ import { fillText, type OrgDetails } from './receiptHtml';
 /** A line of text and where its top sits, in points. */
 export interface Line { top: number; text: string }
 
+/**
+ * A blank to fill on a template whose text is already printed (Moshe's receipt design, 2026-11-22). x and y are in
+ * points from the page's top-left; y is the baseline the letters sit on, so a value lines up exactly with the printed
+ * word beside it. anchor: where x is (start of the text, its middle, or its end). max_width: the text shrinks to fit.
+ */
+export interface FillField {
+  key: 'hebrew_name' | 'name' | 'amount' | 'amount_number' | 'campaign' | 'date' | 'receipt_number' | 'donor_block';
+  x: number; y: number; size: number;
+  anchor?: 'start' | 'middle' | 'end'; bold?: boolean; hebrew?: boolean; max_width?: number; min_size?: number; suffix?: string; color?: string;
+}
+
 export interface ReceiptLayout {
   style: 'letterhead';
   enabled?: boolean;
+  /** 'fill': the letterhead already carries the receipt's text; only `fields` are written on it. */
+  mode?: 'fill';
+  fields?: FillField[];
   hebrew: { right: number; left: number; lines: Line[] };
   english: { left: number; lines: Line[]; signature_top?: number; signer_title?: string; signer?: string };
   /** donor: where the donor's English name and mailing address go on the stub (Shulim, 2026-11-13). */
@@ -25,7 +39,9 @@ export interface ReceiptLayout {
 }
 
 export const isLetterhead = (l: unknown): l is ReceiptLayout =>
-  !!l && typeof l === 'object' && (l as ReceiptLayout).style === 'letterhead' && Array.isArray((l as ReceiptLayout).hebrew?.lines) && Array.isArray((l as ReceiptLayout).english?.lines);
+  !!l && typeof l === 'object' && (l as ReceiptLayout).style === 'letterhead'
+  && ((l as ReceiptLayout).mode === 'fill' ? Array.isArray((l as ReceiptLayout).fields)
+      : Array.isArray((l as ReceiptLayout).hebrew?.lines) && Array.isArray((l as ReceiptLayout).english?.lines));
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const money = (n: unknown) => `$${Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -49,6 +65,10 @@ export const letterheadStyle = (background: string) => `
   .letterhead .he { direction: rtl; text-align: right; font-family: 'Frank Ruhl Libre', 'David', 'Times New Roman', serif; margin: 0; }
   .letterhead .fill { font-weight: 700; color: #111; }
   .letterhead .sig img { max-height: 40px; display: block; }
+  .letterhead .fill-layer { position: absolute; left: 0; top: 0; width: 8.5in; height: 11in; overflow: visible; }
+  .letterhead .fill-layer text { font-family: 'Cabin', 'Helvetica Neue', Arial, sans-serif; fill: #111; }
+  .letterhead .fill-layer text.he { font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif; }
+  .letterhead .fill-layer text.b { font-weight: 700; }
   .letterhead .void { position: absolute; top: 140pt; left: 50%; transform: translateX(-50%); color: #b91c1c; font-weight: bold; font-size: 18px;
     border: 2px solid #b91c1c; padding: 2px 12px; background: #fff; }
   @media screen { body { background: #e5e5e5; } .page.letterhead { margin: 16px auto; box-shadow: 0 2px 10px rgba(0,0,0,.2); } }
@@ -61,7 +81,61 @@ function lineHtml(template: string, r: Row): string {
 }
 
 /** One receipt on the organization's letterhead. */
+/** What a field says for a receipt. */
+export function fieldText(key: FillField['key'], r: Row): string {
+  switch (key) {
+    case 'hebrew_name': return String(r.hebrew_name ?? '').trim();
+    case 'name': return [r.donor_title, r.donor_name].filter(Boolean).join(' ').trim();
+    case 'amount': return money(r.amount);
+    // The narrow blank after the printed "$": whole dollars without ".00" (cents kept when there are any).
+    case 'amount_number': return money(r.amount).replace(/^\$/, '').replace(/\.00$/, '');
+    case 'campaign': return String(r.campaign_name ?? '').trim();
+    case 'date': return usDate(r.receipt_date);
+    case 'receipt_number': return r.receipt_number ? `Receipt ${r.receipt_number}${r.corrects_number ? ` (corrects ${r.corrects_number})` : ''}` : '';
+    default: return '';
+  }
+}
+
+/**
+ * The width of text at a size, from widths measured in Chrome with the receipt fonts (bold Heebo for Hebrew, bold Cabin
+ * otherwise, 2026-11-22); regular weight is about 6% narrower. Receipts are drawn as static pages, so nothing measures
+ * the text where they print: this is used to shrink a long value to fit its blank.
+ */
+export function estimatedWidth(text: string, size: number, bold = false): number {
+  let em = 0;
+  for (const ch of text) {
+    em += /[\u0590-\u05FF]/.test(ch) ? 0.566 : /[0-9$]/.test(ch) ? 0.554 : /[.,:]/.test(ch) ? 0.227 : /[A-Z]/.test(ch) ? 0.625
+      : /[a-z]/.test(ch) ? 0.49 : ch === ' ' ? 0.23 : /['"\u05F3\u05F4]/.test(ch) ? 0.26 : /[-–]/.test(ch) ? 0.33 : 0.55;
+  }
+  return em * size * (bold ? 1 : 0.94);
+}
+
+/** The blanks of a fill-in template, as an SVG layer over the page (SVG places text by its baseline). */
+function fillLayer(r: Row, l: ReceiptLayout): string {
+  const texts = (l.fields ?? []).map(f => {
+    if (f.key === 'donor_block') {
+      const name = fieldText('name', r);
+      const lines = [name, ...String(r.donor_address ?? '').split(/\n+/).map(t => t.trim()).filter(Boolean).slice(0, 3)].filter(Boolean);
+      return lines.map((t, i) => `<text x="${f.x}" y="${f.y + i * (f.size + 3)}" font-size="${f.size}" class="${i === 0 ? 'b' : ''}">${esc(t)}</text>`).join('');
+    }
+    const t = fieldText(f.key, r) + (f.suffix ?? '');
+    if (!t.trim() || t === f.suffix) return '';
+    let size = f.size;
+    // A long value shrinks to fit its blank, down to the field's smallest size (9pt unless the layout says otherwise).
+    if (f.max_width) { const w = estimatedWidth(t, size, f.bold); if (w > f.max_width) size = Math.max(Math.min(f.min_size ?? 9, f.size), Math.floor((size * f.max_width / w) * 10) / 10); }
+    // Hebrew text (a Hebrew name, or a campaign named in Hebrew) is set right to left in the Hebrew font.
+    const he = f.hebrew || /[\u0590-\u05FF]/.test(t);
+    const cls = [f.bold ? 'b' : '', he ? 'he' : ''].filter(Boolean).join(' ');
+    return `<text x="${f.x}" y="${f.y}" font-size="${size}" text-anchor="${f.anchor ?? 'start'}"${he ? ' direction="rtl" unicode-bidi="plaintext"' : ''}${cls ? ` class="${cls}"` : ''}${f.color ? ` fill="${f.color}"` : ''}>${esc(t)}</text>`;
+  }).join('');
+  return `<svg class="fill-layer" viewBox="0 0 612 792" xmlns="http://www.w3.org/2000/svg">${texts}</svg>`;
+}
+
 export function letterheadPage(r: Row, o: OrgDetails, l: ReceiptLayout, signature: string | null): string {
+  if (l.mode === 'fill') {
+    const voided = r.status === 'voided' ? `<div class="void">VOID${r.void_reason ? ` · ${esc(r.void_reason)}` : ''}</div>` : '';
+    return `<section class="page letterhead">${voided}${fillLayer(r, l)}</section>`;
+  }
   const size = l.font_size ?? 11;
   const pt = (n: number) => `${n}pt`;
   const he = l.hebrew;
@@ -91,7 +165,7 @@ export function letterheadPage(r: Row, o: OrgDetails, l: ReceiptLayout, signatur
 }
 
 /** The letterhead's fonts (loaded where the page is opened; printers and mail apps fall back to similar ones). */
-export const LETTERHEAD_FONTS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cabin:wght@400;700&family=Frank+Ruhl+Libre:wght@400;700&display=swap">';
+export const LETTERHEAD_FONTS = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cabin:wght@400;700&family=Frank+Ruhl+Libre:wght@400;700&family=Heebo:wght@400;700&display=swap">';
 
 /** A made-up receipt for previews; never a real donor. */
 export const SAMPLE_RECEIPT: Row = {
