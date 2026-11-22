@@ -15,12 +15,12 @@ import { PoweredBy } from './PoweredBy';
 import PageErrorBoundary from './PageErrorBoundary';
 import { sharpLogoUrl } from '../lib/sharpLogo';
 
-/** The product: Donor Base (Shulim, 2026-11-12). Oizer and other organizations are customers inside it. */
-export const PRODUCT_NAME = 'Donor Base';
+/** The product: FundBase (renamed from Donor Base by Shulim, 2026-11-22). Oizer and other organizations are customers inside it. */
+export const PRODUCT_NAME = 'FundBase';
 const BRAND = `${import.meta.env.BASE_URL}brand/`;
-/** The Offering mark (Donor Base brand kit, Shulim 2026-11-22): splash screens and anywhere the mark stands alone. */
-export const PRODUCT_MARK = `${BRAND}donor-base-icon.svg`;
-export const PRODUCT_MARK_DARK = `${BRAND}donor-base-icon-dark.svg`;
+/** The Offering mark (FundBase brand kit, data/brand-fundbase, Shulim 2026-11-22): splash screens and anywhere the mark stands alone. */
+export const PRODUCT_MARK = `${BRAND}fundbase-icon.svg`;
+export const PRODUCT_MARK_DARK = `${BRAND}fundbase-icon-dark.svg`;
 
 /** The kit's light and dark versions of an image; CSS shows the one that matches the screen's theme. */
 function Themed({ light, dark, alt, className }: { light: string; dark: string; alt: string; className: string }) {
@@ -35,9 +35,9 @@ export function ProductMark({ className = 'splash-mark' }: { className?: string 
   return <Themed light={PRODUCT_MARK} dark={PRODUCT_MARK_DARK} alt={PRODUCT_NAME} className={className} />;
 }
 
-/** The Donor Base lockup (mark + DONOR BASE). The endorsed one ("by TRUBASE") is for the sign-in screen only. */
+/** The FundBase lockup (mark + FUNDBASE). The endorsed one ("by TRUBASE") is for the sign-in screen only. */
 export function ProductLockup({ endorsed = false, dark }: { endorsed?: boolean; dark?: boolean }) {
-  const name = endorsed ? 'donor-base-logo-endorsed' : 'donor-base-logo';
+  const name = endorsed ? 'fundbase-logo-endorsed' : 'fundbase-logo';
   const cls = `lockup${endorsed ? ' endorsed' : ''}`;
   if (dark) return <img className={cls} src={`${BRAND}${name}-dark.svg`} alt={PRODUCT_NAME} />;
   return <Themed light={`${BRAND}${name}.svg`} dark={`${BRAND}${name}-dark.svg`} alt={PRODUCT_NAME} className={cls} />;
@@ -226,7 +226,7 @@ export default function Layout() {
     <SearchContext.Provider value={{ q, setQ }}>
       <div className="app">
         <nav className={`sidebar ${open ? 'open' : ''}`}>
-          {/* The Donor Base logo heads the menu; the organization's logo and name sit under it (Shulim, 2026-11-22). */}
+          {/* The FundBase logo heads the menu; the organization's logo and name sit under it (Shulim, 2026-11-22). */}
           <div className="brand-row"><ProductLockup /></div>
           {org && (
             <div className="logo-row org-row">

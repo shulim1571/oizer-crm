@@ -1,0 +1,87 @@
+/* FundBase — Trubase app design tokens
+   Source of truth also lives in tokens.json. */
+
+:root {
+  /* Accent (Fund teal) */
+  --fb-accent-50: #F1F8F7;
+  --fb-accent-100: #DDEFEC;
+  --fb-accent-200: #B7DCD5;
+  --fb-accent-300: #82C2B7;
+  --fb-accent-400: #43A493;
+  --fb-accent-500: #0E8A74;
+  --fb-accent-600: #0C7461;
+  --fb-accent-700: #0A6252;
+  --fb-accent-800: #084F43;
+  --fb-accent-900: #063E34;
+  --fb-accent: var(--fb-accent-500);
+  --fb-accent-dark: #41C8B0;
+  --fb-accent-mid: #216358;
+  --fb-on-accent: #FFFFFF;
+  --fb-accent-text: #0C7461;
+
+  /* Trubase parent */
+  --tb-blue: #1F5FE0;
+  --tb-navy: #2546A0;
+  --tb-charcoal: #2B2D33;
+  --tb-dark-bg: #0F1116;
+  --tb-dark-blue: #3D7BFF;
+  --tb-slate: #6B7489;
+  --tb-light: #E6E9EF;
+
+  /* Neutrals */
+  --fb-white: #FFFFFF;
+  --fb-bg: #FFFFFF;
+  --fb-bg-subtle: #F4F5F7;
+  --fb-bg-dark: #0F1116;
+  --fb-hair: #E6E9EF;
+  --fb-text: #2B2D33;
+  --fb-text-secondary: #6B7489;
+  --fb-text-muted: #8A8F99;
+  --fb-text-inverse: #E6E9EF;
+
+  /* Semantic */
+  --fb-success: #1F8A4A;
+  --fb-success-soft: #E6F5EC;
+  --fb-warning: #C9892E;
+  --fb-warning-soft: #F8F0DE;
+  --fb-error: #C4473A;
+  --fb-error-soft: #F8E8E6;
+  --fb-info: #1F5FE0;
+  --fb-info-soft: #E6EEFB;
+
+  /* Typography */
+  --fb-font-display: "Jost", Inter, Helvetica, Arial, sans-serif;
+  --fb-font-ui: Inter, Helvetica, Arial, sans-serif;
+  --fb-tracking-wordmark: 0.30em;
+
+  /* Radii (px) */
+  --fb-radius-sm: 4px;
+  --fb-radius-md: 8px;
+  --fb-radius-lg: 12px;
+  --fb-radius-xl: 16px;
+  --fb-radius-pill: 9999px;
+
+  /* Spacing scale (4px) */
+  --fb-space-1: 4px;
+  --fb-space-2: 8px;
+  --fb-space-3: 12px;
+  --fb-space-4: 16px;
+  --fb-space-5: 20px;
+  --fb-space-6: 24px;
+  --fb-space-8: 32px;
+  --fb-space-10: 40px;
+  --fb-space-12: 48px;
+  --fb-space-16: 64px;
+}
+
+[data-theme="dark"] {
+  --fb-bg: #0F1116;
+  --fb-bg-subtle: #16181E;
+  --fb-text: #E6E9EF;
+  --fb-text-secondary: #6B7489;
+  --fb-text-muted: #8A8F99;
+  --fb-hair: #2A2E36;
+  --fb-accent: #41C8B0;
+  --fb-on-accent: #0F1116;
+  --fb-accent-text: #41C8B0;
+}

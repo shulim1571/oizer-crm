@@ -6,6 +6,7 @@ import { warmIfields } from './lib/ifields';
 import { giveCampaignId } from './lib/publicRoute';
 import App from './App';
 import GivePage from './pages/Give';
+import './fundbase-tokens.css';   // the FundBase kit's --fb- tokens (data/brand-fundbase/tokens.css)
 import './styles.css';
 
 // A public payment page is shown without the sign-in machinery (Shulim, 2026-11-22): donors aren't signed in, so it

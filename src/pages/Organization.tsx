@@ -86,7 +86,7 @@ export default function OrganizationPage() {
         help="New campaigns get the next number up from here, one at a time (numbers already used are skipped). An ID typed in by hand on the New Campaign form doesn't change the count. Changing this restarts the numbering at the new number."
         onSaved={() => setSaved('Campaign IDs')} />
       {/* Idle sign-out (Moshe Henig, 2026-11-12): signed out only after this long with no activity. */}
-      <NumberSetting orgId={String(org.id)} settingKey="idle_timeout_minutes" title="Security" intro="How long someone can leave Donor Base untouched before being signed out."
+      <NumberSetting orgId={String(org.id)} settingKey="idle_timeout_minutes" title="Security" intro="How long someone can leave FundBase untouched before being signed out."
         label="Sign out after (minutes idle)" unit="minutes" defaultValue={IDLE_MINUTES_DEFAULT} parse={parseIdleMinutes} saveLabel="Save security settings"
         help="Anyone who leaves the app with no activity (clicks, typing, scrolling, moving between pages, saving) for this long is signed out. From 5 to 720 minutes; it applies from each person's next sign-in or page load."
         onSaved={() => { setSaved('Security'); void refresh(); }} />
@@ -98,7 +98,7 @@ export default function OrganizationPage() {
 
 /**
  * Upload the organization's logo (Shulim, 2026-11-12): shown to its staff in the sidebar and at sign-in, and on its
- * payment pages; without one, the Donor Base logo shows. The image is shrunk to at most 256 pixels here and stored
+ * payment pages; without one, the FundBase logo shows. The image is shrunk to at most 256 pixels here and stored
  * with the organization, so no separate file storage is needed. The Logo URL field below still works too.
  */
 function LogoUpload({ org, onSaved }: { org: Row; onSaved: () => void }) {
@@ -129,7 +129,7 @@ function LogoUpload({ org, onSaved }: { org: Row; onSaved: () => void }) {
     setBusy(false);
   }
   async function remove() {
-    if (!confirm('Remove the logo? The Donor Base logo shows instead.')) return;
+    if (!confirm('Remove the logo? The FundBase logo shows instead.')) return;
     const { error: e } = await supabase.from('organizations').update({ logo_url: null }).eq('id', org.id);
     if (e) return setError(e.message);
     onSaved();
@@ -140,7 +140,7 @@ function LogoUpload({ org, onSaved }: { org: Row; onSaved: () => void }) {
       <div className="logo-upload-row">
         {(org as Org)?.logo_url ? <OrgLogo org={org as Org} /> : <ProductMark className="logo" />}
         <div>
-          <p className="muted small">Shown to your staff in the menu (under the Donor Base logo) and at sign-in, and on your payment pages.</p>
+          <p className="muted small">Shown to your staff in the menu (under the FundBase logo) and at sign-in, and on your payment pages.</p>
           <label className="btn">{busy ? 'Uploading…' : 'Upload logo'}
             <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={busy} onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f); }} />
           </label>

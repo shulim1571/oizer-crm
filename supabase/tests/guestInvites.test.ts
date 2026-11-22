@@ -12,6 +12,7 @@ describe('guest invitations', () => {
     expect(m.to_address).toBe('friend@example.org');
     expect(m.subject).toMatch(/You're invited to follow/);
     expect(m.body).toMatch(/sign up.*with this email address \(friend@example.org\)/);
+    expect(m.body).toMatch(/ on FundBase\./);   // renamed from Donor Base (Shulim, 2026-11-22)
     expect(m.status).toBe('held');   // test mode: nothing leaves until sending goes live
     await rows(db, ADMIN, `select public.resend_guest_invite('1001', 'friend@example.org')`, [], OIZER);
     expect(await msgs()).toHaveLength(2);

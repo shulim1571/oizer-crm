@@ -49,7 +49,7 @@ export function applyOrg(org: Org | null) {
   setRequestOrg(platformOrg() ?? org?.id ?? null);
   if (!org) return;
   setTimezone(org.timezone);
-  document.title = `${org.name} · Donor Base`;   // the product is Donor Base (Shulim, 2026-11-12)
+  document.title = `${org.name} · FundBase`;   // the product is FundBase (Shulim, renamed 2026-11-22)
   const root = document.documentElement.style;
   if (org.primary_color) {
     root.setProperty('--accent', org.primary_color);

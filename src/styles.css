@@ -1,40 +1,42 @@
 /* ------------------------------------------------------------------
    Design tokens
    ------------------------------------------------------------------ */
-/* Donor Base brand kit (data/brand/tokens.css, Shulim 2026-11-22): Donor teal accent, Trubase neutrals, the kit's
-   semantic colors (never the accent for paid/failed), 8px radius with 12px cards and pill primary buttons, Jost for
-   headings and Inter for the interface. Warning text uses a darker shade of the kit's amber so it stays readable. */
+/* FundBase brand kit (data/brand-fundbase, Shulim 2026-11-22; renamed from Donor Base): the kit's --fb- tokens
+   (src/fundbase-tokens.css, a copy of its tokens.css) are the source of truth; the app's own names point at them.
+   Fund teal accent, Trubase neutrals, the kit's semantic colors (never the accent for paid/failed), 8px radius with
+   12px cards and pill primary buttons, Jost for headings and Inter for the interface. Warning text uses a darker shade
+   of the kit's amber (--fb-warning) so it stays readable as text. */
 :root {
-  --bg: #F4F5F7;
-  --surface: #FFFFFF;
+  --bg: var(--fb-bg-subtle);
+  --surface: var(--fb-bg);
   --surface-2: #F8F9FB;
-  --line: #E6E9EF;
+  --line: var(--fb-hair);
   --line-strong: #D5D9E1;
-  --text: #2B2D33;
-  --text-2: #6B7489;
-  --muted: #8A8F99;
-  --accent: #0E8A74;
-  --accent-2: #0E8A74;
-  --accent-strong: #0C7461;
-  --accent-soft: #DDEFEC;
-  --accent-text: #0C7461;
-  --on-accent: #FFFFFF;
-  --pos: #1F8A4A;
-  --pos-soft: #E6F5EC;
-  --neg: #C4473A;
-  --neg-soft: #F8E8E6;
+  --text: var(--fb-text);
+  --text-2: var(--fb-text-secondary);
+  --muted: var(--fb-text-muted);
+  --accent: var(--fb-accent-500);
+  --accent-2: var(--fb-accent-500);
+  --accent-strong: var(--fb-accent-600);
+  --accent-soft: var(--fb-accent-100);
+  --accent-text: var(--fb-accent-600);
+  --on-accent: var(--fb-white);
+  --pos: var(--fb-success);
+  --pos-soft: var(--fb-success-soft);
+  --neg: var(--fb-error);
+  --neg-soft: var(--fb-error-soft);
   --warn: #8C5F20;
-  --warn-soft: #F8F0DE;
-  --info: #1F5FE0;
-  --info-soft: #E6EEFB;
-  --font-display: "Jost", Inter, Helvetica, Arial, sans-serif;
-  --font-ui: Inter, "Noto Sans Hebrew", Helvetica, Arial, sans-serif;
+  --warn-soft: var(--fb-warning-soft);
+  --info: var(--fb-info);
+  --info-soft: var(--fb-info-soft);
+  --font-display: var(--fb-font-display);
+  --font-ui: Inter, "Noto Sans Hebrew", Helvetica, Arial, sans-serif;   /* --fb-font-ui, plus a Hebrew fallback */
   --shadow-sm: 0 1px 2px rgba(43, 45, 51, .05);
   --shadow: 0 1px 3px rgba(43, 45, 51, .06), 0 8px 24px -12px rgba(43, 45, 51, .12);
   --shadow-lg: 0 24px 48px -16px rgba(43, 45, 51, .28);
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-pill: 9999px;
+  --radius: var(--fb-radius-lg);
+  --radius-sm: var(--fb-radius-md);
+  --radius-pill: var(--fb-radius-pill);
   --nav-w: 248px;
   --top-h: 60px;
   color-scheme: light;
@@ -43,20 +45,20 @@
 /* Dark mode: the kit's #41C8B0 on #0F1116, with dark text on teal buttons. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0F1116;
+    --bg: var(--fb-bg-dark);
     --surface: #16181E;
     --surface-2: #1B1E25;
-    --line: #2A2E36;
+    --line: #2A2E36;   /* the kit's dark --fb-hair */
     --line-strong: #353A44;
-    --text: #E6E9EF;
+    --text: var(--fb-text-inverse);
     --text-2: #8A8F99;
     --muted: #6B7489;
-    --accent: #41C8B0;
-    --accent-2: #41C8B0;
+    --accent: var(--fb-accent-dark);
+    --accent-2: var(--fb-accent-dark);
     --accent-strong: #5DD3BE;
     --accent-soft: #123530;
-    --accent-text: #41C8B0;
-    --on-accent: #0F1116;
+    --accent-text: var(--fb-accent-dark);
+    --on-accent: var(--fb-bg-dark);
     --pos: #4CC27E;
     --pos-soft: #10291B;
     --neg: #E5786C;
@@ -305,7 +307,7 @@ input:focus, select:focus, textarea:focus {
 img.logo { background: none; border-radius: 6px; }
 .logo-text { font-weight: 600; font-size: 14px; letter-spacing: -.01em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .logo-text small { display: block; font-weight: 450; font-size: 11px; color: var(--muted); letter-spacing: 0; }
-/* The Donor Base lockup heads the menu (logo files keep the kit's clear space, so they sit a little into the padding). */
+/* The FundBase lockup heads the menu (logo files keep the kit's clear space, so they sit a little into the padding). */
 .brand-row { padding: 0 0 6px; margin: -6px -4px 0; }
 .lockup { display: block; height: 60px; width: auto; }
 .org-row { padding: 2px 8px 14px; gap: 8px; }
@@ -1132,7 +1134,7 @@ tr.selected td { background: var(--accent-soft); }
    so its rows never run over what follows (Moshe Henig, 2026-11-11). */
 .view > .view { flex: none; min-height: auto; }
 
-/* Donor Base product logo and organization logos (Shulim, 2026-11-12). The product tile is its own rounded square in
+/* Product logo and organization logos (Shulim, 2026-11-12). The product tile is its own rounded square in
    the app's colors; an organization's logo sits on white so any logo reads, never stretched. */
 img.logo { object-fit: contain; }
 img.logo.org-logo { background: #fff; padding: 2px; }

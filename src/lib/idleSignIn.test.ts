@@ -62,6 +62,6 @@ describe('signing in again after an idle sign-out', () => {
     expect(auth).toMatch(/watchIdle\(\(\) => \{\s*clearActivity\(\);/);
     const login = readFileSync('src/pages/Login.tsx', 'utf8');
     expect(login).toContain('setIdleNote(false);');
-    expect(login).toMatch(/Your password was accepted, but Donor Base couldn’t open your session/);
+    expect(login).toMatch(/Your password was accepted, but FundBase couldn’t open your session/);
   });
 });

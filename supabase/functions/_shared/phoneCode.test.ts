@@ -9,7 +9,7 @@ describe('phone codes as sent', () => {
   });
 
   it('text the code with its expiry', () => {
-    expect(smsBody('048213')).toBe("Your Donor Base code is 048213. It expires in 10 minutes. Don't share it with anyone.");
+    expect(smsBody('048213')).toBe("Your FundBase code is 048213. It expires in 10 minutes. Don't share it with anyone.");
   });
 
   it('read the code slowly, digit by digit, twice, in valid TwiML', () => {

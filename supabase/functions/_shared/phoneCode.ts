@@ -5,7 +5,7 @@
 export const MFA_FROM = '+18456134272';
 
 export const smsBody = (code: string) =>
-  `Your Donor Base code is ${code}. It expires in 10 minutes. Don't share it with anyone.`;
+  `Your FundBase code is ${code}. It expires in 10 minutes. Don't share it with anyone.`;
 
 const escapeXml = (s: string) => s.replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]!));
 
@@ -13,5 +13,5 @@ const escapeXml = (s: string) => s.replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>':
 export function callTwiml(code: string): string {
   const digits = code.replace(/\D/g, '').split('').join(', ');
   const say = (t: string) => `<Say voice="Polly.Joanna">${escapeXml(t)}</Say>`;
-  return `<?xml version="1.0" encoding="UTF-8"?><Response><Pause length="1"/>${say('Your Donor Base sign in code is:')}<Pause length="1"/>${say(digits + '.')}<Pause length="1"/>${say('Again, your code is:')}<Pause length="1"/>${say(digits + '.')}${say('Goodbye.')}</Response>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Pause length="1"/>${say('Your FundBase sign in code is:')}<Pause length="1"/>${say(digits + '.')}<Pause length="1"/>${say('Again, your code is:')}<Pause length="1"/>${say(digits + '.')}${say('Goodbye.')}</Response>`;
 }

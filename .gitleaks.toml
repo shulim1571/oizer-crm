@@ -2,7 +2,7 @@
 # Default rules, plus one exception: Supabase publishable keys are made to be public (data is protected by
 # row-level security), so they may appear in client configuration. Test fixtures are pinned one by one in
 # .gitleaksignore, so a real secret added to a test still fails.
-title = "Donor Base"
+title = "FundBase"
 
 [extend]
 useDefault = true

@@ -43,7 +43,7 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
   the manual fee); leave it empty to use the preset. After **Record donation** you go to the Transactions list.
 - **Edit Donation** (click a transaction) has the same fields and rules as New Donation. There are no Type, Fee
   or batch fields on any donation form or in bulk edit; older rows keep what they already have. Collectors are no
-  longer part of Donor Base.
+  longer part of FundBase.
 - **New pledge** and **New vouchers** are tabs on New Donation; they open the pledge or voucher form. After a voucher is
   logged, its **voucher ref #** (VCH-...) is shown: write it on the physical voucher. The voucher form also has the
   **Issuer's ref. #** (the issuer's own number). Batch entry is on a campaign's More menu.
@@ -136,7 +136,7 @@ as payouts. Each campaign has a balance: what it raised, less fees, payouts and 
   devices** is under Settings > Account Security. **Not now** lets you in without bank and
   reconciliation data.
 - **Bank Reconciliation and Plaid need a verified session.** Admins without two-step verification see a prompt there
-  to set it up; the rest of Donor Base works as usual.
+  to set it up; the rest of FundBase works as usual.
 - New passwords need at least 12 characters, including a number and a special character.
 - You are signed out after 30 minutes without activity, and after 12 hours in any case.
 

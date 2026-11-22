@@ -37,7 +37,7 @@ async function twilio(path: 'Messages' | 'Calls', form: Record<string, string>) 
   });
   if (res.ok) return null;
   const b = await res.json().catch(() => ({}));
-  return b.code === 21610 ? 'This phone has opted out of texts from Donor Base. Choose a call instead, or text START to the number.'
+  return b.code === 21610 ? 'This phone has opted out of texts from FundBase. Choose a call instead, or text START to the number.'
     : `The code couldn't be sent${b.message ? `: ${b.message}` : ''}.`;
 }
 
