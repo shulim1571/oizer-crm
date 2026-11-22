@@ -72,7 +72,7 @@ export const letterheadStyle = (background: string) => `
   .letterhead .sig img { max-height: 40px; display: block; }
   .letterhead .body { position: absolute; white-space: normal; color: #3a3a3a; }
   .letterhead .he-body { direction: rtl; text-align: right; font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif; }
-  .letterhead .he-body .sal { font-weight: 700; color: #222; margin-bottom: 4pt; }
+  .letterhead .he-body .sal { font-weight: 400; color: #222; margin-bottom: 4pt; }
   .letterhead .en-body { font-family: 'Cabin', 'Helvetica Neue', Arial, sans-serif; }
   .letterhead .body b, .letterhead .body .fill { font-weight: 700; color: #111; }
   .letterhead .body .sig-img { max-height: 36px; display: block; margin-top: 4pt; }
@@ -80,6 +80,10 @@ export const letterheadStyle = (background: string) => `
   .letterhead .fill-layer text { font-family: 'Cabin', 'Helvetica Neue', Arial, sans-serif; fill: #111; }
   .letterhead .fill-layer text.he { font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif; }
   .letterhead .fill-layer text.b { font-weight: 700; }
+  /* Hebrew is always set in the regular weight (Moshe, 2026-11-22: he doesn't like the bold Hebrew), even where the
+     wording marks it **bold** or it is a filled-in value; English keeps its bold. */
+  .letterhead .he-body, .letterhead .he-body b, .letterhead .he-body .fill, .letterhead .he, .letterhead .he .fill, .letterhead .he b,
+  .letterhead .fill-layer text.he, .letterhead .fill-layer text.he.b { font-weight: 400; }
   .letterhead .void { position: absolute; top: 140pt; left: 50%; transform: translateX(-50%); color: #b91c1c; font-weight: bold; font-size: 18px;
     border: 2px solid #b91c1c; padding: 2px 12px; background: #fff; }
   @media screen { body { background: #e5e5e5; } .page.letterhead { margin: 16px auto; box-shadow: 0 2px 10px rgba(0,0,0,.2); } }

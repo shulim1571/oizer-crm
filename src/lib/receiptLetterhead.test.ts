@@ -117,3 +117,14 @@ describe('receipt wording on the letterhead', () => {
     expect(html).not.toContain('{hebrew_name}');
   });
 });
+
+// Moshe, 2026-11-22: "I don't like the hebrew bold font" — Hebrew on receipts is regular weight; English keeps bold.
+describe('Hebrew weight on receipts', () => {
+  it('sets all Hebrew in the regular weight, on the letterhead and the standard receipt', async () => {
+    const { readFileSync } = await import('node:fs');
+    const lh = readFileSync('src/lib/receiptLetterhead.ts', 'utf8');
+    expect(lh).toContain('.letterhead .he-body .sal { font-weight: 400;');
+    expect(lh).toMatch(/\.letterhead \.he-body, \.letterhead \.he-body b, \.letterhead \.he-body \.fill,[^{]*\.letterhead \.fill-layer text\.he\.b \{ font-weight: 400; \}/);
+    expect(readFileSync('src/lib/receiptHtml.ts', 'utf8')).toContain('.he, .he b { font-weight: normal; }');
+  });
+});

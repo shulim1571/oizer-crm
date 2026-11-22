@@ -29,6 +29,7 @@ const STYLE = `
   .logo img { max-height: 80px; max-width: 260px; }
   .logo .name { font-size: 22px; font-weight: bold; }
   .he { direction: rtl; text-align: right; font-family: 'David', 'Frank Ruehl', 'Times New Roman', serif; font-size: 16px; margin: 12px 0 20px; }
+  .he, .he b { font-weight: normal; }   /* Hebrew in the regular weight (Moshe, 2026-11-22) */
   .en { margin: 12px 0 20px; }
   .sig img { max-height: 50px; display: block; }
   .official { border: 1.5px solid #111; padding: 14px 18px; margin-top: 24px; }
