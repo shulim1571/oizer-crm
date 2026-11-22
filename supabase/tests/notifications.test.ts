@@ -96,6 +96,8 @@ describe('notifications', () => {
   });
 
   it('send the morning digest of items waiting a day, and fundraisers their tasks due today', async () => {
+    // Its own Task Sheet item: the seed has none since organizations got default receipt wording.
+    await give(db, null as never, 75, { status: 'completed', donor_id: null, name: 'Walk-in' });
     await run(db);
     await db.query(`update public.task_sheet_seen set first_seen_at = now() - interval '2 days'`);
     await db.query(`insert into public.tasks (org_id, id, title, campaign_id, owner_manager_id, due_date, status)
