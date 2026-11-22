@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-152.00 -46.50 304.00 304.00" width="304" height="304">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-152.00 -57.00 304.00 304.00" width="304" height="304">
 <title>FundBase icon</title>
-<defs><linearGradient id="acc" gradientUnits="userSpaceOnUse" x1="-112.00" y1="0.00" x2="107.23" y2="102.23"><stop offset="0" stop-color="#63D2BE"/><stop offset="0.22" stop-color="#41C8B0"/><stop offset="0.65" stop-color="#299985"/><stop offset="1" stop-color="#3A9086"/></linearGradient><linearGradient id="acl" gradientUnits="userSpaceOnUse" x1="-112.00" y1="0.00" x2="107.23" y2="102.23"><stop offset="0" stop-color="#6BD4C1"/><stop offset="1" stop-color="#41C8B0"/></linearGradient><linearGradient id="acr" gradientUnits="userSpaceOnUse" x1="-112.00" y1="0.00" x2="107.23" y2="102.23"><stop offset="0" stop-color="#41C8B0"/><stop offset="1" stop-color="#299985"/></linearGradient><linearGradient id="base" gradientUnits="userSpaceOnUse" x1="-112.00" y1="86.50" x2="119.68" y2="194.53"><stop offset="0" stop-color="#2F5BC6"/><stop offset="0.55" stop-color="#4C5F93"/><stop offset="1" stop-color="#6B7489"/></linearGradient></defs>
+<defs><linearGradient id="acc" gradientUnits="userSpaceOnUse" x1="-112.00" y1="0.00" x2="107.23" y2="102.23"><stop offset="0" stop-color="#63D2BE"/><stop offset="0.22" stop-color="#41C8B0"/><stop offset="0.65" stop-color="#299985"/><stop offset="1" stop-color="#3A9086"/></linearGradient><linearGradient id="acl" gradientUnits="userSpaceOnUse" x1="-112.00" y1="0.00" x2="107.23" y2="102.23"><stop offset="0" stop-color="#6BD4C1"/><stop offset="1" stop-color="#41C8B0"/></linearGradient><linearGradient id="acr" gradientUnits="userSpaceOnUse" x1="-112.00" y1="0.00" x2="107.23" y2="102.23"><stop offset="0" stop-color="#41C8B0"/><stop offset="1" stop-color="#299985"/></linearGradient><linearGradient id="base" gradientUnits="userSpaceOnUse" x1="-112.00" y1="76.00" x2="115.66" y2="182.16"><stop offset="0" stop-color="#2F5BC6"/><stop offset="0.55" stop-color="#4C5F93"/><stop offset="1" stop-color="#6B7489"/></linearGradient></defs>
 <g id="icon">
-<polygon fill="url(#base)" points="-40.17,86.50 -112.00,116.00 0.00,162.00 112.00,116.00 40.17,86.50 0.00,103.00"/>
-<polygon fill="url(#base)" points="-65.74,146.00 -112.00,165.00 0.00,211.00 112.00,165.00 65.74,146.00 0.00,173.00"/>
+<polygon fill="url(#base)" points="-65.74,76.00 -112.00,95.00 0.00,141.00 112.00,95.00 65.74,76.00 0.00,103.00"/>
+<polygon fill="url(#base)" points="-65.74,125.00 -112.00,144.00 0.00,190.00 112.00,144.00 65.74,125.00 0.00,152.00"/>
 <polygon fill="url(#acc)" points="-112.00,46.00 0.00,0.00 112.00,46.00 0.00,92.00"/>
 </g>
 </svg>

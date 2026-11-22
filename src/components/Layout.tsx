@@ -18,7 +18,7 @@ import { sharpLogoUrl } from '../lib/sharpLogo';
 /** The product: FundBase (renamed from Donor Base by Shulim, 2026-11-22). Oizer and other organizations are customers inside it. */
 export const PRODUCT_NAME = 'FundBase';
 const BRAND = `${import.meta.env.BASE_URL}brand/`;
-/** The Offering mark (FundBase brand kit, data/brand-fundbase, Shulim 2026-11-22): splash screens and anywhere the mark stands alone. */
+/** The Crown mark (FundBase brand kit, data/brand-fundbase, refreshed 2026-11-22): splash screens and anywhere the mark stands alone. */
 export const PRODUCT_MARK = `${BRAND}fundbase-icon.svg`;
 export const PRODUCT_MARK_DARK = `${BRAND}fundbase-icon-dark.svg`;
 

@@ -31,8 +31,15 @@ describe('FundBase branding', () => {
     expect(page).toContain("supabase.from('organizations').update({ logo_url: dataUrl }).eq('id', org.id)");
   });
 
-  // Shulim, 2026-11-22: the FundBase brand kit (data/brand-fundbase), Offering mark only, nothing from alternates/.
-  it('applies the brand kit: teal accent, Jost and Inter, Offering icons, dark sign-in with the endorsed logo', () => {
+  // Shulim, 2026-11-22: the FundBase brand kit (data/brand-fundbase), refreshed to the Crown mark; nothing from alternates/.
+  it('applies the brand kit: teal accent, Jost and Inter, Crown icons, dark sign-in with the endorsed logo', () => {
+    // The kit folder isn't in git, so this check runs only where it's present.
+    if (existsSync('data/brand-fundbase/fundbase-icon.svg')) {
+      for (const f of ['fundbase-icon.svg', 'fundbase-icon-dark.svg', 'fundbase-logo.svg', 'fundbase-logo-dark.svg', 'fundbase-logo-endorsed-dark.svg']) {
+        expect(readFileSync(`public/brand/${f}`, 'utf8'), f).toBe(readFileSync(`data/brand-fundbase/${f}`, 'utf8'));
+      }
+      expect(readFileSync('public/brand/fundbase-icon.svg', 'utf8')).not.toBe(readFileSync('data/brand-fundbase/alternates/fundbase-icon-offering.svg', 'utf8'));
+    }
     const tokens = readFileSync('src/fundbase-tokens.css', 'utf8');
     expect(tokens).toContain('--fb-accent-500: #0E8A74;');
     expect(tokens).toContain('--fb-accent-600: #0C7461;');
@@ -55,6 +62,6 @@ describe('FundBase branding', () => {
     const manifest = JSON.parse(readFileSync('public/site.webmanifest', 'utf8'));
     expect(manifest.icons.map((i: { src: string }) => i.src)).toEqual(['/brand/app-icon-192.png', '/brand/app-icon-512.png']);
     expect(readFileSync('src/pages/Login.tsx', 'utf8')).toContain('<ProductLockup endorsed dark />');
-    for (const f of ['src/components/Layout.tsx', 'src/pages/Login.tsx', 'index.html', 'public/site.webmanifest']) expect(readFileSync(f, 'utf8')).not.toMatch(/crown|heart|alternates/i);
+    for (const f of ['src/components/Layout.tsx', 'src/pages/Login.tsx', 'index.html', 'public/site.webmanifest']) expect(readFileSync(f, 'utf8')).not.toMatch(/offering|heart|alternates/i);
   });
 });
