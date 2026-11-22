@@ -28,9 +28,14 @@ export interface FillField {
 export interface ReceiptLayout {
   style: 'letterhead';
   enabled?: boolean;
-  /** 'fill': the letterhead already carries the receipt's text; only `fields` are written on it. */
+  /** 'fill': a letterhead image with blanks; `fields` are written by baseline (the stub), and `body` is where the
+   *  receipt's wording goes (from the organization's receipt text, or the campaign's), in the template's fonts. */
   mode?: 'fill';
   fields?: FillField[];
+  body?: {
+    hebrew: { top: number; left: number; right: number; size: number; line_height: number; gap?: number; salutation_size?: number; salutation_line_height?: number };
+    english: { top: number; left: number; width: number; size: number; line_height: number; gap?: number; max_bottom?: number };
+  };
   hebrew: { right: number; left: number; lines: Line[] };
   english: { left: number; lines: Line[]; signature_top?: number; signer_title?: string; signer?: string };
   /** donor: where the donor's English name and mailing address go on the stub (Shulim, 2026-11-13). */
@@ -65,6 +70,12 @@ export const letterheadStyle = (background: string) => `
   .letterhead .he { direction: rtl; text-align: right; font-family: 'Frank Ruhl Libre', 'David', 'Times New Roman', serif; margin: 0; }
   .letterhead .fill { font-weight: 700; color: #111; }
   .letterhead .sig img { max-height: 40px; display: block; }
+  .letterhead .body { position: absolute; white-space: normal; color: #3a3a3a; }
+  .letterhead .he-body { direction: rtl; text-align: right; font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif; }
+  .letterhead .he-body .sal { font-weight: 700; color: #222; margin-bottom: 4pt; }
+  .letterhead .en-body { font-family: 'Cabin', 'Helvetica Neue', Arial, sans-serif; }
+  .letterhead .body b, .letterhead .body .fill { font-weight: 700; color: #111; }
+  .letterhead .body .sig-img { max-height: 36px; display: block; margin-top: 4pt; }
   .letterhead .fill-layer { position: absolute; left: 0; top: 0; width: 8.5in; height: 11in; overflow: visible; }
   .letterhead .fill-layer text { font-family: 'Cabin', 'Helvetica Neue', Arial, sans-serif; fill: #111; }
   .letterhead .fill-layer text.he { font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif; }
@@ -77,7 +88,30 @@ export const letterheadStyle = (background: string) => `
 /** Marks the filled-in parts of a line in bold, so the donor's details stand out as on a filled form. */
 function lineHtml(template: string, r: Row): string {
   const parts = template.split(/(\{(?:name|hebrew_name|amount|date|campaign)\})/);
-  return parts.map(p => (/^\{.+\}$/.test(p) ? `<span class="fill">${esc(fillLine(p, r))}</span>` : esc(p))).join('');
+  // **...** in the wording is bold (Moshe's design sets "Dear", the מו"ה line and the signer in bold).
+  return parts.map(p => (/^\{.+\}$/.test(p) ? `<span class="fill">${esc(fillLine(p, r))}</span>` : esc(p))).join('')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*\*/g, '');
+}
+
+/** The receipt's wording in a fill-in template's body area: each line of the text is a line (long ones wrap), an
+ *  empty line leaves a space, and a line naming {hebrew_name} is left out when the donor has no Hebrew name. */
+function bodyHtml(r: Row, l: ReceiptLayout, signature: string | null): string {
+  const b = l.body;
+  if (!b) return '';
+  const pt = (n: number) => `${n}pt`;
+  const lines = (text: string | null | undefined, gap: number, lh: number) => String(text ?? '').replace(/\r/g, '').split('\n')
+    .filter(x => showsLine(x, r))
+    .map((x, i) => (x.trim() ? `<div style="margin-top:${i ? pt(gap) : 0}">${lineHtml(x, r)}</div>` : `<div style="height:${pt(lh)}"></div>`)).join('');
+  const he = b.hebrew;
+  const sal = String(r.hebrew_salutation ?? '').trim()
+    ? `<div class="sal" style="font-size:${pt(he.salutation_size ?? he.size + 1)};line-height:${pt(he.salutation_line_height ?? he.line_height + 4)}">${lines(r.hebrew_salutation, 0, he.line_height)}</div>` : '';
+  const hebrew = sal || String(r.hebrew_text ?? '').trim()
+    ? `<div class="body he-body" style="top:${pt(he.top)};left:${pt(he.left)};width:${pt(he.right - he.left)};font-size:${pt(he.size)};line-height:${pt(he.line_height)}">${sal}${lines(r.hebrew_text, he.gap ?? 4, he.line_height)}</div>` : '';
+  const en = b.english;
+  const maxH = en.max_bottom ? `max-height:${pt(en.max_bottom - en.top)};overflow:hidden;` : '';
+  const english = String(r.english_text ?? '').trim()
+    ? `<div class="body en-body" style="top:${pt(en.top)};left:${pt(en.left)};width:${pt(en.width)};font-size:${pt(en.size)};line-height:${pt(en.line_height)};${maxH}">${lines(r.english_text, en.gap ?? 0, en.line_height)}${signature ? `<img class="sig-img" src="${signature}" alt="">` : ''}</div>` : '';
+  return hebrew + english;
 }
 
 /** One receipt on the organization's letterhead. */
@@ -134,7 +168,7 @@ function fillLayer(r: Row, l: ReceiptLayout): string {
 export function letterheadPage(r: Row, o: OrgDetails, l: ReceiptLayout, signature: string | null): string {
   if (l.mode === 'fill') {
     const voided = r.status === 'voided' ? `<div class="void">VOID${r.void_reason ? ` · ${esc(r.void_reason)}` : ''}</div>` : '';
-    return `<section class="page letterhead">${voided}${fillLayer(r, l)}</section>`;
+    return `<section class="page letterhead">${voided}${bodyHtml(r, l, signature)}${fillLayer(r, l)}</section>`;
   }
   const size = l.font_size ?? 11;
   const pt = (n: number) => `${n}pt`;

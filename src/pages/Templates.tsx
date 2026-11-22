@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ReceiptTextCard } from './Receipts';
 import RichTextEditor from '../components/RichTextEditor';
 import { createPortal } from 'react-dom';
 import { Plus, Trash2 } from 'lucide-react';
@@ -314,6 +315,7 @@ function PageContentCard({ campaignId, v, setV }: { campaignId: string; v: PageC
 
 /** A campaign's own page settings, used by its public payment page. One Save for everything (readiness #55). */
 export function CampaignSettingsTab({ campaignId }: { campaignId: string }) {
+  const { isAdmin } = useAuth();
   const q = useQuery(async () => (await supabase.from('campaign_page_settings').select('*').eq('campaign_id', campaignId).maybeSingle()).data as Row | null, [campaignId]);
   const [settings, setSettings] = useState<Row | null>(null);
   const [page, setPage] = useState<PageContent>(pageContentOf(null));
@@ -348,6 +350,8 @@ export function CampaignSettingsTab({ campaignId }: { campaignId: string }) {
         <div className="spacer" />
         <button type="button" className="btn primary" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'Save'}</button>
       </div>
+      {/* This campaign's own receipt wording, over the organization's (Shulim, 2026-11-22). Saved on its own. */}
+      {isAdmin && <ReceiptTextCard level="campaign" refId={campaignId} title="Receipt text for this campaign" />}
     </div>
   );
 }

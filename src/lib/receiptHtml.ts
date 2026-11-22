@@ -51,14 +51,27 @@ const footer = (o: OrgDetails) => {
 const logo = (o: OrgDetails, small = false) =>
   o.logo_url ? `<img src="${esc(o.logo_url)}" alt="" ${small ? '' : ''}>` : small ? '' : `<div class="name">${esc(o.name)}</div>`;
 
+/** **...** in the office's wording is bold. */
+const bold = (html: string) => html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*\*/g, '');
+
 export function receiptPage(r: Row, o: OrgDetails, signature: string | null) {
   const items = (r.items ?? []) as Row[];
+  // Wording that carries its own blanks ({hebrew_name}, {name}) or signer (the default since 2026-11-22) isn't added
+  // to; older wording without them gets the salutation with the Hebrew name, "Dear …," and the director as before.
+  const ownsHebrewName = /\{hebrew_name\}/.test(`${r.hebrew_salutation ?? ''}\n${r.hebrew_text ?? ''}`);
+  // A line naming {hebrew_name} is left out when the donor has none (salutation and text alike).
+  const withName = (t: unknown) => String(t ?? '').split('\n').filter(x => !/\{hebrew_name\}/.test(x) || String(r.hebrew_name ?? '').trim()).join('\n')
+    .replace(/\{hebrew_name\}/g, String(r.hebrew_name ?? '').trim());
+  const ownsName = /\{name\}/.test(String(r.english_text ?? ''));
+  const ownsSigner = !!o.director_name && String(r.english_text ?? '').includes(o.director_name);
+  const heText = withName(r.hebrew_text);
   const hebrew = r.hebrew_text
-    ? `<div class="he">${r.hebrew_name ? `<p>${esc(r.hebrew_salutation || 'לכבוד ידידנו')} ${esc(r.hebrew_name)}</p>` : ''}<p>${para(fillText(r.hebrew_text, r))}</p></div>`
+    ? `<div class="he">${ownsHebrewName ? (r.hebrew_salutation ? `<p><b>${bold(para(withName(r.hebrew_salutation)))}</b></p>` : '')
+        : r.hebrew_name ? `<p>${esc(r.hebrew_salutation || 'לכבוד ידידנו')} ${esc(r.hebrew_name)}</p>` : ''}<p>${bold(para(fillText(heText, r)))}</p></div>`
     : '';
   const english = r.english_text
-    ? `<div class="en"><p>Dear ${esc([r.donor_title, r.donor_name].filter(Boolean).join(' '))},</p><p>${para(fillText(r.english_text, r))}</p>
-       <div class="sig">${signature ? `<img src="${signature}" alt="">` : ''}${o.director_name ? `<div>${esc(o.director_name)}</div>` : ''}</div></div>`
+    ? `<div class="en">${ownsName ? '' : `<p>Dear ${esc([r.donor_title, r.donor_name].filter(Boolean).join(' '))},</p>`}<p>${bold(para(fillText(r.english_text, r)))}</p>
+       <div class="sig">${signature ? `<img src="${signature}" alt="">` : ''}${o.director_name && !ownsSigner ? `<div>${esc(o.director_name)}</div>` : ''}</div></div>`
     : '';
   const breakdown = items.length > 1
     ? `<table><thead><tr><th>Campaign</th><th class="r">Amount</th></tr></thead><tbody>${items.map(i => `<tr><td>${esc(i.campaign)}</td><td class="r">${money(i.amount)}</td></tr>`).join('')}</tbody></table>`

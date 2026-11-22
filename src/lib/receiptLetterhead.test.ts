@@ -85,3 +85,35 @@ describe('fill-in receipt template', () => {
     expect(estimatedWidth("ר' שמואל דוגמא", 13, true)).toBeGreaterThan(86);     // measured: about 90.7pt at 13pt
   });
 });
+
+// Shulim, 2026-11-22: the wording comes from Receipt Text (organization default, campaign override); the letterhead
+// image carries no wording. Sample data only.
+import { receiptPage as standardPage } from './receiptHtml';
+describe('receipt wording on the letterhead', () => {
+  const layout = { style: 'letterhead', mode: 'fill', hebrew: { left: 0, right: 0, lines: [] }, english: { left: 0, lines: [] }, stub: { amount: [0, 0], date: [0, 0] },
+    body: { hebrew: { top: 172, left: 98, right: 514, size: 12, line_height: 17, gap: 4, salutation_size: 13 }, english: { top: 410.7, left: 98.7, width: 425, size: 11.5, line_height: 16.5, max_bottom: 535 } },
+    fields: [{ key: 'amount', x: 318, y: 710.5, size: 14, bold: true }] } as never;
+  const w = { hebrew_salutation: 'לכבוד ידידנו\n**מו"ה {hebrew_name} הי"ו**', hebrew_text: 'הננו בזה לאשר על קבלת נדבת לבו בסך {amount}\n\nלטובת המגבית עבור {campaign}',
+    english_text: '**Dear** {name},\nThis is to acknowledge receipt of your generous contribution in the sum of {amount}\nDirector\n**Moshe Henig**' };
+  const r = { ...w, donor_title: 'Mr.', donor_name: 'Sample Donor', hebrew_name: "ר' שמואל דוגמא", amount: 180, campaign_name: 'Sample Campaign', receipt_date: '2026-11-22', status: 'issued' };
+  it('writes the wording from the settings, with bold marks and the blanks filled', () => {
+    const html = page(r, { name: 'S' }, layout, null);
+    expect(html).toContain('<b>מו&quot;ה <span class="fill">ר&#39; שמואל דוגמא</span> הי&quot;ו</b>');
+    expect(html).toContain('<b>Dear</b> <span class="fill">Mr. Sample Donor</span>,');
+    expect(html).toContain('in the sum of <span class="fill">$180.00</span>');
+    expect(html).toContain('לטובת המגבית עבור <span class="fill">Sample Campaign</span>');
+    expect(html).not.toContain('**');
+  });
+  it('leaves out the Hebrew-name line when the donor has none', () => {
+    const html = page({ ...r, hebrew_name: '' }, { name: 'S' }, layout, null);
+    expect(html).toContain('לכבוד ידידנו');
+    expect(html).not.toContain('מו&quot;ה');
+  });
+  it('lets the standard receipt use the same wording without doubling the name or the signer', () => {
+    const html = standardPage(r, { name: 'Sample Org', director_name: 'Moshe Henig' }, null);
+    expect(html.match(/Dear/g)?.length).toBe(1);                              // the wording's own "Dear", not a second one
+    expect(html.match(/Moshe Henig/g)?.length).toBe(1);
+    expect(html).toContain('ר&#39; שמואל דוגמא');
+    expect(html).not.toContain('{hebrew_name}');
+  });
+});

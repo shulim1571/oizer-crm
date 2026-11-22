@@ -322,7 +322,7 @@ function BulkReceipts({ onClose, onDone }: { onClose: () => void; onDone: () => 
 // ---------------------------------------------------------------------------
 // Receipt text: Settings (default), fundraiser and campaign
 // ---------------------------------------------------------------------------
-export function ReceiptTextCard({ level, refId, title }: { level: 'default' | 'fundraiser'; refId: string; title: string }) {
+export function ReceiptTextCard({ level, refId, title }: { level: 'default' | 'fundraiser' | 'campaign'; refId: string; title: string }) {
   const [v, setV] = useState<Row>({});
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -342,21 +342,27 @@ export function ReceiptTextCard({ level, refId, title }: { level: 'default' | 'f
     window.dispatchEvent(new Event('task-sheet-changed'));
   }
   async function preview() {
-    const [org, sig] = await Promise.all([orgDetails(), directorSignature()]);
-    printPages('Receipt preview', [receiptPage({
+    const [org, sig, layout, assets, fallback] = await Promise.all([orgDetails(), directorSignature(), receiptLayout(), receiptAssets(),
+      // A campaign or fundraiser box left empty shows the default's text, as a receipt would.
+      level === 'default' ? Promise.resolve(null) : supabase.from('receipt_templates').select('*').eq('level', 'default').eq('ref_id', '').maybeSingle().then(r => r.data as Row | null)]);
+    const pick = (k: string) => (String(v[k] ?? '').trim() ? v[k] : fallback?.[k] ?? null);
+    const sample = {
       status: 'issued', receipt_number: 'R-PREVIEW', receipt_date: localToday(), amount: 180, actual_amount: 180, donor_title: 'Mr.', donor_name: 'Sample Donor',
       donor_address: '1 Sample St\nBrooklyn, NY 11219', hebrew_name: 'ר׳ ישראל ישראלי', campaign_name: 'Sample campaign',
-      hebrew_salutation: v.hebrew_salutation, hebrew_text: v.hebrew_text, english_text: v.english_text,
-    }, org, sig)]);
+      hebrew_salutation: pick('hebrew_salutation'), hebrew_text: pick('hebrew_text'), english_text: pick('english_text'),
+    };
+    // On the organization's letterhead when it has one (even before it's switched on), else the standard page.
+    if (layout && assets.letterhead) printPages('Receipt preview', [letterheadPage(sample, org, layout, assets.signature)], { css: letterheadStyle(assets.letterhead), head: LETTERHEAD_FONTS });
+    else printPages('Receipt preview', [receiptPage(sample, org, sig)]);
   }
   return (
     <div className="card">
       <h3>{title}</h3>
       <p className="muted small">{level === 'default'
         ? 'Used on every receipt. A section left empty is left off the receipt.'
-        : 'Leave a box empty to use the next level up. Campaign text wins over the fundraiser\'s, which wins over the default.'}
-        {' '}You can write {'{amount}'}, {'{date}'}, {'{campaign}'} and {'{name}'} in the text.</p>
-      <label className="field"><span>Hebrew salutation</span><input dir="rtl" value={v.hebrew_salutation ?? ''} onChange={e => set('hebrew_salutation', e.target.value)} placeholder="לכבוד ידידנו" /></label>
+        : 'Leave a box empty to use the organization\'s receipt text (Messaging → Receipt Text). Campaign text wins over the fundraiser\'s, which wins over the default.'}
+        {' '}You can write {'{amount}'}, {'{date}'}, {'{campaign}'}, {'{name}'} and {'{hebrew_name}'} in the text (a line with {'{hebrew_name}'} is left off when the donor has no Hebrew name), and put **two stars** around words to make them bold.</p>
+      <label className="field"><span>Hebrew salutation (one or two lines, printed larger)</span><textarea dir="rtl" rows={2} value={v.hebrew_salutation ?? ''} onChange={e => set('hebrew_salutation', e.target.value)} placeholder="לכבוד ידידנו" /></label>
       <label className="field"><span>Hebrew blessing</span><textarea dir="rtl" rows={4} value={v.hebrew_text ?? ''} onChange={e => set('hebrew_text', e.target.value)} /></label>
       <label className="field"><span>English acknowledgment</span><textarea rows={4} value={v.english_text ?? ''} onChange={e => set('english_text', e.target.value)} /></label>
       {msg && <div className="notice">{msg}</div>}

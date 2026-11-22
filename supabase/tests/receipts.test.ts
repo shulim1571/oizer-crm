@@ -56,12 +56,12 @@ describe('receipts', () => {
     expect(r3).toMatchObject({ hebrew_text: 'לכבוד המיוחד', english_text: 'One time only' });
   });
 
-  it('no longer have campaign-level text: campaigns use the standard receipt text', async () => {
-    await expect(template(db, 'campaign', '1001', null, 'From the fundraiser', MANAGER_1)).rejects.toThrow(/no longer have their own receipt text/);
-    await expect(template(db, 'campaign', '1001', null, 'x')).rejects.toThrow(/no longer have their own receipt text/);
-    await expect(db.query(`insert into public.receipt_templates (org_id, level, ref_id, english_text) select org_id, 'campaign', '1001', 'x' from public.campaigns limit 1`)).rejects.toThrow(/receipt_templates_level_check/);
+  // Campaign-level text was removed once; Shulim asked for it back (2026-11-22): admins set it, fundraisers don't.
+  it('take campaign-level text from admins only', async () => {
+    await expect(template(db, 'campaign', '1001', null, 'From the fundraiser', MANAGER_1)).rejects.toThrow(/Only admins/);
+    await template(db, 'campaign', '1001', null, 'Campaign text');
+    expect(await rows(db, ADMIN, `select english_text from public.receipt_templates where level = 'campaign' and ref_id = '1001'`)).toEqual([{ english_text: 'Campaign text' }]);
     await expect(template(db, 'default', '', null, 'x', MANAGER_1)).rejects.toThrow();
-    expect(await rows(db, ADMIN, `select * from public.receipt_templates where level = 'campaign'`)).toEqual([]);
   });
 
   it('can show part of a donation, while the donation stays whole', async () => {
@@ -130,6 +130,8 @@ describe('receipts', () => {
   });
 
   it('remind the office to set up receipt text', async () => {
+    // Oizer starts with Moshe's wording as its default (2026-11-22); without any default, the reminder shows.
+    await db.query(`delete from public.receipt_templates where level = 'default'`);
     expect((await rows(db, ADMIN, `select 1 from public.admin_task_sheet where task_type = 'receipt_text_missing'`)).length).toBe(1);
     await template(db, 'default', '', null, 'Thank you');
     expect(await rows(db, ADMIN, `select 1 from public.admin_task_sheet where task_type = 'receipt_text_missing'`)).toEqual([]);
