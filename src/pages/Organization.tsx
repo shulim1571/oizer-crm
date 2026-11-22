@@ -1,6 +1,6 @@
 import RecordForm, { type Field } from '../components/RecordForm';
 import { supabase, type Row } from '../lib/supabase';
-import { OrgLogo } from '../components/Layout';
+import { OrgLogo, ProductMark } from '../components/Layout';
 import type { Org } from '../lib/org';
 import { useAuth } from '../lib/auth';
 import { useEffect, useState } from 'react';
@@ -138,9 +138,9 @@ function LogoUpload({ org, onSaved }: { org: Row; onSaved: () => void }) {
     <div className="settings-section card logo-upload">
       <h3>Logo</h3>
       <div className="logo-upload-row">
-        <OrgLogo org={org as Org} />
+        {(org as Org)?.logo_url ? <OrgLogo org={org as Org} /> : <ProductMark className="logo" />}
         <div>
-          <p className="muted small">Shown to your staff in the menu and at sign-in, and on your payment pages. Without one, the Donor Base logo shows.</p>
+          <p className="muted small">Shown to your staff in the menu (under the Donor Base logo) and at sign-in, and on your payment pages.</p>
           <label className="btn">{busy ? 'Uploading…' : 'Upload logo'}
             <input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={busy} onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f); }} />
           </label>

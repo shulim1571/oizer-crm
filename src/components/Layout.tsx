@@ -17,20 +17,35 @@ import { sharpLogoUrl } from '../lib/sharpLogo';
 
 /** The product: Donor Base (Shulim, 2026-11-12). Oizer and other organizations are customers inside it. */
 export const PRODUCT_NAME = 'Donor Base';
-export const PRODUCT_TILE = `${import.meta.env.BASE_URL}brand/donor-base-tile.png`;
-export const PRODUCT_MARK = `${import.meta.env.BASE_URL}brand/donor-base-mark.png`;
-export const PRODUCT_MARK_WHITE = `${import.meta.env.BASE_URL}brand/donor-base-mark-white.png`;
+const BRAND = `${import.meta.env.BASE_URL}brand/`;
+/** The Offering mark (Donor Base brand kit, Shulim 2026-11-22): splash screens and anywhere the mark stands alone. */
+export const PRODUCT_MARK = `${BRAND}donor-base-icon.svg`;
+export const PRODUCT_MARK_DARK = `${BRAND}donor-base-icon-dark.svg`;
 
-/** The Donor Base logo: its tile on light backgrounds; just the white mark on a colored one (the sign-in panel). */
-export function ProductLogo({ onColor = false }: { onColor?: boolean }) {
-  return <img className={`logo product-logo${onColor ? ' on-color' : ''}`} src={onColor ? PRODUCT_MARK_WHITE : PRODUCT_TILE} alt={PRODUCT_NAME} />;
+/** The kit's light and dark versions of an image; CSS shows the one that matches the screen's theme. */
+function Themed({ light, dark, alt, className }: { light: string; dark: string; alt: string; className: string }) {
+  return <>
+    <img className={`${className} on-light`} src={light} alt={alt} />
+    <img className={`${className} on-dark`} src={dark} alt="" aria-hidden="true" />
+  </>;
 }
 
-/** The organization's own logo where it has one (sharp, at any size); otherwise the Donor Base logo. */
-export function OrgLogo({ org, onColor = false }: { org: Org | null; onColor?: boolean }) {
-  return org?.logo_url
-    ? <img className="logo org-logo" src={sharpLogoUrl(org.logo_url)!} alt={org.name ? `${org.name} logo` : ''} />
-    : <ProductLogo onColor={onColor} />;
+/** The mark alone, light or dark to match the theme. */
+export function ProductMark({ className = 'splash-mark' }: { className?: string }) {
+  return <Themed light={PRODUCT_MARK} dark={PRODUCT_MARK_DARK} alt={PRODUCT_NAME} className={className} />;
+}
+
+/** The Donor Base lockup (mark + DONOR BASE). The endorsed one ("by TRUBASE") is for the sign-in screen only. */
+export function ProductLockup({ endorsed = false, dark }: { endorsed?: boolean; dark?: boolean }) {
+  const name = endorsed ? 'donor-base-logo-endorsed' : 'donor-base-logo';
+  const cls = `lockup${endorsed ? ' endorsed' : ''}`;
+  if (dark) return <img className={cls} src={`${BRAND}${name}-dark.svg`} alt={PRODUCT_NAME} />;
+  return <Themed light={`${BRAND}${name}.svg`} dark={`${BRAND}${name}-dark.svg`} alt={PRODUCT_NAME} className={cls} />;
+}
+
+/** The organization's own logo, when it has one (sharp, at any size). */
+export function OrgLogo({ org }: { org: Org | null }) {
+  return org?.logo_url ? <img className="logo org-logo" src={sharpLogoUrl(org.logo_url)!} alt={org.name ? `${org.name} logo` : ''} /> : null;
 }
 
 export const ROLE_LABEL: Record<string, string> = {
@@ -211,10 +226,14 @@ export default function Layout() {
     <SearchContext.Provider value={{ q, setQ }}>
       <div className="app">
         <nav className={`sidebar ${open ? 'open' : ''}`}>
-          <div className="logo-row">
-            <OrgLogo org={org} />
-            <div className="logo-text">{org?.name ?? PRODUCT_NAME}{org && <small>{PRODUCT_NAME}</small>}</div>
-          </div>
+          {/* The Donor Base logo heads the menu; the organization's logo and name sit under it (Shulim, 2026-11-22). */}
+          <div className="brand-row"><ProductLockup /></div>
+          {org && (
+            <div className="logo-row org-row">
+              <OrgLogo org={org} />
+              <div className="logo-text">{org.name}</div>
+            </div>
+          )}
           {MENU.map(section => {
             const items = section.items.filter(n => visible(n) && !n.offMenu);
             if (!items.length) return null;

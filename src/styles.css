@@ -1,58 +1,69 @@
 /* ------------------------------------------------------------------
    Design tokens
    ------------------------------------------------------------------ */
+/* Donor Base brand kit (data/brand/tokens.css, Shulim 2026-11-22): Donor teal accent, Trubase neutrals, the kit's
+   semantic colors (never the accent for paid/failed), 8px radius with 12px cards and pill primary buttons, Jost for
+   headings and Inter for the interface. Warning text uses a darker shade of the kit's amber so it stays readable. */
 :root {
-  --bg: #f5f6f8;
-  --surface: #ffffff;
-  --surface-2: #f8f9fb;
-  --line: #e7e9ee;
-  --line-strong: #d9dce3;
-  --text: #0f172a;
-  --text-2: #475569;
-  --muted: #8a94a6;
-  --accent: #4f46e5;
-  --accent-2: #7c3aed;
-  --accent-soft: #eef0ff;
-  --accent-text: #4338ca;
-  --pos: #059669;
-  --pos-soft: #e7f8f1;
-  --neg: #dc2626;
-  --neg-soft: #fdecec;
-  --warn: #b45309;
-  --warn-soft: #fef5e7;
-  --info: #2563eb;
-  --info-soft: #eaf1ff;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05);
-  --shadow: 0 1px 3px rgba(15, 23, 42, .06), 0 8px 24px -12px rgba(15, 23, 42, .12);
-  --shadow-lg: 0 24px 48px -16px rgba(15, 23, 42, .28);
+  --bg: #F4F5F7;
+  --surface: #FFFFFF;
+  --surface-2: #F8F9FB;
+  --line: #E6E9EF;
+  --line-strong: #D5D9E1;
+  --text: #2B2D33;
+  --text-2: #6B7489;
+  --muted: #8A8F99;
+  --accent: #0E8A74;
+  --accent-2: #0E8A74;
+  --accent-strong: #0C7461;
+  --accent-soft: #DDEFEC;
+  --accent-text: #0C7461;
+  --on-accent: #FFFFFF;
+  --pos: #1F8A4A;
+  --pos-soft: #E6F5EC;
+  --neg: #C4473A;
+  --neg-soft: #F8E8E6;
+  --warn: #8C5F20;
+  --warn-soft: #F8F0DE;
+  --info: #1F5FE0;
+  --info-soft: #E6EEFB;
+  --font-display: "Jost", Inter, Helvetica, Arial, sans-serif;
+  --font-ui: Inter, "Noto Sans Hebrew", Helvetica, Arial, sans-serif;
+  --shadow-sm: 0 1px 2px rgba(43, 45, 51, .05);
+  --shadow: 0 1px 3px rgba(43, 45, 51, .06), 0 8px 24px -12px rgba(43, 45, 51, .12);
+  --shadow-lg: 0 24px 48px -16px rgba(43, 45, 51, .28);
   --radius: 12px;
   --radius-sm: 8px;
+  --radius-pill: 9999px;
   --nav-w: 248px;
   --top-h: 60px;
   color-scheme: light;
 }
 
+/* Dark mode: the kit's #41C8B0 on #0F1116, with dark text on teal buttons. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b0d12;
-    --surface: #12151c;
-    --surface-2: #171b23;
-    --line: #232834;
-    --line-strong: #2e3442;
-    --text: #e6e9ef;
-    --text-2: #b4bccb;
-    --muted: #7d8699;
-    --accent: #818cf8;
-    --accent-2: #a78bfa;
-    --accent-soft: #1d1f3a;
-    --accent-text: #a5b4fc;
-    --pos: #34d399;
-    --pos-soft: #0e2a21;
-    --neg: #f87171;
-    --neg-soft: #33171a;
-    --warn: #fbbf24;
-    --warn-soft: #2e2410;
-    --info: #60a5fa;
+    --bg: #0F1116;
+    --surface: #16181E;
+    --surface-2: #1B1E25;
+    --line: #2A2E36;
+    --line-strong: #353A44;
+    --text: #E6E9EF;
+    --text-2: #8A8F99;
+    --muted: #6B7489;
+    --accent: #41C8B0;
+    --accent-2: #41C8B0;
+    --accent-strong: #5DD3BE;
+    --accent-soft: #123530;
+    --accent-text: #41C8B0;
+    --on-accent: #0F1116;
+    --pos: #4CC27E;
+    --pos-soft: #10291B;
+    --neg: #E5786C;
+    --neg-soft: #33181A;
+    --warn: #E0A955;
+    --warn-soft: #2E2410;
+    --info: #3D7BFF;
     --info-soft: #132238;
     --shadow-sm: none;
     --shadow: 0 0 0 1px rgba(255, 255, 255, .02);
@@ -70,14 +81,14 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.5 Inter, "Noto Sans Hebrew", system-ui, -apple-system, sans-serif;
+  font: 14px/1.5 var(--font-ui);
   font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
 }
 a { color: var(--accent-text); text-decoration: none; }
 a:hover { text-decoration: underline; }
-h1 { font-size: 22px; font-weight: 650; letter-spacing: -.02em; margin: 0; }
-h2 { font-size: 16px; font-weight: 600; letter-spacing: -.01em; margin: 24px 0 10px; }
+h1 { font-family: var(--font-display); font-size: 24px; font-weight: 400; letter-spacing: 0; margin: 0; }
+h2 { font-family: var(--font-display); font-size: 18px; font-weight: 400; letter-spacing: 0; margin: 24px 0 10px; }
 h3 { font-size: 12px; font-weight: 600; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 input, select, textarea {
   font: inherit; color: inherit; background: var(--surface);
@@ -224,7 +235,8 @@ input:focus, select:focus, textarea:focus {
 .balance-list { margin: 6px 0 0; font-size: 13px; }
 .session-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .splash { display: grid; place-items: center; height: 100%; color: var(--muted); }
-.splash .logo { animation: pulse 1.2s ease-in-out infinite; }
+.splash .logo, .splash .splash-mark { animation: pulse 1.2s ease-in-out infinite; }
+.splash-mark { width: 72px; height: 72px; }
 @keyframes pulse { 50% { opacity: .4; } }
 
 /* Pills */
@@ -255,11 +267,10 @@ input:focus, select:focus, textarea:focus {
 .btn:hover { background: var(--surface-2); border-color: var(--muted); }
 .btn:active { transform: translateY(1px); }
 .btn.primary {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, white), var(--accent));
-  border-color: transparent; color: #fff;
-  box-shadow: 0 1px 2px rgba(79, 70, 229, .3), inset 0 1px 0 rgba(255, 255, 255, .15);
+  background: var(--accent); border-color: transparent; color: var(--on-accent); border-radius: var(--radius-pill);
+  padding: 0 18px; box-shadow: none;
 }
-.btn.primary:hover { filter: brightness(1.06); }
+.btn.primary:hover { background: var(--accent-strong); border-color: transparent; }
 .btn.danger { color: var(--neg); border-color: color-mix(in srgb, var(--neg) 40%, transparent); }
 .btn.danger:hover { background: var(--neg-soft); }
 .btn.ghost { border-color: transparent; box-shadow: none; background: none; }
@@ -289,11 +300,24 @@ input:focus, select:focus, textarea:focus {
 .logo-row { display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px; }
 .logo {
   width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-weight: 700; font-size: 16px;
-  box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--accent) 50%, transparent);
+  background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 16px; object-fit: contain;
 }
-.logo-text { font-weight: 650; font-size: 16px; letter-spacing: -.02em; }
+img.logo { background: none; border-radius: 6px; }
+.logo-text { font-weight: 600; font-size: 14px; letter-spacing: -.01em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .logo-text small { display: block; font-weight: 450; font-size: 11px; color: var(--muted); letter-spacing: 0; }
+/* The Donor Base lockup heads the menu (logo files keep the kit's clear space, so they sit a little into the padding). */
+.brand-row { padding: 0 0 6px; margin: -6px -4px 0; }
+.lockup { display: block; height: 60px; width: auto; }
+.org-row { padding: 2px 8px 14px; gap: 8px; }
+.org-row .logo { width: 24px; height: 24px; }
+/* Light/dark versions of the kit images: show the one that matches the theme. */
+.on-dark { display: none !important; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .on-light { display: none !important; }
+  :root:not([data-theme="light"]) .on-dark { display: block !important; }
+  /* The kit's dark lockup is drawn on #0F1116, so the dark menu uses that same color. */
+  :root:not([data-theme="light"]) .sidebar { background: var(--bg); }
+}
 .nav-section {
   display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: none; cursor: pointer; font: inherit; text-align: left;
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 12px 10px 6px; border-radius: var(--radius-sm);
@@ -321,7 +345,7 @@ input:focus, select:focus, textarea:focus {
 .me-role { font-size: 11px; color: var(--muted); text-transform: capitalize; }
 .avatar {
   width: 32px; height: 32px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 600; font-size: 13px;
-  background: linear-gradient(135deg, #fbcfe8, #c7d2fe); color: #3730a3;
+  background: var(--accent-soft); color: var(--accent-text);
 }
 
 .topbar {
@@ -598,24 +622,28 @@ ul.plain li { padding: 6px 0; }
 /* ------------------------------------------------------------------
    Auth screens
    ------------------------------------------------------------------ */
-.auth { min-height: 100%; display: grid; grid-template-columns: 1.1fr 1fr; background: var(--surface); }
-.auth-art {
-  position: relative; overflow: hidden; padding: 48px; color: #fff; display: flex; flex-direction: column; justify-content: space-between;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, .18), transparent 40%),
-    radial-gradient(circle at 80% 70%, rgba(236, 72, 153, .45), transparent 45%),
-    linear-gradient(135deg, #4338ca, #7c3aed 55%, #a21caf);
+/* Sign-in (brand kit splash-login): always dark, the endorsed lockup above a single column form. */
+.auth {
+  --bg: #0F1116; --surface: #171A21; --surface-2: #1B1E25; --line: #2A2E36; --line-strong: #2A2E36;
+  --text: #E6E9EF; --text-2: #8A8F99; --muted: #8A8F99; --accent: #41C8B0; --accent-strong: #5DD3BE; --accent-soft: #123530;
+  --accent-text: #41C8B0; --on-accent: #0F1116; --neg: #E5786C; --neg-soft: #33181A; color-scheme: dark;
+  min-height: 100%; display: flex; flex-direction: column; align-items: center; background: var(--bg); color: var(--text); padding: 0 20px;
 }
-.auth-art .logo { background: rgba(255, 255, 255, .18); box-shadow: none; backdrop-filter: blur(6px); }
-.auth-art h2 { font-size: 34px; line-height: 1.15; letter-spacing: -.03em; font-weight: 650; max-width: 440px; margin: 0 0 12px; }
-.auth-art p { opacity: .8; max-width: 420px; margin: 0; font-size: 15px; }
-.auth-stats { display: flex; gap: 28px; }
-.auth-stats b { display: block; font-size: 22px; letter-spacing: -.02em; }
-.auth-stats span { opacity: .75; font-size: 13px; }
-.auth-main { display: grid; place-items: center; padding: 32px 20px; }
+.auth-brand { margin-top: max(48px, 12vh); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.auth-brand .lockup { height: auto; width: min(360px, 82vw); }
+.auth-org { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 13px; }
+.auth-org .logo { width: 22px; height: 22px; }
+.auth input { background: var(--surface); border-color: var(--line); border-radius: var(--radius-sm); height: 46px; padding: 0 14px; }
+.auth .field > span { color: var(--text-2); }
+.auth .btn.primary.wide { height: 46px; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600; }
+.auth .auth-links .link { color: var(--text-2); font-weight: 400; }
+.auth .auth-links .link:hover { color: var(--accent); }
+.auth-foot { margin-top: auto; padding: 28px 0 22px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.auth-foot a { color: var(--muted); }
+.auth-main { display: grid; justify-items: center; width: 100%; padding: 40px 0 0; }
 .auth-card { width: min(380px, 100%); display: flex; flex-direction: column; gap: 14px; }
-.auth-card h1 { font-size: 26px; }
-.auth-card .lead { color: var(--muted); margin: -8px 0 6px; }
+.auth-card h1 { font-size: 26px; text-align: center; }
+.auth-card .lead { color: var(--text-2); margin: -8px 0 6px; text-align: center; }
 .auth-links { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; }
 .auth-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 4px 0; }
 .auth-or::before, .auth-or::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
@@ -646,10 +674,6 @@ ul.plain li { padding: 6px 0; }
   .kpi { padding: 12px; gap: 8px; }
   .kpi-icon { width: 28px; height: 28px; }
   .kpi-value { font-size: 17px; font-size: clamp(13px, 11.5cqi, 17px); }
-  .auth { grid-template-columns: 1fr; }
-  .auth-art { padding: 28px 24px; min-height: 220px; }
-  .auth-art h2 { font-size: 24px; }
-  .auth-stats { display: none; }
 }
 
 /* Person cell */
@@ -741,7 +765,7 @@ ul.plain li { padding: 6px 0; }
 /* ------------------------------------------------------------------
    Public payment page (#/give/<campaign> and /give/<campaign>). Mobile first.
 ------------------------------------------------------------------ */
-.give { --give-accent: #4f46e5; --give-ink: #14151a; --give-muted: #5f6470; --give-line: #e6e8ee; --give-bg: #f4f5f8;
+.give { --give-accent: #0E8A74; --give-ink: #14151a; --give-muted: #5f6470; --give-line: #e6e8ee; --give-bg: #f4f5f8;
   min-height: 100vh; background: var(--give-bg); color: var(--give-ink); font-size: 15px; line-height: 1.45; }
 .give-hero { position: relative; color: #fff; padding: 22px 16px 64px;
   background: linear-gradient(135deg, var(--give-accent), color-mix(in srgb, var(--give-accent) 55%, #000)); background-size: cover; background-position: center; }
@@ -1111,14 +1135,11 @@ tr.selected td { background: var(--accent-soft); }
 /* Donor Base product logo and organization logos (Shulim, 2026-11-12). The product tile is its own rounded square in
    the app's colors; an organization's logo sits on white so any logo reads, never stretched. */
 img.logo { object-fit: contain; }
-img.logo.product-logo { background: none; box-shadow: none; padding: 0; }
 img.logo.org-logo { background: #fff; padding: 2px; }
-.auth-art img.logo.product-logo { background: none; backdrop-filter: none; }
 .splash .splash-mark { width: 72px; height: 72px; object-fit: contain; animation: pulse 1.2s ease-in-out infinite; }
 .logo-upload-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .logo-upload-row img.logo, .logo-upload-row .logo { width: 72px; height: 72px; border-radius: 14px; }
 .logo-upload-row .btn { margin-right: 8px; margin-top: 4px; }
-img.logo.product-logo.on-color { width: 38px; height: 38px; background: none; box-shadow: none; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .18)); }
 code.break { word-break: break-all; }
 
 /* "Check with USPS" under address fields (Shulim, 2026-11-12). */

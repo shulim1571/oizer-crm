@@ -13,7 +13,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: { auth: { signInWithOAuth: (a: unknown) => oauth(a) } },
 }));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ org: null }) }));
-vi.mock('../components/Layout', () => ({ OrgLogo: () => null, PRODUCT_NAME: 'Donor Base' }));
+vi.mock('../components/Layout', () => ({ OrgLogo: () => null, ProductLockup: () => null, PRODUCT_NAME: 'Donor Base' }));
 vi.mock('../components/PoweredBy', () => ({ PoweredBy: () => null }));
 import Login from './Login';
 

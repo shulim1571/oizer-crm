@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-152.00 -46.50 304.00 304.00" width="304" height="304">
+<title>Donor Base icon</title>
+<defs><linearGradient id="acc" gradientUnits="userSpaceOnUse" x1="-112.00" y1="0.00" x2="107.23" y2="102.23"><stop offset="0" stop-color="#51AB9B"/><stop offset="0.18" stop-color="#51AB9B"/><stop offset="0.5" stop-color="#0E8A74"/><stop offset="1" stop-color="#0B6C5A"/></linearGradient><linearGradient id="acl" gradientUnits="userSpaceOnUse" x1="-112.00" y1="0.00" x2="107.23" y2="102.23"><stop offset="0" stop-color="#51AB9B"/><stop offset="0.55" stop-color="#0E8A74"/><stop offset="1" stop-color="#0E8A74"/></linearGradient><linearGradient id="acr" gradientUnits="userSpaceOnUse" x1="-112.00" y1="0.00" x2="107.23" y2="102.23"><stop offset="0" stop-color="#0E8A74"/><stop offset="0.55" stop-color="#0B6C5A"/><stop offset="1" stop-color="#106354"/></linearGradient><linearGradient id="base" gradientUnits="userSpaceOnUse" x1="-112.00" y1="86.50" x2="119.68" y2="194.53"><stop offset="0" stop-color="#2546A0"/><stop offset="0.55" stop-color="#283A6A"/><stop offset="1" stop-color="#2B2D33"/></linearGradient></defs>
+<g id="icon">
+<polygon fill="url(#base)" points="-40.17,86.50 -112.00,116.00 0.00,162.00 112.00,116.00 40.17,86.50 0.00,103.00"/>
+<polygon fill="url(#base)" points="-65.74,146.00 -112.00,165.00 0.00,211.00 112.00,165.00 65.74,146.00 0.00,173.00"/>
+<polygon fill="url(#acc)" points="-112.00,46.00 0.00,0.00 112.00,46.00 0.00,92.00"/>
+</g>
+</svg>

@@ -1,7 +1,7 @@
 import { PoweredBy } from '../components/PoweredBy';
 import { useRef, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import type { EmailOtpType } from '@supabase/supabase-js';
-import { OrgLogo, PRODUCT_NAME } from '../components/Layout';
+import { OrgLogo, ProductLockup } from '../components/Layout';
 import { useAuth } from '../lib/auth';
 import { startFreshSession } from '../lib/idle';
 import { signInWithPassword, supabase } from '../lib/supabase';
@@ -49,27 +49,20 @@ export const passwordProblem = (p: string) =>
     ? null
     : `Use at least ${MIN_PASSWORD} characters, including a number and a special character.`;
 
-/** Two-panel layout shared by the sign-in, password and waiting screens. */
+/**
+ * The sign-in, password and waiting screens: the Donor Base sign-in design (brand kit splash-login, Shulim 2026-11-22),
+ * always dark: the endorsed lockup, then the form. An organization's own logo and name show under the lockup.
+ */
 export function AuthShell({ children }: { children: ReactNode }) {
   const { org } = useAuth();
   return (
     <div className="auth">
-      <div className="auth-art">
-        <div className="logo-row">
-          <OrgLogo org={org} onColor />
-          <div className="logo-text">{org?.name ?? PRODUCT_NAME}{org && <small style={{ color: 'rgba(255,255,255,.7)' }}>{PRODUCT_NAME}</small>}</div>
-        </div>
-        <div>
-          <h2>Every campaign, donor and dollar in one place.</h2>
-          <p>Track what each campaign raised, what it spent and who gave.</p>
-        </div>
-        <div className="auth-stats">
-          <div><b>Live</b><span>balances</span></div>
-          <div><b>Secure</b><span>role-based access</span></div>
-          <div><b>Anywhere</b><span>desktop &amp; phone</span></div>
-        </div>
+      <div className="auth-brand">
+        <ProductLockup endorsed dark />
+        {org && <div className="auth-org"><OrgLogo org={org} /><span>{org.name}</span></div>}
       </div>
-      <div className="auth-main">{children}<PoweredBy orgId={org?.id} /></div>
+      <div className="auth-main">{children}</div>
+      <footer className="auth-foot"><PoweredBy orgId={org?.id} /><a href="https://trubase.org" target="_blank" rel="noopener noreferrer">trubase.org</a></footer>
     </div>
   );
 }
