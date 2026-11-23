@@ -69,10 +69,12 @@ describe('cloud configuration checks', () => {
   });
 
   it('Cloudflare: secret-looking values in plain text fail; wrong branch or missing domain fail', () => {
-    const p = { name: 'oizer-drm', production_branch: 'main', domains: ['oizer.trubase.org'], deployment_configs: { production: { env_vars: { GIVE_GATE_SECRET: { type: 'secret_text' }, VITE_FLAG: { type: 'plain_text' } } } } };
+    const p = { name: 'oizer-drm', production_branch: 'main', domains: ['fund.trubase.org', 'oizer.trubase.org'], deployment_configs: { production: { env_vars: { GIVE_GATE_SECRET: { type: 'secret_text' }, VITE_FLAG: { type: 'plain_text' } } } } };
     expect(levels(C.checkPagesProject(p, baseline.cloudflare))).toEqual(['ok']);
     expect(levels(C.checkPagesProject({ ...p, deployment_configs: { production: { env_vars: { API_TOKEN: { type: 'plain_text' } } } } }, baseline.cloudflare))).toEqual(['fail']);
-    expect(levels(C.checkPagesProject({ ...p, production_branch: 'dev', domains: [] }, baseline.cloudflare))).toEqual(['fail', 'fail']);
+    expect(levels(C.checkPagesProject({ ...p, production_branch: 'dev', domains: [] }, baseline.cloudflare))).toEqual(['fail', 'fail', 'fail']);
+    // fund.trubase.org, the platform address, is required too (Shulim, 2026-11-23).
+    expect(levels(C.checkPagesProject({ ...p, domains: ['oizer.trubase.org'] }, baseline.cloudflare))).toEqual(['fail']);
     expect(levels(C.checkWorker('oizer-give-gate', { bindings: [{ name: 'GIVE_GATE_SECRET', type: 'secret_text' }], workersDev: true }, baseline.cloudflare))).toEqual(['ok']);
     expect(levels(C.checkWorker('oizer-give-gate', { bindings: [{ name: 'SENDGRID_KEY', type: 'plain_text' }], workersDev: false }, baseline.cloudflare))).toEqual(['fail', 'fail']);
   });
