@@ -8,6 +8,13 @@
   Permissions-Policy: camera=(), microphone=(self), geolocation=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
+# The privacy policy is public and may be read by search engines and Google's sign-in review (Shulim, 2026-11-23).
+/privacy
+  ! X-Robots-Tag
+
+/privacy.html
+  ! X-Robots-Tag
+
 # The donate widget's page is meant to sit inside other organizations' websites.
 /embed
   ! X-Frame-Options

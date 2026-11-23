@@ -642,6 +642,8 @@ ul.plain li { padding: 6px 0; }
 .auth .auth-links .link:hover { color: var(--accent); }
 .auth-foot { margin-top: auto; padding: 28px 0 22px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .auth-foot a { color: var(--muted); }
+.auth-foot-links { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.auth-foot-links a[href="/privacy"] { color: var(--text-2); font-weight: 500; }
 .auth-main { display: grid; justify-items: center; width: 100%; padding: 40px 0 0; }
 .auth-card { width: min(380px, 100%); display: flex; flex-direction: column; gap: 14px; }
 .auth-card h1 { font-size: 26px; text-align: center; }

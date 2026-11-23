@@ -62,7 +62,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
         {org && <div className="auth-org"><OrgLogo org={org} /><span>{org.name}</span></div>}
       </div>
       <div className="auth-main">{children}</div>
-      <footer className="auth-foot"><PoweredBy orgId={org?.id} /><a href="https://trubase.org" target="_blank" rel="noopener noreferrer">trubase.org</a></footer>
+      <footer className="auth-foot"><PoweredBy orgId={org?.id} />
+        {/* The privacy policy, public at /privacy (Shulim, 2026-11-23, for Google sign-in approval). */}
+        <div className="auth-foot-links"><a href="/privacy">Privacy</a><span aria-hidden="true">·</span><a href="https://trubase.org" target="_blank" rel="noopener noreferrer">trubase.org</a></div></footer>
     </div>
   );
 }
