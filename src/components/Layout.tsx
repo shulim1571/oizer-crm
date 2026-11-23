@@ -36,10 +36,11 @@ export function ProductMark({ className = 'splash-mark' }: { className?: string 
 }
 
 /** The FundBase lockup (mark + FUNDBASE). The endorsed one ("by TRUBASE") is for the sign-in screen only. */
-export function ProductLockup({ endorsed = false, dark }: { endorsed?: boolean; dark?: boolean }) {
+export function ProductLockup({ endorsed = false, dark, light }: { endorsed?: boolean; dark?: boolean; light?: boolean }) {
   const name = endorsed ? 'fundbase-logo-endorsed' : 'fundbase-logo';
   const cls = `lockup${endorsed ? ' endorsed' : ''}`;
   if (dark) return <img className={cls} src={`${BRAND}${name}-dark.svg`} alt={PRODUCT_NAME} />;
+  if (light) return <img className={cls} src={`${BRAND}${name}.svg`} alt={PRODUCT_NAME} />;
   return <Themed light={`${BRAND}${name}.svg`} dark={`${BRAND}${name}-dark.svg`} alt={PRODUCT_NAME} className={cls} />;
 }
 

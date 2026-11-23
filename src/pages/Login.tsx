@@ -50,15 +50,16 @@ export const passwordProblem = (p: string) =>
     : `Use at least ${MIN_PASSWORD} characters, including a number and a special character.`;
 
 /**
- * The sign-in, password and waiting screens: the FundBase sign-in design (brand kit splash-login, Shulim 2026-11-22),
- * always dark: the endorsed lockup, then the form. An organization's own logo and name show under the lockup.
+ * The sign-in, password and waiting screens: the FundBase sign-in layout (brand kit splash-login, Shulim 2026-11-22) in
+ * the light FundBase look (Moshe, 2026-11-23: he didn't like it black): the endorsed lockup, then the form. An
+ * organization's own logo and name show under the lockup.
  */
 export function AuthShell({ children }: { children: ReactNode }) {
   const { org } = useAuth();
   return (
     <div className="auth">
       <div className="auth-brand">
-        <ProductLockup endorsed dark />
+        <ProductLockup endorsed light />
         {org && <div className="auth-org"><OrgLogo org={org} /><span>{org.name}</span></div>}
       </div>
       <div className="auth-main">{children}</div>

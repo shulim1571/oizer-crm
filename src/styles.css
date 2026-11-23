@@ -624,11 +624,13 @@ ul.plain li { padding: 6px 0; }
 /* ------------------------------------------------------------------
    Auth screens
    ------------------------------------------------------------------ */
-/* Sign-in (brand kit splash-login): always dark, the endorsed lockup above a single column form. */
+/* Sign-in (brand kit splash-login layout): the endorsed lockup above a single column form, always in the light
+   FundBase look (Moshe, 2026-11-23: not black), whatever the device's dark-mode setting. */
 .auth {
-  --bg: #0F1116; --surface: #171A21; --surface-2: #1B1E25; --line: #2A2E36; --line-strong: #2A2E36;
-  --text: #E6E9EF; --text-2: #8A8F99; --muted: #8A8F99; --accent: #41C8B0; --accent-strong: #5DD3BE; --accent-soft: #123530;
-  --accent-text: #41C8B0; --on-accent: #0F1116; --neg: #E5786C; --neg-soft: #33181A; color-scheme: dark;
+  --bg: var(--fb-bg-subtle); --surface: var(--fb-bg); --surface-2: #F8F9FB; --line: var(--fb-hair); --line-strong: #D5D9E1;
+  --text: var(--fb-text); --text-2: var(--fb-text-secondary); --muted: var(--fb-text-muted); --accent: var(--fb-accent-500);
+  --accent-strong: var(--fb-accent-600); --accent-soft: var(--fb-accent-100); --accent-text: var(--fb-accent-600); --on-accent: var(--fb-white);
+  --neg: var(--fb-error); --neg-soft: var(--fb-error-soft); color-scheme: light;
   min-height: 100%; display: flex; flex-direction: column; align-items: center; background: var(--bg); color: var(--text); padding: 0 20px;
 }
 .auth-brand { margin-top: max(48px, 12vh); display: flex; flex-direction: column; align-items: center; gap: 14px; }

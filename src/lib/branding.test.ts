@@ -32,7 +32,7 @@ describe('FundBase branding', () => {
   });
 
   // Shulim, 2026-11-22: the FundBase brand kit (data/brand-fundbase), refreshed to the Crown mark; nothing from alternates/.
-  it('applies the brand kit: teal accent, Jost and Inter, Crown icons, dark sign-in with the endorsed logo', () => {
+  it('applies the brand kit: teal accent, Jost and Inter, Crown icons, light sign-in with the endorsed logo', () => {
     // The kit folder isn't in git, so this check runs only where it's present.
     if (existsSync('data/brand-fundbase/fundbase-icon.svg')) {
       for (const f of ['fundbase-icon.svg', 'fundbase-icon-dark.svg', 'fundbase-logo.svg', 'fundbase-logo-dark.svg', 'fundbase-logo-endorsed-dark.svg']) {
@@ -61,7 +61,9 @@ describe('FundBase branding', () => {
     }
     const manifest = JSON.parse(readFileSync('public/site.webmanifest', 'utf8'));
     expect(manifest.icons.map((i: { src: string }) => i.src)).toEqual(['/brand/app-icon-192.png', '/brand/app-icon-512.png']);
-    expect(readFileSync('src/pages/Login.tsx', 'utf8')).toContain('<ProductLockup endorsed dark />');
+    expect(readFileSync('src/pages/Login.tsx', 'utf8')).toContain('<ProductLockup endorsed light />');   // light, not black (Moshe, 2026-11-23)
+    expect(css).toMatch(/\.auth \{\n {2}--bg: var\(--fb-bg-subtle\);[^}]*color-scheme: light;/);
+    expect(existsSync('public/brand/fundbase-logo-endorsed.svg')).toBe(true);
     for (const f of ['src/components/Layout.tsx', 'src/pages/Login.tsx', 'index.html', 'public/site.webmanifest']) expect(readFileSync(f, 'utf8')).not.toMatch(/offering|heart|alternates/i);
   });
 });
