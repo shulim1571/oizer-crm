@@ -32,7 +32,7 @@ describe('FundBase branding', () => {
   });
 
   // Shulim, 2026-11-22: the FundBase brand kit (data/brand-fundbase), refreshed to the Crown mark; nothing from alternates/.
-  it('applies the brand kit: teal accent, Jost and Inter, Crown icons, light sign-in with the endorsed logo', () => {
+  it('applies the brand kit: teal accent, Inter text (Jost only in the logo images), Crown icons, light sign-in with the endorsed logo', () => {
     // The kit folder isn't in git, so this check runs only where it's present.
     if (existsSync('data/brand-fundbase/fundbase-icon.svg')) {
       for (const f of ['fundbase-icon.svg', 'fundbase-icon-dark.svg', 'fundbase-logo.svg', 'fundbase-logo-dark.svg', 'fundbase-logo-endorsed-dark.svg']) {
@@ -54,7 +54,13 @@ describe('FundBase branding', () => {
     expect(css).not.toContain('--db-');
     expect(css).not.toMatch(/#4f46e5|#7c3aed|#4338ca/i);
     const html = readFileSync('index.html', 'utf8');
-    expect(html).toContain('family=Jost:');
+    // Moshe, 2026-11-23: the app's text stays in Inter as before FundBase; Jost only in the logo wordmark (drawn into the SVGs).
+    expect(html).not.toContain('Jost');
+    expect(readFileSync('public/privacy.html', 'utf8')).not.toContain('Jost');
+    expect(css).not.toMatch(/font-family:[^;]*(Jost|--font-display|--fb-font-display)/);
+    expect(css).toContain('h1 { font-size: 22px; font-weight: 650; letter-spacing: -.02em; margin: 0; }');
+    expect(css).toContain('h2 { font-size: 16px; font-weight: 600; letter-spacing: -.01em; margin: 24px 0 10px; }');
+    expect(readFileSync('public/brand/fundbase-logo.svg', 'utf8')).not.toMatch(/<text|font-family/);   // wordmark is drawn, needs no font
     expect(html).toContain('<meta name="theme-color" content="#0E8A74"');
     for (const f of ['index.html', 'public/site.webmanifest', 'src/components/Layout.tsx', 'src/lib/org.ts', 'src/pages/Login.tsx', 'src/pages/Organization.tsx']) {
       expect(readFileSync(f, 'utf8').replace(/renamed from Donor Base/g, ''), f).not.toMatch(/Donor Base|donor-base/);
