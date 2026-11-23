@@ -127,7 +127,7 @@ Deno.serve(async req => {
         }).then(r => (r.ok ? r.json() : [])).catch(() => []) as { value: unknown }[];
         const days = plaidDays(setting[0]?.value);
         const r = await plaid('/link/token/create', {
-          client_name: 'Oizer', language: 'en', country_codes: ['US'], products: ['transactions'],
+          client_name: 'FundBase', language: 'en', country_codes: ['US'], products: ['transactions'],
           // History to ask for (Shulim, 2026-11-13: only recent transactions came in), per organization. Applies to new
           // links; Plaid sends the latest first and the rest over the next while, which the next syncs pick up.
           transactions: { days_requested: days },

@@ -72,4 +72,11 @@ describe('FundBase branding', () => {
     expect(existsSync('public/brand/fundbase-logo-endorsed.svg')).toBe(true);
     for (const f of ['src/components/Layout.tsx', 'src/pages/Login.tsx', 'index.html', 'public/site.webmanifest']) expect(readFileSync(f, 'utf8')).not.toMatch(/offering|heart|alternates/i);
   });
+
+  // Shulim, 2026-11-23: Plaid's bank-connection screen names the app FundBase.
+  it('names the app FundBase on Plaid\'s bank-connection screen', () => {
+    const plaid = readFileSync('supabase/functions/plaid/index.ts', 'utf8');
+    expect(plaid).toContain("client_name: 'FundBase',");
+    expect(plaid).not.toContain("client_name: 'Oizer'");
+  });
 });
