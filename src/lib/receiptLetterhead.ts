@@ -87,6 +87,8 @@ export const letterheadStyle = (background: string) => `
      bold field) is Medium. English keeps its bold. */
   .letterhead .he-body, .letterhead .he-body .fill, .letterhead .he, .letterhead .he .fill, .letterhead .fill-layer text.he { font-weight: 400; }
   .letterhead .he-body .sal, .letterhead .he-body .sal .fill, .letterhead .he-body b, .letterhead .he b, .letterhead .fill-layer text.he.b { font-weight: 500; }
+  /* The amount in the Hebrew text stands out (Moshe, approving the v3 sample): Medium, the template's "bold". */
+  .letterhead .he-body .fill-amount { font-weight: 500; }
   .letterhead .void { position: absolute; top: 140pt; left: 50%; transform: translateX(-50%); color: #b91c1c; font-weight: bold; font-size: 18px;
     border: 2px solid #b91c1c; padding: 2px 12px; background: #fff; }
   @media screen { body { background: #e5e5e5; } .page.letterhead { margin: 16px auto; box-shadow: 0 2px 10px rgba(0,0,0,.2); } }
@@ -96,7 +98,8 @@ export const letterheadStyle = (background: string) => `
 function lineHtml(template: string, r: Row): string {
   const parts = template.split(/(\{(?:name|hebrew_name|amount|date|campaign)\})/);
   // **...** in the wording is bold (Moshe's design sets "Dear", the מו"ה line and the signer in bold).
-  return parts.map(p => (/^\{.+\}$/.test(p) ? `<span class="fill">${esc(fillLine(p, r))}</span>` : esc(p))).join('')
+  // Each filled-in value is marked with its blank's name (fill-amount, fill-campaign…), so one can be styled on its own.
+  return parts.map(p => (/^\{.+\}$/.test(p) ? `<span class="fill fill-${p.slice(1, -1).replace('_', '-')}">${esc(fillLine(p, r))}</span>` : esc(p))).join('')
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*\*/g, '');
 }
 

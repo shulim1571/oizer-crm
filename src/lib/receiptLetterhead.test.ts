@@ -12,10 +12,10 @@ const layout: ReceiptLayout = {
 describe('receipt letterhead', () => {
   it('fills in the donor, amount, campaign and date where the layout says', () => {
     const html = letterheadPage({ ...SAMPLE_RECEIPT, receipt_date: '2026-11-12' }, { name: 'Sample Org' }, layout, null);
-    expect(html).toContain('<span class="fill">ר&#39; שמואל דוגמא</span>');
-    expect(html).toContain('<span class="fill">$180.00</span>');
-    expect(html).toContain('<span class="fill">Sample Campaign</span>');
-    expect(html).toContain('<span class="fill">Mr. Sample Donor</span>');
+    expect(html).toContain('<span class="fill fill-hebrew-name">ר&#39; שמואל דוגמא</span>');
+    expect(html).toContain('<span class="fill fill-amount">$180.00</span>');
+    expect(html).toContain('<span class="fill fill-campaign">Sample Campaign</span>');
+    expect(html).toContain('<span class="fill fill-name">Mr. Sample Donor</span>');
     expect(html).toContain('top:697pt;left:452pt');
     expect(html).toContain('11/12/2026');
     expect(html).toContain('Receipt SAMPLE-0001');
@@ -33,10 +33,10 @@ describe('receipt letterhead', () => {
     const html = letterheadPage({ ...SAMPLE_RECEIPT, hebrew_name: null }, { name: 'Sample Org' }, layout, null);
     expect(html).not.toContain('מו&quot;ה');
     expect(html).not.toContain('top:202pt');
-    expect(html).toContain('<span class="fill">Mr. Sample Donor</span>');   // still in the English greeting
+    expect(html).toContain('<span class="fill fill-name">Mr. Sample Donor</span>');   // still in the English greeting
     const hebrewBlock = html.match(/<div class="t he"[^]*?<\/div>/g)?.join('') ?? '';
     expect(hebrewBlock).not.toContain('Sample Donor');   // only in the English greeting and on the stub
-    expect(html).toContain('עבור <span class="fill">Sample Campaign</span>');   // the other Hebrew lines stay
+    expect(html).toContain('עבור <span class="fill fill-campaign">Sample Campaign</span>');   // the other Hebrew lines stay
     const blank = letterheadPage({ ...SAMPLE_RECEIPT, hebrew_name: '  ' }, { name: 'Sample Org' }, layout, null);
     expect(blank).not.toContain('top:202pt');
   });
@@ -98,10 +98,10 @@ describe('receipt wording on the letterhead', () => {
   const r = { ...w, donor_title: 'Mr.', donor_name: 'Sample Donor', hebrew_name: "ר' שמואל דוגמא", amount: 180, campaign_name: 'Sample Campaign', receipt_date: '2026-11-22', status: 'issued' };
   it('writes the wording from the settings, with bold marks and the blanks filled', () => {
     const html = page(r, { name: 'S' }, layout, null);
-    expect(html).toContain('<b>מו&quot;ה <span class="fill">ר&#39; שמואל דוגמא</span> הי&quot;ו</b>');
-    expect(html).toContain('<b>Dear</b> <span class="fill">Mr. Sample Donor</span>,');
-    expect(html).toContain('in the sum of <span class="fill">$180.00</span>');
-    expect(html).toContain('לטובת המגבית עבור <span class="fill">Sample Campaign</span>');
+    expect(html).toContain('<b>מו&quot;ה <span class="fill fill-hebrew-name">ר&#39; שמואל דוגמא</span> הי&quot;ו</b>');
+    expect(html).toContain('<b>Dear</b> <span class="fill fill-name">Mr. Sample Donor</span>,');
+    expect(html).toContain('in the sum of <span class="fill fill-amount">$180.00</span>');
+    expect(html).toContain('לטובת המגבית עבור <span class="fill fill-campaign">Sample Campaign</span>');
     expect(html).not.toContain('**');
   });
   it('leaves out the Hebrew-name line when the donor has none', () => {
@@ -131,6 +131,17 @@ describe('Hebrew font on receipts', () => {
     expect(lh).toMatch(/\.letterhead \.he-body, \.letterhead \.he-body \.fill,[^{]*\{ font-weight: 400; \}/);
     expect(lh).toMatch(/\.letterhead \.he-body b,[^{]*text\.he\.b \{ font-weight: 500; \}/);
     expect(lh).not.toMatch(/\.he[^{}]*\{[^}]*font-weight: (700|bold)/);
+    expect(lh).toContain('.letterhead .he-body .fill-amount { font-weight: 500; }');
     expect(readFileSync('src/lib/receiptHtml.ts', 'utf8')).toContain('.he, .he b { font-weight: normal; }');
+  });
+});
+
+describe('the amount in the Hebrew text', () => {
+  it('is marked as the amount, so it can be set in Medium (Moshe, 2026-11-22)', () => {
+    const layout = { style: 'letterhead', mode: 'fill', enabled: true, fields: [],
+      body: { hebrew: { top: 180, left: 100, right: 514, size: 12, line_height: 17 }, english: { top: 400, left: 98, width: 420, size: 11, line_height: 16 } } } as never;
+    const html = page({ ...SAMPLE_RECEIPT, amount: 180, hebrew_text: 'הננו בזה לאשר על קבלת נדבת לבו בסך {amount}\nלטובת המגבית עבור {campaign}', english_text: '' }, { name: 'Sample Org' }, layout, null);
+    expect(html).toContain('<span class="fill fill-amount">$180.00</span>');
+    expect(html).toContain('<span class="fill fill-campaign">');
   });
 });
