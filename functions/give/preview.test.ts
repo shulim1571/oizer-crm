@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 vi.mock('../_config', () => ({ SUPABASE_URL: 'https://example.supabase.co', SUPABASE_ANON_KEY: 'anon', DEFAULT_ORG: 'oizer' }));
 const { previewTags, withPreview } = await import('./[id]');
@@ -41,5 +42,17 @@ describe('payment link previews', () => {
     const d = p.tags.find(t => t.includes('og:description'))!;
     expect(d.length).toBeLessThan(260);
     expect(d).toContain('…');
+  });
+});
+
+describe('link previews on the platform address (Shulim, 2026-11-23)', () => {
+  it('keep ?org= in the shared address, so it opens the right organization', () => {
+    const p = previewTags({ campaign: { name: 'Sample Campaign' }, org: { name: 'Oizer' }, page: {} }, 'Oizer', new URL('https://fund.trubase.org/give/1002?org=oizer&utm=x'));
+    expect(p.tags.join('\n')).toContain('<meta property="og:url" content="https://fund.trubase.org/give/1002?org=oizer" />');
+  });
+  it('use the default organization only on pages.dev', () => {
+    const src = readFileSync('functions/give/[id].ts', 'utf8');
+    expect(src).toContain("p_slug: url.searchParams.get('org')");
+    expect(src).toContain("DEFAULT_ORG && url.hostname.endsWith('.pages.dev')");
   });
 });

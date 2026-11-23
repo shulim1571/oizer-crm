@@ -29,6 +29,6 @@ describe('teams and sub-campaigns', () => {
   it("list teams that are turned on on the parent's payment page, each linking to its own page", () => {
     const g = src('pages', 'Give.tsx');
     expect(g).toContain('teams.map((tm: Row) => (');
-    expect(g).toContain('href={`/give/${encodeURIComponent(tm.id)}`}');
+    expect(g).toContain('href={`/give/${encodeURIComponent(tm.id)}${window.location.search}`}');   // keeps ?org= (Shulim, 2026-11-23)
   });
 });

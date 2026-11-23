@@ -214,7 +214,7 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
             <ul>
               {teams.map((tm: Row) => (
                 <li key={tm.id}>
-                  <a href={`/give/${encodeURIComponent(tm.id)}`}>
+                  <a href={`/give/${encodeURIComponent(tm.id)}${window.location.search}`}>
                     <span className="give-team-avatar" aria-hidden="true">{String(tm.name ?? '?').trim()[0]?.toUpperCase()}</span>
                     <span className="give-team-name" dir="auto">{tm.name}</span>
                     <ChevronRight size={16} className="give-team-go" aria-hidden="true" />

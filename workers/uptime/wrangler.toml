@@ -24,6 +24,6 @@ id = "446ba1c360074ae1b5a82c206691464f"
 [vars]
 TITLE = "Oizer status"
 SUPABASE_URL = "https://wwaknikpdquwnphhwzsm.supabase.co"
-APP_URLS = "https://oizer.trubase.org/,https://oizer-drm.pages.dev/"
+APP_URLS = "https://fund.trubase.org/,https://oizer.trubase.org/,https://oizer-drm.pages.dev/"
 ALERT_EMAIL = "smueller@trubase.org"
 ALERT_FROM = "status@mail.trubase.org"

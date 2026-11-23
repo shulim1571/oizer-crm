@@ -9,7 +9,7 @@ describe('payment page teams panel (Moshe Henig, 2026-11-11)', () => {
   it('is its own card, on the right on wide screens and above the form on a phone', () => {
     expect(give).toContain('<aside className="give-card give-teams" aria-label={t.teams}>');
     expect(give).toContain("<main className={`give-main ${teams.length ? 'has-teams' : ''}`}>");
-    expect(give).toContain('href={`/give/${encodeURIComponent(tm.id)}`}');
+    expect(give).toContain('href={`/give/${encodeURIComponent(tm.id)}${window.location.search}`}');   // keeps ?org= (Shulim, 2026-11-23)
     expect(css).toContain('.give-main.has-teams { grid-template-columns: minmax(0, 1fr) 300px;');
     expect(css).toContain('.give-main.has-teams > .give-teams { grid-column: 2;');
   });

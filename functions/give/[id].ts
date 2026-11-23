@@ -41,7 +41,8 @@ export function previewTags(page: Json, orgFallback: string, url: URL) {
       orgName ? `<meta property="og:site_name" content="${esc(orgName)}" />` : '',
       `<meta property="og:title" content="${esc(`Donate to ${name}`)}" />`,
       `<meta property="og:description" content="${esc(description)}" />`,
-      `<meta property="og:url" content="${esc(url.origin + url.pathname)}" />`,
+      // Keeps ?org= (a link from fund.trubase.org), so the shared address still opens the right organization.
+      `<meta property="og:url" content="${esc(url.origin + url.pathname + (url.searchParams.get('org') ? `?org=${encodeURIComponent(url.searchParams.get('org')!)}` : ''))}" />`,
       image ? `<meta property="og:image" content="${esc(image)}" />` : '',
       // A wide card only for a banner; a logo shows as the small square card.
       `<meta name="twitter:card" content="${banner ? 'summary_large_image' : 'summary'}" />`,
@@ -66,9 +67,10 @@ export async function onRequestGet({ request, params, env }: Ctx) {
   let html = await (await env.ASSETS.fetch(new URL('/', url))).text();
   if (/^[A-Za-z0-9-]{1,40}$/.test(id)) {
     try {
-      // The address decides the organization; the default one only where the address belongs to none (pages.dev).
-      let [org] = (await rpc('resolve_org', { p_host: url.hostname, p_slug: null })) ?? [];
-      if (!org && DEFAULT_ORG) [org] = (await rpc('resolve_org', { p_host: url.hostname, p_slug: DEFAULT_ORG })) ?? [];
+      // The address decides the organization: its hostname, or ?org= (links from fund.trubase.org carry it). The
+      // default one only on pages.dev, never for other addresses that match no organization (Shulim, 2026-11-23).
+      let [org] = (await rpc('resolve_org', { p_host: url.hostname, p_slug: url.searchParams.get('org') })) ?? [];
+      if (!org && DEFAULT_ORG && url.hostname.endsWith('.pages.dev')) [org] = (await rpc('resolve_org', { p_host: url.hostname, p_slug: DEFAULT_ORG })) ?? [];
       const page = org ? await rpc('public_give_page', { p_org: org.id, p_campaign: id }) : null;
       if (page?.campaign) html = withPreview(html, previewTags(page, org.name, url));
     } catch {

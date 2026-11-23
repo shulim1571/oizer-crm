@@ -7,6 +7,7 @@ import { Pill } from '../components/Pill';
 import { dateTime, formatPhone } from '../lib/format';
 import { campaignOptions, donorOptions, managerOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
+import { orgLink } from '../lib/org';
 import { useQuery } from '../lib/useQuery';
 import { MessagePill } from './Messaging';
 import { Overlay } from './Pledges';
@@ -43,7 +44,7 @@ async function copy(text: string, done: (m: string) => void) {
 
 /** The campaign's payment link: its Payment Link when that's a web address, otherwise its own payment page. */
 export const paymentUrl = (c: Row) => (/^https?:\/\/\S+$/i.test(String(c.payment_link ?? '').trim())
-  ? String(c.payment_link).trim() : `${window.location.origin}${import.meta.env.BASE_URL}give/${encodeURIComponent(c.id)}`);
+  ? String(c.payment_link).trim() : orgLink(`give/${encodeURIComponent(c.id)}`));   // carries ?org= off the org's own address
 
 // ---------------------------------------------------------------------------
 // Sharing a campaign's payment link
@@ -80,8 +81,11 @@ export function ShareDialog({ campaign, onClose }: { campaign: Row; onClose: () 
     + (channel === 'sms' ? '\nReply STOP to opt out.' : '');
   const recipients = to.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
   const origin = window.location.origin;
-  const snippet = `<script src="${origin}/widget.js" data-campaign="${campaign.id}" data-label="Donate" async></script>`;
-  const inline = `<script src="${origin}/widget.js" data-campaign="${campaign.id}" data-mode="inline" async></script>`;
+  // Off the organization's own address (fund.trubase.org, pages.dev), the widget names the organization (data-org).
+  const widgetOrg = new URL(orgLink('')).searchParams.get('org');
+  const orgAttr = widgetOrg ? ` data-org="${widgetOrg}"` : '';
+  const snippet = `<script src="${origin}/widget.js" data-campaign="${campaign.id}"${orgAttr} data-label="Donate" async></script>`;
+  const inline = `<script src="${origin}/widget.js" data-campaign="${campaign.id}"${orgAttr} data-mode="inline" async></script>`;
 
   async function send() {
     setError(null);

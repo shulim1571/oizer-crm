@@ -117,3 +117,14 @@ describe('the Supabase key the gate sends', () => {
     expect(supabaseKey({ SUPABASE_ANON_KEY: 'sb_publishable_b' })).toBe('sb_publishable_b');
   });
 });
+
+describe('platform and organization addresses (Shulim, 2026-11-23)', () => {
+  it('allows fund.trubase.org and organization subdomains, but not look-alike domains', () => {
+    const list = 'fund.trubase.org,*.trubase.org,oizer.trubase.org,oizer-drm.pages.dev,*.oizer-drm.pages.dev,localhost';
+    expect(allowedOrigin('https://fund.trubase.org', list)).toBe('https://fund.trubase.org');
+    expect(allowedOrigin('https://neworg.trubase.org', list)).toBe('https://neworg.trubase.org');
+    expect(allowedOrigin('https://oizer.trubase.org', list)).toBe('https://oizer.trubase.org');
+    expect(allowedOrigin('https://eviltrubase.org', list)).toBeNull();
+    expect(allowedOrigin('https://trubase.org.evil.com', list)).toBeNull();
+  });
+});

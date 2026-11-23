@@ -26,4 +26,5 @@ namespace_id = "41002"
 
 [vars]
 SUPABASE_URL = "https://wwaknikpdquwnphhwzsm.supabase.co"
-ALLOWED_ORIGINS = "oizer.trubase.org,oizer-drm.pages.dev,*.oizer-drm.pages.dev,localhost"
+# fund.trubase.org is the platform address; *.trubase.org covers organization subdomains (Shulim, 2026-11-23).
+ALLOWED_ORIGINS = "fund.trubase.org,*.trubase.org,oizer.trubase.org,oizer-drm.pages.dev,*.oizer-drm.pages.dev,localhost"

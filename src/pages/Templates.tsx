@@ -8,6 +8,7 @@ import { Pill } from '../components/Pill';
 import { money } from '../lib/format';
 import { accountOptions, clearLookups, paymentMethodIdOptions, type Option } from '../lib/lookups';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
+import { orgLink } from '../lib/org';
 import { useQuery } from '../lib/useQuery';
 import { pictureToDataUrl } from '../lib/imageUpload';
 import { useAuth } from '../lib/auth';
@@ -293,7 +294,7 @@ function PictureField({ label, value, onChange, kind, hint }: { label: string; v
 
 /** The public payment page: its address, whether it's on, and what it says beyond the amounts. */
 function PageContentCard({ campaignId, v, setV }: { campaignId: string; v: PageContent; setV: (f: (prev: PageContent) => PageContent) => void }) {
-  const link = `${window.location.origin}${import.meta.env.BASE_URL}give/${encodeURIComponent(campaignId)}`;
+  const link = orgLink(`give/${encodeURIComponent(campaignId)}`);   // carries ?org= off the org's own address
   return (
     <div className="panel-box">
       <h3>Payment page</h3>
