@@ -40,7 +40,7 @@
     "cert_min_days": 14
   },
   "cloudflare": {
-    "pages": { "production_branch": "main", "domains": ["oizer.trubase.org"] },
+    "pages": { "production_branch": "main", "domains": ["fund.trubase.org", "oizer.trubase.org"] },
     "workers": {
       "oizer-give-gate": { "workers_dev": true },
       "oizer-status": { "workers_dev": true }
