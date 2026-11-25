@@ -21,15 +21,21 @@ const SAY_AS_IS = [
 ];
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-async function begin(token: string, org: string): Promise<void> {
-  const res = await fetch(`${url}/rest/v1/rpc/address_suggest_begin`, {
-    method: 'POST', headers: { ...apiHeaders(token), 'Content-Type': 'application/json', 'x-org-id': org }, body: '{}',
-  });
-  if (res.ok) return;
-  const data = await res.json().catch(() => null);
-  const text = String(data?.message ?? '');
-  if (!SAY_AS_IS.includes(text)) console.error('address-suggest permission check failed: %s', res.status);
-  throw new Error(SAY_AS_IS.includes(text) ? text : 'You can\'t look up addresses for this organization.');
+// Null when the lookup is booked; otherwise the fixed message to show the person (never an exception's text).
+async function begin(token: string, org: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${url}/rest/v1/rpc/address_suggest_begin`, {
+      method: 'POST', headers: { ...apiHeaders(token), 'Content-Type': 'application/json', 'x-org-id': org }, body: '{}',
+    });
+    if (res.ok) return null;
+    const data = await res.json().catch(() => null);
+    const said = SAY_AS_IS.find(m => m === String(data?.message ?? ''));
+    if (!said) console.error('address-suggest permission check failed: %s', res.status);
+    return said ?? 'You can\'t look up addresses for this organization.';
+  } catch (e) {
+    console.error('address-suggest permission check failed: %s', e instanceof Error ? e.name : 'error');
+    return 'Couldn\'t check your access. Please try again.';
+  }
 }
 
 Deno.serve(async req => {
@@ -43,10 +49,8 @@ Deno.serve(async req => {
   const query = cleanQuery(b.query);
   if (!query) return reply({ suggestions: [] });   // under 3 characters (or far too long): nothing to look up, nothing booked
 
-  try { await begin(token, b.org); } catch (e) {
-    const text = e instanceof Error ? e.message : String(e);
-    return reply({ error: text, suggestions: [] }, text.startsWith('Address suggestions') ? 429 : 403);
-  }
+  const refused = await begin(token, b.org);
+  if (refused) return reply({ error: refused, suggestions: [] }, refused.startsWith('Address suggestions') ? 429 : 403);
 
   const key = Deno.env.get('AZURE_MAPS_KEY');
   if (!key) { console.error('address-suggest: AZURE_MAPS_KEY is not set'); return reply({ error: 'Address suggestions aren\'t available right now.', suggestions: [] }); }
