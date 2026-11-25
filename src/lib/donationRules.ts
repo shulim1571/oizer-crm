@@ -14,6 +14,8 @@ export const DONATION_TRANSITIONS: Record<string, string[]> = {
   voided: [],
   refunded: [],
   returned: [],
+  // A held Donary cash or check gift: voided here; it counts once marked delivered (Shulim, 2026-11-25).
+  held: ['voided'],
 };
 
 /** Fields the card processor decides on a donation it handled. */

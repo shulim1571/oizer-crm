@@ -11,7 +11,7 @@ export const DONATION_SELECT =
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending', post_dated: 'Post-dated', collect: 'Collect', voided: 'Voided', refunded: 'Refunded', returned: 'Returned', failed: 'Failed', rejected: 'Rejected',
-  disputed: 'Disputed', chargeback: 'Chargeback',
+  disputed: 'Disputed', chargeback: 'Chargeback', held: 'Held',
 };
 
 /** A check recorded but not delivered yet: not in the balance until it is (readiness #36). */

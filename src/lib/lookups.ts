@@ -107,6 +107,8 @@ export const DONATION_TYPES = ['Payment', 'Batch'].map(v => ({ value: v, label: 
 export const DONATION_STATUSES = [
   ['completed', 'Completed'], ['pending', 'Pending approval'], ['post_dated', 'Post-dated'], ['collect', 'To collect'], ['voided', 'Voided'],
   ['refunded', 'Refunded'], ['returned', 'Returned'], ['failed', 'Failed'], ['rejected', 'Rejected'],
+  // Donary cash or check, not counted until marked delivered (Shulim, 2026-11-25).
+  ['held', 'Held (Donary cash/check)'],
 ].map(([value, label]) => ({ value, label }));
 export const CAMPAIGN_STATUSES = [['draft', 'Draft'], ['active', 'Active']].map(([value, label]) => ({ value, label }));
 export const TASK_STATUSES = ['Pending', 'In Progress', 'Done'].map(v => ({ value: v, label: v }));

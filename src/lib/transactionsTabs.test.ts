@@ -8,7 +8,7 @@ const app = readFileSync('src/App.tsx', 'utf8');
 
 describe('Transactions tabs', () => {
   it('shows the four views as tabs of Transactions, with Vouchers and Receipts for admins only', () => {
-    expect(layout).toMatch(/\{ to: '\/donations\/all', label: 'Transactions', icon: <CircleDollarSign size=\{I\} \/>,\s*tabs: \[\{ to: '\/donations\/all', label: 'Transactions' \}, \{ to: '\/donations\/recurring', label: 'Recurring' \},\s*\{ to: '\/donations\/pledges', label: 'Pledges' \}, \{ to: '\/donations\/vouchers', label: 'Vouchers', admin: true \},\s*\{ to: '\/donations\/receipts', label: 'Receipts', admin: true \}\] \},/);
+    expect(layout).toMatch(/\{ to: '\/donations\/all', label: 'Transactions', icon: <CircleDollarSign size=\{I\} \/>,\s*tabs: \[\{ to: '\/donations\/all', label: 'Transactions' \}, \{ to: '\/donations\/recurring', label: 'Recurring' \},\s*\{ to: '\/donations\/pledges', label: 'Pledges' \}, \{ to: '\/donations\/vouchers', label: 'Vouchers', admin: true \},\s*\{ to: '\/donations\/receipts', label: 'Receipts', admin: true \},\s*\/\/ [^\n]*\n\s*\{ to: '\/donations\/donary-held', label: 'Donary cash & checks', admin: true \}\] \},/);
     for (const old of ["to: '/recurring'", "to: '/pledges'", "to: '/vouchers'", "to: '/receipts'"]) expect(layout).not.toContain(old);
   });
 

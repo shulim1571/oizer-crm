@@ -22,6 +22,7 @@ import GuestPage from './pages/Guest';
 import BatchEntry from './pages/BatchEntry';
 import FeesPage from './pages/Fees';
 import { PledgesPage } from './pages/Pledges';
+import { DonaryHeldPage } from './pages/DonaryHeld';
 import { VouchersPage } from './pages/Vouchers';
 import { TransfersPage } from './pages/Transfers';
 import TaskSheetPage from './pages/TaskSheet';
@@ -232,6 +233,7 @@ export default function App() {
         <Route path="checks" element={<AdminOnly><ChecksPage /></AdminOnly>} />
         <Route path="reconciliation" element={<AdminOnly><ReconciliationPage /></AdminOnly>} />
         <Route path="donations/receipts" element={<AdminOnly><ReceiptsPage /></AdminOnly>} />
+        <Route path="donations/donary-held" element={<AdminOnly><DonaryHeldPage /></AdminOnly>} />
         <Route path="source-report" element={<SourceReportPage />} />
         <Route path="fundraiser-directory" element={<AdminOnly><FundraiserDirectoryPage /></AdminOnly>} />
         <Route path="data-import" element={<AdminOnly><DataImportPage /></AdminOnly>} />

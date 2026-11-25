@@ -1,4 +1,5 @@
 import RecordForm, { type Field } from '../components/RecordForm';
+import { DonaryCashCheckSetting } from './DonaryHeld';
 import { supabase, type Row } from '../lib/supabase';
 import { OrgLogo, ProductMark } from '../components/Layout';
 import type { Org } from '../lib/org';
@@ -90,6 +91,8 @@ export default function OrganizationPage() {
         label="Sign out after (minutes idle)" unit="minutes" defaultValue={IDLE_MINUTES_DEFAULT} parse={parseIdleMinutes} saveLabel="Save security settings"
         help="Anyone who leaves the app with no activity (clicks, typing, scrolling, moving between pages, saving) for this long is signed out. From 5 to 720 minutes; it applies from each person's next sign-in or page load."
         onSaved={() => { setSaved('Security'); void refresh(); }} />
+      {/* Donary cash and check gifts: ignored, or flagged for review; never counted until marked delivered (Shulim, 2026-11-25). */}
+      <DonaryCashCheckSetting orgId={String(org.id)} />
       <UspsKeys />
       <FooterSettings />
     </section>

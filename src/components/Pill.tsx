@@ -11,7 +11,7 @@ const TONES: Record<string, Tone> = {
   Payment: 'green', Batch: 'blue', 'Batch deposit': 'blue', Collect: 'amber', Voided: 'red',
   Pending: 'amber', 'In Progress': 'blue', Done: 'green',
   Active: 'green', Archived: '', Draft: 'amber', Closed: 'red', Suspended: 'amber', Deactivated: 'red',
-  Refunded: 'amber', Returned: 'red', Failed: 'red', Rejected: 'red', 'Post-dated': 'blue', 'Possible duplicate': 'amber', Split: 'violet', 'Not delivered': 'amber', Disputed: 'red', Chargeback: 'red',
+  Refunded: 'amber', Returned: 'red', Failed: 'red', Rejected: 'red', 'Post-dated': 'blue', 'Possible duplicate': 'amber', Split: 'violet', 'Not delivered': 'amber', Held: 'amber', Disputed: 'red', Chargeback: 'red',
   'Changes requested': 'amber', Approved: 'green', Withdrawn: '',
   Open: 'blue', 'Partially fulfilled': 'amber', Fulfilled: 'green', Overdue: 'red', Cancelled: '', Skipped: '',
   'Pending funding': 'amber', 'Partially funded': 'blue', 'Fully funded': 'green', 'Overage review': 'red',

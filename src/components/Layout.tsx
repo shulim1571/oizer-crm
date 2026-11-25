@@ -110,7 +110,9 @@ const NAV: NavSection[] = [
       { to: '/donations/all', label: 'Transactions', icon: <CircleDollarSign size={I} />,
         tabs: [{ to: '/donations/all', label: 'Transactions' }, { to: '/donations/recurring', label: 'Recurring' },
           { to: '/donations/pledges', label: 'Pledges' }, { to: '/donations/vouchers', label: 'Vouchers', admin: true },
-          { to: '/donations/receipts', label: 'Receipts', admin: true }] },
+          { to: '/donations/receipts', label: 'Receipts', admin: true },
+          // Held Donary cash and check gifts, to mark delivered (Shulim, 2026-11-25).
+          { to: '/donations/donary-held', label: 'Donary cash & checks', admin: true }] },
       // Opened from the New Donation button in the header bar, so it's off the sidebar (Moshe Henig, 2026-11-11).
       { to: '/donations/new', label: 'New Donation', icon: <PlusCircle size={I} />, admin: true, offMenu: true,
         // Batch Entry gave way to new pledges and vouchers (Moshe Henig, 2026-11-11); it stays on a campaign's page.
