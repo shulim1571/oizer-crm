@@ -82,8 +82,24 @@ describe('donor address suggestions', () => {
     expect(host.textContent).toContain('reached today\'s limit');
   });
 
-  it('is on donor address boxes (not bulk edits), next to Check with USPS', () => {
-    expect(readFileSync('src/lib/schemas.ts', 'utf8')).toContain("{ name: 'address', label: 'Address', uspsCheck: true, addressSuggest: true },");
-    expect(readFileSync('src/components/RecordForm.tsx', 'utf8')).toContain('if (f.addressSuggest && !p.onBulk) return <AddressSuggest');
+  it('is the donor address\'s Street box, in separate address boxes (not bulk edits); Check with USPS is gone', () => {
+    expect(readFileSync('src/lib/schemas.ts', 'utf8')).toContain("{ name: 'address', label: 'Address', type: 'usaddress', addressSuggest: true,");
+    expect(readFileSync('src/components/RecordForm.tsx', 'utf8')).toContain("if (f.type === 'usaddress' && !f.readOnly && !p.onBulk) {");
+    for (const f of ['src/components/RecordForm.tsx', 'src/components/AddressEditor.tsx', 'src/pages/Organization.tsx', 'src/lib/schemas.ts', 'src/styles.css']) {
+      expect(readFileSync(f, 'utf8'), f).not.toMatch(/AddressCheck|uspsCheck|usps-address|Check with USPS|UspsKeys/);
+    }
+  });
+
+  it('hands back the picked address in parts when the form wants separate boxes', async () => {
+    const picked: unknown[] = [];
+    function Parts() {
+      const [v, setV] = useState('');
+      return <AddressSuggest value={v} onChange={setV} onPick={s => picked.push(s)} />;
+    }
+    await act(async () => createRoot(host).render(<Parts />));
+    await type('123 Sam');
+    await wait(350);
+    await act(async () => { host.querySelector('[role="option"]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
+    expect(picked).toEqual([SUGG]);
   });
 });

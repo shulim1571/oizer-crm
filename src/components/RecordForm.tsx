@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import CampaignBalanceNote from './CampaignBalanceNote';
-import AddressCheck from './AddressCheck';
 import AddressSuggest from './AddressSuggest';
+import AddressBoxes from './AddressBoxes';
 import { NewDonorDialog } from './DonorPicker';
 import { useEffect, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
@@ -23,7 +23,8 @@ const PAYOUT_LOCKED = ['amount', 'payee_id', 'payee'];
 export interface Field {
   name: string;
   label: string;
-  type?: 'text' | 'number' | 'textarea' | 'checkbox' | 'select' | 'search' | 'multi' | 'datetime' | 'date' | 'email';
+  /** usaddress: a US address in Street / Apt / City / State / ZIP boxes, kept as one field (Shulim, 2026-11-25). */
+  type?: 'text' | 'number' | 'textarea' | 'checkbox' | 'select' | 'search' | 'multi' | 'datetime' | 'date' | 'email' | 'usaddress';
   options?: Option[] | (() => Promise<Option[]>);
   required?: boolean;
   /** Free-text select: allow values not in the list. */
@@ -37,8 +38,6 @@ export interface Field {
   showIf?: (values: Row) => boolean;
   /** Groups the form into titled sections, in the order they first appear (layout only). */
   section?: string;
-  /** A US address: offers "Check with USPS" under it once the organization has USPS keys (Shulim, 2026-11-12). */
-  uspsCheck?: boolean;
   /** Suggests US street addresses while typing (Azure Maps, through address-suggest), filling the box when one is picked (Shulim, 2026-11-25). */
   addressSuggest?: boolean;
   /** Checked before saving: a message stops the save and says what's wrong (the database checks too). */
@@ -272,11 +271,20 @@ export default function RecordForm(p: Props) {
   );
 
   function fieldBox(f: Field) {
+    // An address in separate boxes: its own group (each box has its own label), not one label around them all.
+    if (f.type === 'usaddress' && !f.readOnly && !p.onBulk) {
+      return (
+        <div key={f.name} className="field wide address-field" role="group" aria-label={f.label}>
+          <span>{f.label}{f.required && ' *'}</span>
+          <AddressBoxes value={values[f.name]} onChange={v => set(f.name, v || null)} suggest={!!f.addressSuggest} />
+          {f.help && <small className="muted">{f.help}</small>}
+        </div>
+      );
+    }
     return (
       <label key={f.name} className={`field ${f.type === 'textarea' ? 'wide' : ''} ${f.type === 'checkbox' ? 'check' : ''}`}>
         <span>{f.label}{f.required && ' *'}</span>
         {renderInput(f)}
-        {f.uspsCheck && !f.readOnly && <AddressCheck value={values[f.name]} oneLine={f.type !== 'textarea'} onUse={v => set(f.name, v)} />}
         {f.help && <small className="muted">{f.help}</small>}
       </label>
     );

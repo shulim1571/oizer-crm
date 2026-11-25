@@ -1,5 +1,6 @@
 import RecordForm, { type Field } from '../components/RecordForm';
 import { DonaryCashCheckSetting } from './DonaryHeld';
+import AddressRegionSetting from '../components/AddressRegionSetting';
 import { supabase, type Row } from '../lib/supabase';
 import { OrgLogo, ProductMark } from '../components/Layout';
 import type { Org } from '../lib/org';
@@ -19,7 +20,7 @@ const SECTIONS: { title: string; description: string; save: string; fields: Fiel
       { name: 'name', label: 'Organization name', required: true, help: 'Shown across the portal' },
       { name: 'legal_name', label: 'Legal name', help: 'As it appears on receipts' },
       { name: 'ein', label: 'EIN' },
-      { name: 'address', label: 'Address', uspsCheck: true },
+      { name: 'address', label: 'Address' },
       { name: 'phone', label: 'Phone' },
       { name: 'email', label: 'Email', type: 'email' },
     ],
@@ -93,7 +94,8 @@ export default function OrganizationPage() {
         onSaved={() => { setSaved('Security'); void refresh(); }} />
       {/* Donary cash and check gifts: ignored, or flagged for review; never counted until marked delivered (Shulim, 2026-11-25). */}
       <DonaryCashCheckSetting orgId={String(org.id)} />
-      <UspsKeys />
+      {/* Address suggestions: a state or region only, or first (Shulim, 2026-11-25; replaces the USPS keys card). */}
+      <AddressRegionSetting orgId={String(org.id)} />
       <FooterSettings />
     </section>
   );
@@ -205,72 +207,6 @@ function NumberSetting({ orgId, settingKey, title, intro, label, unit, help, def
         </div>
         {error && <div className="error">{error}</div>}
         <p className="muted small" aria-live="polite">{saving ? 'Saving…' : done ? `Saved. (${saveLabel.replace(/^Save /, '')})` : 'Saved when you leave the box.'}</p>
-      </form>
-    </div>
-  );
-}
-
-/**
- * The organization's own USPS credentials for address checks (Shulim, 2026-11-12): a consumer key and secret from a
- * USPS developer account (developers.usps.com). Stored encrypted; the secret never comes back to the browser. Only the
- * Super Admin sets them; admins see whether they're set.
- */
-function UspsKeys() {
-  const { isSuperAdmin } = useAuth();
-  const [version, setVersion] = useState(0);
-  const [status, setStatus] = useState<Row | null | undefined>(undefined);
-  const [key, setKey] = useState('');
-  const [secret, setSecret] = useState('');
-  const [env, setEnv] = useState('production');
-  const [error, setError] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
-  useEffect(() => {
-    supabase.rpc('usps_keys_status').then(({ data }) => {
-      const row = ((data ?? []) as Row[])[0] ?? null;
-      setStatus(row);
-      if (row?.environment) setEnv(row.environment);
-    });
-  }, [version]);
-  const set = !!status?.key_hint && !!status?.secret_set;
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null); setNote(null);
-    const { error: err } = await supabase.rpc('save_usps_keys', { p_consumer_key: key || null, p_consumer_secret: secret || null, p_environment: env });
-    if (err) return setError(err.message);
-    setKey(''); setSecret(''); setNote('USPS keys saved. Reload the page to see "Check with USPS" under address fields.');
-    setVersion(v => v + 1);
-  }
-  async function clear() {
-    if (!confirm('Remove this organization\'s USPS keys? Address checks stop being offered.')) return;
-    const { error: err } = await supabase.rpc('clear_usps_keys');
-    if (err) return setError(err.message);
-    setVersion(v => v + 1);
-  }
-  if (status === undefined) return null;
-  return (
-    <div className="settings-section">
-      <form className="record-form" onSubmit={save}>
-        <div className="form-head"><h2>USPS address check</h2></div>
-        <p className="muted small form-desc">
-          With your own USPS developer keys, address fields (donors, payees, this page) get a "Check with USPS" button that standardizes the address.
-          {set ? ` Set up: key ${status?.key_hint}, ${status?.environment === 'test' ? 'USPS test environment' : 'production'}${status?.updated_by ? `, by ${status.updated_by}` : ''}.` : ' Not set up yet.'}
-        </p>
-        {isSuperAdmin ? (
-          <>
-            <div className="fields">
-              <label className="field"><span>Consumer key</span><input value={key} onChange={e => setKey(e.target.value)} placeholder={set ? 'Leave empty to keep the one on file' : 'From developers.usps.com → Apps'} autoComplete="off" /></label>
-              <label className="field"><span>Consumer secret</span><input type="password" value={secret} onChange={e => setSecret(e.target.value)} placeholder={set ? 'Leave empty to keep the one on file' : ''} autoComplete="new-password" /></label>
-              <label className="field"><span>USPS environment</span>
-                <select value={env} onChange={e => setEnv(e.target.value)}><option value="production">Production (apis.usps.com)</option><option value="test">Test (apis-tem.usps.com)</option></select></label>
-            </div>
-            {error && <div className="error">{error}</div>}
-            {note && <div className="notice">{note}</div>}
-            <div className="form-actions">
-              {set && <button type="button" className="btn danger" onClick={() => void clear()}>Remove keys</button>}
-              <div className="spacer" /><button className="btn primary">Save USPS keys</button>
-            </div>
-          </>
-        ) : <p className="muted small">The Super Admin enters these.</p>}
       </form>
     </div>
   );

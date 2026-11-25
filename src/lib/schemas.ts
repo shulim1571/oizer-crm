@@ -1,4 +1,5 @@
 import type { Field } from '../components/RecordForm';
+import { addressProblem, splitAddress } from './addressParts';
 import type { Row } from './supabase';
 import { localToday } from './format';
 import {
@@ -214,7 +215,7 @@ export const payeeFields: Field[] = [
   { name: 'name', label: 'Name', required: true },
   { name: 'phone', label: 'Phone' },
   { name: 'email', label: 'Email', type: 'email' },
-  { name: 'address', label: 'Address', type: 'textarea', uspsCheck: true },
+  { name: 'address', label: 'Address', type: 'textarea' },
   { name: 'preferred_method', label: 'Preferred payout method', type: 'select', options: payoutMethodOptions },
   { name: 'notes', label: 'Notes', type: 'textarea' },
 ];
@@ -266,8 +267,9 @@ export const donorFields: Field[] = [
   { name: 'cell_phone', label: 'Cell phone', help: 'Texts go to this number' },
   { name: 'home_phone', label: 'Home phone' },
   { name: 'email', label: 'Email', type: 'email' },
-  // Suggestions while typing (Azure Maps), then "Check with USPS" as before (Shulim, 2026-11-25).
-  { name: 'address', label: 'Address', uspsCheck: true, addressSuggest: true },
+  // Street / Apt / City / State / ZIP boxes, kept as the donor's one address; suggestions while typing the street fill
+  // the rest when one is picked (Shulim, 2026-11-25).
+  { name: 'address', label: 'Address', type: 'usaddress', addressSuggest: true, validate: v => addressProblem(splitAddress(v)) },
   { name: 'ojc_id', label: 'OJC account number', help: 'The donor\'s account at the OJC Fund, as it shows on their grants' },
   { name: 'nadvan_id', label: 'Nadvan account number' },
   { name: 'matbia_id', label: 'Matbia account number' },

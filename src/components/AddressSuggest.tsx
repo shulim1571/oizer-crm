@@ -41,8 +41,10 @@ export async function fetchSuggestions(query: string): Promise<Answer> {
  * state and ZIP into the box ("123 Main St, Brooklyn NY 11219"). Arrow keys move through the list, Enter picks,
  * Escape closes. Nothing is looked up for an address that's only been loaded or picked, not typed.
  */
-export default function AddressSuggest({ value, onChange, required, oneLine = true }: {
-  value: string; onChange: (v: string) => void; required?: boolean; oneLine?: boolean;
+export default function AddressSuggest({ value, onChange, onPick, required, oneLine = true, placeholder }: {
+  value: string; onChange: (v: string) => void; required?: boolean; oneLine?: boolean; placeholder?: string;
+  /** Given the picked address in parts (separate street, city, state and ZIP boxes) instead of one line in the box. */
+  onPick?: (s: AddressSuggestion) => void;
 }) {
   const [list, setList] = useState<AddressSuggestion[]>([]);
   const [note, setNote] = useState<string | null>(null);
@@ -69,14 +71,14 @@ export default function AddressSuggest({ value, onChange, required, oneLine = tr
   function pick(s: AddressSuggestion) {
     typed.current = false;   // the picked address isn't looked up again
     asked.current++;
-    onChange(oneLine ? s.one_line : s.two_lines);
+    if (onPick) onPick(s); else onChange(oneLine ? s.one_line : s.two_lines);
     setList([]); setNote(null); setOpen(false);
   }
 
   return (
     <div className="addr-suggest">
       <input
-        value={value} required={required} autoComplete="off" role="combobox" aria-autocomplete="list"
+        value={value} required={required} placeholder={placeholder} autoComplete="off" role="combobox" aria-autocomplete="list"
         aria-expanded={open && list.length > 0} aria-controls={listId}
         aria-activedescendant={sel >= 0 ? `${listId}-${sel}` : undefined}
         onChange={e => { typed.current = true; onChange(e.target.value); }}

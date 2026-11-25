@@ -1152,9 +1152,6 @@ img.logo.org-logo { background: #fff; padding: 2px; }
 .logo-upload-row .btn { margin-right: 8px; margin-top: 4px; }
 code.break { word-break: break-all; }
 
-/* "Check with USPS" under address fields (Shulim, 2026-11-12). */
-.address-check { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
-.address-suggestion { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 
 /* Transactions: search by the card's last 4 digits (Moshe Henig, 2026-11-12). */
 .card-search { width: 120px; font-variant-numeric: tabular-nums; letter-spacing: .08em; }

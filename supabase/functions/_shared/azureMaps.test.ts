@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { cleanQuery, formatSuggestion, searchParams, toSuggestions } from './azureMaps.ts';
+import { cleanQuery, formatSuggestion, readRegion, searchParams, toSuggestions } from './azureMaps.ts';
 
 // Azure Maps Search Address (api-version 1.0), US only, typeahead (Shulim, 2026-11-25). Sample data only.
 const sample = {
@@ -39,7 +39,7 @@ describe('Azure Maps address suggestions', () => {
     expect(toSuggestions({ results: 'x' })).toEqual([]);
   });
 
-  it('formats like the USPS check\'s "Use this"', () => {
+  it('formats in the one-field address layout', () => {
     expect(formatSuggestion({ street: '1 A St', city: 'Brooklyn', state: 'NY', zip: '11219' }, true)).toBe('1 A St, Brooklyn NY 11219');
   });
 
@@ -50,5 +50,34 @@ describe('Azure Maps address suggestions', () => {
     expect(src).not.toMatch(/console\.\w+\([^)]*(key|params|AZURE_SEARCH_ADDRESS)/);
     expect(src).not.toMatch(/reply\([^)]*key/);
     expect(src).toContain("import { apiHeaders } from '../_shared/keys.ts';");
+  });
+
+  // An organization's region (Shulim, 2026-11-25): only these states, or these first.
+  it('reads the region setting: known states only, off when none', () => {
+    expect(readRegion({ mode: 'only', states: ['ny', 'NJ', 'XX', 'NY'] })).toEqual({ mode: 'only', states: ['NY', 'NJ'] });
+    expect(readRegion({ mode: 'prefer', states: ['CT'] })).toEqual({ mode: 'prefer', states: ['CT'] });
+    expect(readRegion({ mode: 'off', states: ['NY'] })).toBeNull();
+    expect(readRegion({ mode: 'only', states: ['XX'] })).toBeNull();
+    expect(readRegion(null)).toBeNull();
+  });
+
+  it('points Azure at the region\'s first state and asks for more when a region is set', () => {
+    const p = searchParams('123 Sample St', { mode: 'prefer', states: ['NJ', 'NY'] });
+    expect([p.get('lat'), p.get('lon'), p.get('limit'), p.get('countrySet')]).toEqual(['40.2', '-74.7', '20', 'US']);
+    expect(searchParams('123 Sample St').has('lat')).toBe(false);
+  });
+
+  it('shows only the region\'s addresses, or the region\'s first', () => {
+    expect(toSuggestions(sample, { mode: 'only', states: ['NJ'] }).map(s => s.state)).toEqual(['NJ']);
+    expect(toSuggestions(sample, { mode: 'prefer', states: ['NJ'] }).map(s => s.state)).toEqual(['NJ', 'NY', 'NY']);
+    expect(toSuggestions(sample, { mode: 'only', states: ['CA'] })).toEqual([]);
+  });
+
+  it('the function reads the organization\'s region after the access check, and narrows with it', () => {
+    const src = readFileSync('supabase/functions/address-suggest/index.ts', 'utf8');
+    expect(src.indexOf('const refused = await begin(token, b.org)')).toBeLessThan(src.indexOf('const region = await orgRegion(b.org)'));
+    expect(src).toContain('searchParams(query, region)');
+    expect(src).toContain('toSuggestions(await res.json().catch(() => null), region)');
+    expect(src).toContain('key=eq.address_region');
   });
 });
