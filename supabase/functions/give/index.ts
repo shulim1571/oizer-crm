@@ -194,7 +194,8 @@ Deno.serve(async req => {
     ...solaFields(c.method, later ? 'save' : 'sale', b, null),
     ...(later ? {} : { xAmount: Number(c.amount).toFixed(2) }), xInvoice: c.invoice, xIP: ip ?? undefined,
     xBillFirstName: d.first_name, xBillLastName: d.last_name, xBillPhone: d.phone, xEmail: d.email || undefined,
-    xBillStreet: d.address || undefined, xBillZip: d.zip || undefined, xBillCountry: COUNTRY[d.country] ?? undefined,
+    // The street line alone when the page sends it (US addresses in separate boxes, 2026-11-25), else the address as typed.
+    xBillStreet: d.street || d.address || undefined, xBillZip: d.zip || undefined, xBillCountry: COUNTRY[d.country] ?? undefined,
     xDescription: c.campaign_label ?? undefined,
   };
   let result: Record<string, string>;

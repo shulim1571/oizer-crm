@@ -18,11 +18,12 @@ export const resetAddressSuggest = () => { cache.clear(); unavailable = false; }
 type Answer = { suggestions: AddressSuggestion[]; error?: string };
 
 /** Asks the address-suggest function; a refusal (a limit, signed out) comes back as a message, not an exception. */
-export async function fetchSuggestions(query: string): Promise<Answer> {
-  const key = query.trim().toLowerCase();
+export async function fetchSuggestions(query: string, campaign?: string): Promise<Answer> {
+  const key = `${campaign ?? ''}|${query.trim().toLowerCase()}`;
   const hit = cache.get(key);
   if (hit) return { suggestions: hit };
-  const { data, error } = await supabase.functions.invoke('address-suggest', { body: { org: requestOrgId(), query: query.trim() } });
+  // On a payment page the campaign goes along: donors aren't signed in, and the page's own limits apply (Moshe, 2026-11-25).
+  const { data, error } = await supabase.functions.invoke('address-suggest', { body: { org: requestOrgId(), query: query.trim(), ...(campaign ? { campaign } : {}) } });
   if (error) {
     // A refusal carries its reason in the reply; anything else means the function isn't there to ask.
     const said = await (error as { context?: Response }).context?.json?.().catch(() => null) as Answer | null;
@@ -41,8 +42,10 @@ export async function fetchSuggestions(query: string): Promise<Answer> {
  * state and ZIP into the box ("123 Main St, Brooklyn NY 11219"). Arrow keys move through the list, Enter picks,
  * Escape closes. Nothing is looked up for an address that's only been loaded or picked, not typed.
  */
-export default function AddressSuggest({ value, onChange, onPick, required, oneLine = true, placeholder }: {
+export default function AddressSuggest({ value, onChange, onPick, required, oneLine = true, placeholder, campaign }: {
   value: string; onChange: (v: string) => void; required?: boolean; oneLine?: boolean; placeholder?: string;
+  /** On a campaign's public payment page: that campaign (the donor isn't signed in). */
+  campaign?: string;
   /** Given the picked address in parts (separate street, city, state and ZIP boxes) instead of one line in the box. */
   onPick?: (s: AddressSuggestion) => void;
 }) {
@@ -60,7 +63,7 @@ export default function AddressSuggest({ value, onChange, onPick, required, oneL
     if (q.length < SUGGEST_MIN_CHARS || unavailable) { setList([]); setNote(null); setOpen(false); return; }
     const mine = ++asked.current;
     const timer = setTimeout(() => {
-      void fetchSuggestions(q).then(a => {
+      void fetchSuggestions(q, campaign).then(a => {
         if (mine !== asked.current) return;   // a later keystroke has already asked
         setList(a.suggestions); setNote(a.error ?? null); setSel(-1); setOpen(a.suggestions.length > 0 || !!a.error);
       });

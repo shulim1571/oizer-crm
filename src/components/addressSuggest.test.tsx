@@ -102,4 +102,10 @@ describe('donor address suggestions', () => {
     await act(async () => { host.querySelector('[role="option"]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
     expect(picked).toEqual([SUGG]);
   });
+
+  it('sends the campaign along from a payment page (the donor isn\'t signed in)', async () => {
+    const { fetchSuggestions } = await import('./AddressSuggest');
+    await fetchSuggestions('123 Sample', '1001');
+    expect(invoke).toHaveBeenCalledWith('address-suggest', { body: { org: 'org-1', query: '123 Sample', campaign: '1001' } });
+  });
 });

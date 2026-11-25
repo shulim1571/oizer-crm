@@ -19,7 +19,7 @@ describe('address suggestion lookups', () => {
     expect((await begin(db, MANAGER_1))[0].address_suggest_begin).toBe(OIZER);
     const [r] = (await db.query<{ n: number; cols: string }>(`select count(*)::int n, (select string_agg(column_name, ',' order by column_name) from information_schema.columns where table_name = 'address_lookups') cols from public.address_lookups`)).rows;
     expect(r.n).toBe(2);
-    expect(r.cols).toBe('created_at,id,org_id,user_id');   // never what was typed
+    expect(r.cols).toBe('campaign_id,created_at,id,ip_hash,org_id,user_id');   // never what was typed (campaign and connection hash: payment pages, 2026-11-25)
   });
 
   it('refuses people who aren\'t active staff, and the lookups table is closed to everyone', async () => {

@@ -43,10 +43,20 @@ describe('Azure Maps address suggestions', () => {
     expect(formatSuggestion({ street: '1 A St', city: 'Brooklyn', state: 'NY', zip: '11219' }, true)).toBe('1 A St, Brooklyn NY 11219');
   });
 
-  it('the function requires sign-in, books each lookup in the database first, and never logs or returns the key', () => {
+  it('the function requires sign-in (except from a payment page), books each lookup first, and never logs or returns the key', () => {
     const src = readFileSync('supabase/functions/address-suggest/index.ts', 'utf8');
-    expect(src).toContain("if (!token) return reply({ error: 'Sign in to look up addresses' }, 401);");
-    expect(src.indexOf('await begin(token, b.org)')).toBeLessThan(src.indexOf("Deno.env.get('AZURE_MAPS_KEY')"));
+    expect(src).toContain("} else if (!token) {\n    return reply({ error: 'Sign in to look up addresses' }, 401);");
+    // A payment page must name a campaign (and a real organization id); its lookups are booked with the server key.
+    expect(src).toContain('const fromPage = b.campaign !== undefined;');
+    expect(src).toContain("/^[A-Za-z0-9-]{1,40}$/.test(b.campaign) || !/^[0-9a-f-]{36}$/i.test(b.org)");
+    expect(src).toContain('rpc/address_suggest_public_begin');
+    // The connection is only ever a keyed hash; its address is never logged or sent on.
+    expect(src).toContain("crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }");
+    expect(src).not.toMatch(/console\.\w+\([^)]*\bip\b/);
+    expect(src).not.toMatch(/p_ip_hash: ip\b/);
+    // Each lookup is booked (as the person, or for a payment page) before Azure is asked.
+    expect(src.indexOf('await begin(token, b.org)')).toBeLessThan(src.indexOf('await fetch(`${AZURE_SEARCH_ADDRESS}'));
+    expect(src.indexOf('await beginPublic(')).toBeLessThan(src.indexOf('await fetch(`${AZURE_SEARCH_ADDRESS}'));
     expect(src).not.toMatch(/console\.\w+\([^)]*(key|params|AZURE_SEARCH_ADDRESS)/);
     expect(src).not.toMatch(/reply\([^)]*key/);
     expect(src).toContain("import { apiHeaders } from '../_shared/keys.ts';");
@@ -75,7 +85,7 @@ describe('Azure Maps address suggestions', () => {
 
   it('the function reads the organization\'s region after the access check, and narrows with it', () => {
     const src = readFileSync('supabase/functions/address-suggest/index.ts', 'utf8');
-    expect(src.indexOf('const refused = await begin(token, b.org)')).toBeLessThan(src.indexOf('const region = await orgRegion(b.org)'));
+    expect(src.indexOf('const refused = fromPage')).toBeLessThan(src.indexOf('const region = await orgRegion(b.org)'));
     expect(src).toContain('searchParams(query, region)');
     expect(src).toContain('toSuggestions(await res.json().catch(() => null), region)');
     expect(src).toContain('key=eq.address_region');

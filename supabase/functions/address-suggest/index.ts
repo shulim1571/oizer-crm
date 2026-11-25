@@ -1,5 +1,7 @@
 // Address suggestions while typing (Shulim, 2026-11-25). Called from the portal by a signed-in admin or fundraiser
-// with { org, query }. The database checks the person, as them, and books the lookup against the limits that keep
+// with { org, query }, or from a campaign's public payment page by a donor with { org, campaign, query } (Moshe,
+// 2026-11-25; booked with the server key by address_suggest_public_begin, with its own limits per connection and per
+// organization, only while that campaign's page is open). The database checks the person, as them, and books the lookup against the limits that keep
 // usage inside Azure Maps' free tier (address_suggest_begin); then this function asks Azure Maps Search Address
 // (api-version 1.0, typeahead, US only) with the platform key AZURE_MAPS_KEY and returns up to five street addresses,
 // narrowed to the organization's region or with it first, when it has one (address_region).
@@ -39,6 +41,41 @@ async function begin(token: string, org: string): Promise<string | null> {
   }
 }
 
+// Payment page lookups are limited per connection by a keyed hash of its address (never the address itself): HMAC with
+// the Azure Maps key, which only this function holds, and the date, so it means nothing outside this function and day.
+async function connectionHash(req: Request, secret: string): Promise<string> {
+  const ip = (req.headers.get('cf-connecting-ip') ?? req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim();
+  if (!ip) return 'unknown';
+  const enc = new TextEncoder();
+  const k = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(`${ip}|${new Date().toISOString().slice(0, 10)}`)));
+  return [...sig.slice(0, 16)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+// The payment page's messages from address_suggest_public_begin; anything else becomes a fixed message.
+const PUBLIC_SAY_AS_IS = [
+  'Address suggestions aren\'t available on this page',
+  'Address suggestions are paused for a moment; type the address in full',
+  'Address suggestions aren\'t available right now; type the address in full',
+];
+// Null when a payment page lookup is booked; otherwise the message for the donor.
+async function beginPublic(org: string, campaign: string, who: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${url}/rest/v1/rpc/address_suggest_public_begin`, {
+      method: 'POST', headers: { ...apiHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_org: org, p_campaign: campaign, p_ip_hash: who }),
+    });
+    const said = await res.json().catch(() => undefined);
+    if (res.ok && said === null) return null;
+    const known = PUBLIC_SAY_AS_IS.find(m => m === String(said ?? ''));
+    if (!known) console.error('address-suggest public check failed: %s', res.status);
+    return known ?? 'Address suggestions aren\'t available right now; type the address in full';
+  } catch (e) {
+    console.error('address-suggest public check failed: %s', e instanceof Error ? e.name : 'error');
+    return 'Address suggestions aren\'t available right now; type the address in full';
+  }
+}
+
 // The organization's region setting (address_region: states, show only or show first); null when not set or unreadable,
 // and then suggestions simply aren't narrowed. Read with the server key, for the organization the database just confirmed.
 async function orgRegion(org: string): Promise<Region | null> {
@@ -56,20 +93,26 @@ async function orgRegion(org: string): Promise<Region | null> {
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return reply({ error: 'Method not allowed' }, 405);
-  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (!token) return reply({ error: 'Sign in to look up addresses' }, 401);
-  let b: { org?: unknown; query?: unknown };
+  let b: { org?: unknown; query?: unknown; campaign?: unknown };
   try { b = await req.json(); } catch { return reply({ error: 'Bad request' }, 400); }
   if (typeof b.org !== 'string' || !b.org) return reply({ error: 'Missing organization' }, 400);
+  // A payment page names its campaign; staff are signed in.
+  const fromPage = b.campaign !== undefined;
+  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (fromPage) {
+    if (typeof b.campaign !== 'string' || !/^[A-Za-z0-9-]{1,40}$/.test(b.campaign) || !/^[0-9a-f-]{36}$/i.test(b.org)) return reply({ error: 'Bad request' }, 400);
+  } else if (!token) {
+    return reply({ error: 'Sign in to look up addresses' }, 401);
+  }
   const query = cleanQuery(b.query);
   if (!query) return reply({ suggestions: [] });   // under 3 characters (or far too long): nothing to look up, nothing booked
 
-  const refused = await begin(token, b.org);
-  if (refused) return reply({ error: refused, suggestions: [] }, refused.startsWith('Address suggestions') ? 429 : 403);
-
-  const region = await orgRegion(b.org);
   const key = Deno.env.get('AZURE_MAPS_KEY');
   if (!key) { console.error('address-suggest: AZURE_MAPS_KEY is not set'); return reply({ error: 'Address suggestions aren\'t available right now.', suggestions: [] }); }
+  const refused = fromPage ? await beginPublic(b.org, b.campaign as string, await connectionHash(req, key)) : await begin(token, b.org);
+  if (refused) return reply({ error: refused, suggestions: [] }, refused.includes('on this page') || !refused.startsWith('Address suggestions') ? 403 : 429);
+
+  const region = await orgRegion(b.org);
   try {
     const params = searchParams(query, region);
     params.set('subscription-key', key);

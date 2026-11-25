@@ -1,4 +1,5 @@
 import OrgContact from '../components/OrgContact';
+import AddressBoxes from '../components/AddressBoxes';
 import { PoweredBy } from '../components/PoweredBy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, Users } from 'lucide-react';
@@ -21,7 +22,7 @@ const T: Record<Lang, Record<string, string>> = {
     recurring: 'Make this a recurring donation', often: 'How often', weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', annually: 'Yearly', start: 'Start date', payments: 'Number of payments', until: 'Until I cancel', fixed: 'A set number', series: '{n} payments of {amount}: {total} in total', agree: 'I agree to be charged {amount} each {period}{until}. The office can stop it any time I ask.', agree_until: ' until I ask to stop', agree_n: ' for {n} payments', agree_needed: 'Please confirm the recurring terms.', week: 'week', month: 'month', quarter: 'quarter', year: 'year', text_me: 'Text me about this recurring donation', saved: 'Your card is saved. The first charge of {amount} will be on {date}.', per: 'each',
     raised: 'raised of', goal: 'goal', amount: 'Amount', other: 'Other amount', cover: 'I\'d like to cover the processing fee so 100% of my donation goes to the campaign',
     fee: 'fee', total: 'Total charge', first: 'First name', last: 'Last name', phone: 'Phone', email: 'Email (optional)', country: 'Country',
-    address: 'Address (optional)', zip: 'ZIP code', postal: 'Postal code', postcode: 'Postcode', notes: 'Message (optional)', card: 'Card number', cvv: 'CVV',
+    address: 'Address (optional)', street: 'Street address (optional)', unit: 'Apt / Suite', city: 'City', state: 'State', zip: 'ZIP code', postal: 'Postal code', postcode: 'Postcode', notes: 'Message (optional)', card: 'Card number', cvv: 'CVV',
     exp: 'Exp.', donate: 'Donate', processing: 'Processing…', loading: 'Loading the secure card fields…', other_ways: 'Other ways to give', teams: 'Teams', teams_sub: 'Give through a team', include_id: 'Make sure to include the campaign ID',
     checks: 'Checks payable to', zelle: 'Zelle', ein: 'EIN', wall: 'Recent donors', anonymous: 'Anonymous', thanks: 'Thank you for your donation to',
     charged: 'Charged', receipt: 'Send me a receipt', receipt_sent: 'Thank you. The office will send your receipt.', another: 'Make another donation',
@@ -34,7 +35,7 @@ const T: Record<Lang, Record<string, string>> = {
     recurring: 'תרומה קבועה', often: 'תדירות', weekly: 'שבועי', monthly: 'חודשי', quarterly: 'רבעוני', annually: 'שנתי', start: 'תאריך התחלה', payments: 'מספר תשלומים', until: 'עד שאבטל', fixed: 'מספר קבוע', series: '{n} תשלומים של {amount}: סה״כ {total}', agree: 'אני מסכים לחיוב של {amount} בכל {period}{until}. המשרד יפסיק בכל עת לבקשתי.', agree_until: ' עד שאבקש להפסיק', agree_n: ' למשך {n} תשלומים', agree_needed: 'נא לאשר את תנאי התרומה הקבועה.', week: 'שבוע', month: 'חודש', quarter: 'רבעון', year: 'שנה', text_me: 'שלחו לי הודעות על התרומה הקבועה', saved: 'הכרטיס נשמר. החיוב הראשון של {amount} יהיה ב-{date}.', per: 'בכל',
     raised: 'נאספו מתוך', goal: 'יעד', amount: 'סכום', other: 'סכום אחר', cover: 'אני מעוניין לכסות את עמלת הסליקה כדי שכל תרומתי תגיע למטרה',
     fee: 'עמלה', total: 'סך החיוב', first: 'שם פרטי', last: 'שם משפחה', phone: 'טלפון', email: 'דוא״ל (רשות)', country: 'מדינה',
-    address: 'כתובת (רשות)', zip: 'מיקוד', postal: 'מיקוד', postcode: 'מיקוד', notes: 'הודעה (רשות)', card: 'מספר כרטיס', cvv: 'CVV',
+    address: 'כתובת (רשות)', street: 'רחוב ומספר (רשות)', unit: 'דירה', city: 'עיר', state: 'סטייט', zip: 'מיקוד', postal: 'מיקוד', postcode: 'מיקוד', notes: 'הודעה (רשות)', card: 'מספר כרטיס', cvv: 'CVV',
     exp: 'תוקף', donate: 'לתרומה', processing: 'מעבד…', loading: 'טוען את שדות הכרטיס המאובטחים…', other_ways: 'דרכים נוספות לתרום', teams: 'צוותים', teams_sub: 'תרמו דרך אחד הצוותים', include_id: 'הקפידו לציין את מספר הקמפיין',
     checks: 'צ׳קים לפקודת', zelle: 'Zelle', ein: 'EIN', wall: 'תורמים אחרונים', anonymous: 'בעילום שם', thanks: 'תודה על תרומתך ל',
     charged: 'חויב', receipt: 'שלחו לי קבלה', receipt_sent: 'תודה. המשרד ישלח לך קבלה.', another: 'תרומה נוספת',
@@ -47,7 +48,7 @@ const T: Record<Lang, Record<string, string>> = {
     recurring: 'א קבועה נדבה', often: 'ווי אפט', weekly: 'וועכנטליך', monthly: 'כל חודש', quarterly: 'יעדע דריי חדשים', annually: 'יערליך', start: 'אנהייב דאטום', payments: 'צאל באצאלונגען', until: 'ביז איך שטעל אפ', fixed: 'א געוויסע צאל', series: '{n} באצאלונגען פון {amount}: סך הכל {total}', agree: 'איך בין מסכים צו באצאלן {amount} יעדע {period}{until}. דער אפיס קען עס אפשטעלן ווען איך בעט.', agree_until: ' ביז איך בעט אפצושטעלן', agree_n: ' פאר {n} באצאלונגען', agree_needed: 'ביטע באשטעטיגט די תנאים פון דער קבועה נדבה.', week: 'וואך', month: 'חודש', quarter: 'דריי חדשים', year: 'יאר', text_me: 'שיקט מיר מעסעדזשעס וועגן די קבועה נדבה', saved: 'די קארטל איז געהאלטן. די ערשטע באצאלונג פון {amount} וועט זיין {date}.', per: 'יעדע',
     raised: 'געזאמלט פון', goal: 'ציל', amount: 'סכום', other: 'אן אנדער סכום', cover: 'איך וויל צאלן די באארבעטונג אפצאל, כדי מיין גאנצע נדבה זאל אנקומען צום ציל',
     fee: 'אפצאל', total: 'סך הכל', first: 'ערשטער נאמען', last: 'פאמיליע נאמען', phone: 'טעלעפאן', email: 'אימעיל (אויב געוואלט)', country: 'לאנד',
-    address: 'אדרעס (אויב געוואלט)', zip: 'זיפ קאוד', postal: 'פאסט קאוד', postcode: 'פאסט קאוד', notes: 'מעסעדזש (אויב געוואלט)', card: 'קארטל נומער', cvv: 'CVV',
+    address: 'אדרעס (אויב געוואלט)', street: 'גאס און נומער (אויב געוואלט)', unit: 'אפארטמענט', city: 'שטאט', state: 'סטעיט', zip: 'זיפ קאוד', postal: 'פאסט קאוד', postcode: 'פאסט קאוד', notes: 'מעסעדזש (אויב געוואלט)', card: 'קארטל נומער', cvv: 'CVV',
     exp: 'ביז', donate: 'נדבה געבן', processing: 'ארבעט…', loading: 'לאדט די זיכערע קארטל פעלדער…', other_ways: 'אנדערע וועגן צו געבן', teams: 'גרופעס', teams_sub: 'געבט דורך א גרופע', include_id: 'מאכט זיכער צו שרייבן די קאמפעין נומער',
     checks: 'טשעקס צו', zelle: 'Zelle', ein: 'EIN', wall: 'לעצטע נדבנים', anonymous: 'אנאנים', thanks: 'א דאנק פאר אייער נדבה צו',
     charged: 'באצאלט', receipt: 'שיקט מיר א קבלה', receipt_sent: 'א דאנק. דער אפיס וועט אייך שיקן א קבלה.', another: 'נאך א נדבה',
@@ -267,7 +268,8 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   const [other, setOther] = useState('');
   const [cover, setCover] = useState<boolean>(!!p.cover_fee_default);
   const [coverTotal, setCoverTotal] = useState<number | null>(null);
-  const [d, setD] = useState({ first_name: '', last_name: '', phone: '', email: '', country: 'USA', address: '', zip: '', notes: '' });
+  // street: the street line alone (with any apartment), for the card processor's billing street; address keeps the whole address.
+  const [d, setD] = useState({ first_name: '', last_name: '', phone: '', email: '', country: 'USA', address: '', street: '', zip: '', notes: '' });
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [exp, setExp] = useState('');
   const [method, setMethod] = useState<Method>('card');
@@ -446,8 +448,20 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
         <label className="field"><span dir="auto">{t.email}</span><input type="email" dir="ltr" value={d.email} onChange={set('email')} autoComplete="email" /></label>
         <label className="field"><span dir="auto">{t.country}</span>
           <select value={d.country} onChange={set('country')}>{COUNTRIES.map(x => <option key={x}>{x}</option>)}</select></label>
-        <label className="field"><span dir="auto">{zipLabel} *</span><input required dir="ltr" value={d.zip} onChange={set('zip')} autoComplete="postal-code" /></label>
-        <label className="field wide"><span dir="auto">{t.address}</span><input dir="auto" value={d.address} onChange={set('address')} autoComplete="street-address" /></label>
+        {d.country === 'USA' ? (
+          // US addresses in Street / Apt / City / State / ZIP, with suggestions while typing the street that fill the rest,
+          // following the organization's Address suggestions setting (Moshe, 2026-11-25).
+          <div className="wide give-address">
+            <AddressBoxes value={d.address} campaign={String(data.campaign.id)} zipRequired
+              labels={{ street: t.street, unit: t.unit, city: t.city, state: t.state, zip: zipLabel }}
+              onChange={(joined, a) => setD(x => ({ ...x, address: joined, zip: a.zip, street: [a.street, a.unit].filter(Boolean).join(' ') }))} />
+          </div>
+        ) : (
+          <>
+            <label className="field"><span dir="auto">{zipLabel} *</span><input required dir="ltr" value={d.zip} onChange={set('zip')} autoComplete="postal-code" /></label>
+            <label className="field wide"><span dir="auto">{t.address}</span><input dir="auto" value={d.address} onChange={e => setD(x => ({ ...x, address: e.target.value, street: e.target.value }))} autoComplete="street-address" /></label>
+          </>
+        )}
         {fields.filter(f => f.name).map(f => (
           f.type === 'checkbox'
             ? <label key={f.name} className="inline-check wide"><input type="checkbox" checked={custom[f.name] === 'true'} onChange={e => setCustom(x => ({ ...x, [f.name]: String(e.target.checked) }))} />
