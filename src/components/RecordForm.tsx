@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import CampaignBalanceNote from './CampaignBalanceNote';
 import AddressCheck from './AddressCheck';
+import AddressSuggest from './AddressSuggest';
 import { NewDonorDialog } from './DonorPicker';
 import { useEffect, useState, type FormEvent } from 'react';
 import { X } from 'lucide-react';
@@ -38,6 +39,8 @@ export interface Field {
   section?: string;
   /** A US address: offers "Check with USPS" under it once the organization has USPS keys (Shulim, 2026-11-12). */
   uspsCheck?: boolean;
+  /** Suggests US street addresses while typing (Azure Maps, through address-suggest), filling the box when one is picked (Shulim, 2026-11-25). */
+  addressSuggest?: boolean;
   /** Checked before saving: a message stops the save and says what's wrong (the database checks too). */
   validate?: (value: any, values: Row) => string | null;
   /** How to make a new one from right here, without leaving this form. */
@@ -335,6 +338,7 @@ export default function RecordForm(p: Props) {
         );
       }
       default:
+        if (f.addressSuggest && !p.onBulk) return <AddressSuggest value={v ?? ''} onChange={x => set(f.name, x)} required={f.required} />;
         return <input type={f.type ?? 'text'} value={v ?? ''} onChange={e => set(f.name, e.target.value)} required={f.required} />;
     }
   }

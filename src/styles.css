@@ -614,6 +614,10 @@ ul.plain li { padding: 6px 0; }
   border-radius: 10px; box-shadow: var(--shadow-lg);
 }
 .ss-list li { padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+/* Address suggestions under a donor's address box (Shulim, 2026-11-25). */
+.addr-suggest { position: relative; display: flex; flex-direction: column; }
+.addr-suggest > input { width: 100%; }
+.ss-list li.addr-suggest-note { cursor: default; background: none; color: var(--muted); }
 .ss-list li:hover, .ss-list li.sel { background: var(--accent-soft); color: var(--accent-text); }
 .multi { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .multi .ss { min-width: 180px; flex: 1; }

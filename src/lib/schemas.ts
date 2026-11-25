@@ -266,7 +266,8 @@ export const donorFields: Field[] = [
   { name: 'cell_phone', label: 'Cell phone', help: 'Texts go to this number' },
   { name: 'home_phone', label: 'Home phone' },
   { name: 'email', label: 'Email', type: 'email' },
-  { name: 'address', label: 'Address', uspsCheck: true },
+  // Suggestions while typing (Azure Maps), then "Check with USPS" as before (Shulim, 2026-11-25).
+  { name: 'address', label: 'Address', uspsCheck: true, addressSuggest: true },
   { name: 'ojc_id', label: 'OJC account number', help: 'The donor\'s account at the OJC Fund, as it shows on their grants' },
   { name: 'nadvan_id', label: 'Nadvan account number' },
   { name: 'matbia_id', label: 'Matbia account number' },
