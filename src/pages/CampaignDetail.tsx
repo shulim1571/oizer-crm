@@ -30,9 +30,10 @@ import { MyTransferRequests, RequestTransferDialog } from './TransferRequests';
 import { CampaignSettingsTab, SwitchTemplateDialog } from './Templates';
 import { PayoutStatusPill, RequestPayoutDialog, payoutStatus } from './Payouts';
 import { CampaignReportDialog, DonorListDialog } from './Reports';
+import { balanceAfterColumn, balanceIndex, loadStatement, statementColumns } from './campaignStatement';
 import { ContactImportDialog } from './Imports';
 
-type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges' | 'vouchers' | 'teams' | 'sub-campaigns' | 'settings';
+type Tab = 'donations' | 'expenses' | 'transfers' | 'statement' | 'tasks' | 'pledges' | 'vouchers' | 'teams' | 'sub-campaigns' | 'settings';
 
 export default function CampaignDetail() {
   const { id = '' } = useParams();
@@ -118,6 +119,8 @@ export default function CampaignDetail() {
         return page((a, b) => supabase.from('transfers')
           .select(TRANSFER_SELECT)
           .or(`from_campaign_id.eq.${id},to_campaign_id.eq.${id}`).order('created_at', { ascending: false }).range(a, b));
+      case 'statement':
+        return loadStatement(id);
       case 'tasks':
         return page((a, b) => supabase.from('tasks').select('*, donors(display_name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
       case 'pledges':
@@ -130,6 +133,11 @@ export default function CampaignDetail() {
         return page((a, b) => supabase.from('voucher_list').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
     }
   }, [id, tab, version, family.join(',')]);
+  // The running balance (Shulim, 2026-11-25): staff only, and not on a team that shares its parent's balance (it has
+  // none of its own; the parent's statement includes it).
+  const showStatement = canWork && !summary.data?.pool_id;
+  const balances = useQuery(async () => (showStatement && ['donations', 'expenses', 'transfers'].includes(tab) ? balanceIndex(await loadStatement(id)) : null),
+    [id, tab, version, showStatement]);
   // Each tab's rows are kept, so switching back shows them at once while they refresh (readiness #55).
   const tabRows = useRef(new Map<string, Row[]>());
   useEffect(() => { tabRows.current.clear(); }, [id]);
@@ -151,7 +159,7 @@ export default function CampaignDetail() {
     || Number(c.combined_donations) !== Number(c.donation_count);
   const canAddSub = c.status !== 'closed' && isPrimary;
   // Fundraisers see transfers in and out of their campaign, read-only (Moshe Henig, 2026-11-15).
-  const tabs: Tab[] = ['donations', 'expenses', 'transfers', 'tasks', 'pledges', 'vouchers', 'teams', 'sub-campaigns', ...(isPrimary ? ['settings' as Tab] : [])];
+  const tabs: Tab[] = ['donations', 'expenses', 'transfers', ...(showStatement ? ['statement' as Tab] : []), 'tasks', 'pledges', 'vouchers', 'teams', 'sub-campaigns', ...(isPrimary ? ['settings' as Tab] : [])];
   const canEditTasks = canWork;
   const setStatus = async (status: string, question: string) => {
     if (!confirm(question)) return;
@@ -161,10 +169,11 @@ export default function CampaignDetail() {
     setVersion(v => v + 1);
   };
 
+  const balanceCol = (kind: 'donation' | 'payout' | 'transfer') => (showStatement ? [balanceAfterColumn(balances.data as Map<string, number> | null, kind)] : []);
   const tabConfig = {
     donations: {
       // With shared teams, each row says which campaign (this one or a team) it's on.
-      columns: donationColumns({ hideCampaign: family.length < 2 }),
+      columns: [...donationColumns({ hideCampaign: family.length < 2 }), ...balanceCol('donation')],
       add: !isAdmin && canEnter ? { table: 'donations', title: 'New payment (held for approval)', fields: fundraiserDonationFields, defaults: { campaign_id: id, source: 'Manual' } } : isAdmin && { table: 'donations', title: 'New Donation', fields: newDonationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() } },
       edit: isAdmin && { table: 'donations', title: 'Edit Donation', fields: editDonationFields },
     },
@@ -182,6 +191,7 @@ export default function CampaignDetail() {
         { key: 'account', label: 'Account', optional: true, value: (r: Row) => r.accounts?.name },
         { key: 'cleared', label: 'Cleared', render: (r: Row) => yn(r.cleared) },
         { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
+        ...balanceCol('payout'),
       ],
       add: isAdmin && { table: 'expenses', title: 'New Payout', fields: expenseFields, defaults: { campaign_id: id, account_id: defaultAccountId, ...newPayoutDefaults() } },
       edit: isAdmin && { table: 'expenses', title: 'Edit Payout', fields: expenseFields },
@@ -190,15 +200,22 @@ export default function CampaignDetail() {
       columns: isAdmin ? [
         { key: 'direction', label: 'Direction', value: (r: Row) => (r.to_campaign_id === id ? 'Transfer In' : 'Transfer Out'), render: (r: Row) => (r.to_campaign_id === id ? <Pill tone="green">Transfer In</Pill> : <Pill tone="amber">Transfer Out</Pill>) },
         ...transferColumns(r => setTransferStart({ from_campaign_id: r.to_campaign_id, to_campaign_id: r.from_campaign_id, amount: r.amount, description: `Reverses transfer ${r.id}` })),
+        ...balanceCol('transfer'),
       ] : [
         { key: 'direction', label: 'Direction', value: (r: Row) => (r.direction === 'in' ? 'Transfer In' : 'Transfer Out'), render: (r: Row) => (r.direction === 'in' ? <Pill tone="green">Transfer In</Pill> : <Pill tone="amber">Transfer Out</Pill>) },
         { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
         { key: 'other', label: 'From / to', value: (r: Row) => (r.other_campaign_id ? `${r.other_campaign_name ?? ''} - ${r.other_campaign_id}` : r.other_campaign_name) },
         { key: 'description', label: 'Memo' },
         { key: 'created_at', label: 'Date', render: (r: Row) => dateTime(r.created_at) },
+        ...balanceCol('transfer'),
       ],
       add: false as const,
       edit: isAdmin && { table: 'transfers', title: 'Edit memo', fields: transferEditFields },
+    },
+    statement: {
+      columns: statementColumns(family.length > 1),
+      add: false as const,
+      edit: false as const,
     },
     teams: {
       columns: [],

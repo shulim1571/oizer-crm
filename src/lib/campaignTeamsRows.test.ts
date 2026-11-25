@@ -10,7 +10,7 @@ describe('a campaign with shared teams', () => {
     expect(c).toContain(".eq('parent_campaign_id', id).eq('balance_mode', 'shared').is('deleted_at', null)");
     expect(c).toContain("supabase.from('donations').select(DONATION_SELECT).in('campaign_id', family)");
     expect(c).toContain("supabase.from('expenses').select('*, accounts(name)').in('campaign_id', family)");
-    expect(c).toContain('columns: donationColumns({ hideCampaign: family.length < 2 }),');
+    expect(c).toContain("columns: [...donationColumns({ hideCampaign: family.length < 2 }), ...balanceCol('donation')],");   // plus Balance after (Shulim, 2026-11-25)
   });
   it('labels the figures that include teams', () => {
     expect(c).toContain("label={withTeams ? 'Fees, with teams' : 'Fees'}");
