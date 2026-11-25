@@ -1010,6 +1010,10 @@ tr.selected td { background: var(--accent-soft); }
 /* Banner top row: organization and logo first, email and phone at the far side (the right on English pages). */
 .give-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; }
 .give-hero-top .give-contact { margin-inline-start: auto; justify-content: flex-end; }
+/* Moshe, 2026-11-25: the phone on top and the email under it, lined up at the far edge; the organization's name and
+   logo, and the campaign name under them, a little in from the edge (mirrored on Hebrew and Yiddish pages). */
+.give-hero-top .give-contact { flex-direction: column; align-items: flex-end; gap: 4px; }
+.give-hero-top .give-org, .give-hero h1 { margin-inline-start: clamp(10px, 3vw, 36px); }
 .give.give-framed .give-org img { height: 40px; }
 .give-include-id { margin: 10px 0 0; font-size: 14px; }
 .pager { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }

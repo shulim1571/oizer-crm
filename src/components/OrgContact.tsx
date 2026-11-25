@@ -11,8 +11,9 @@ export default function OrgContact({ email, phone, className = 'org-contact' }: 
   if (!e && !p) return null;
   return (
     <div className={className}>
-      {e && <a href={`mailto:${e}`}><Mail size={13} /> {e}</a>}
+      {/* Phone on top, email under it (Moshe, 2026-11-25). */}
       {p && <a href={`tel:${p.replace(/[^\d+]/g, '')}`}><Phone size={13} /> {formatPhone(p)}</a>}
+      {e && <a href={`mailto:${e}`}><Mail size={13} /> {e}</a>}
     </div>
   );
 }

@@ -165,7 +165,8 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
       <header className={`give-hero ${data.page.banner_url ? 'has-banner' : ''}`}
         style={data.page.banner_url ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.6)), url("${encodeURI(String(data.page.banner_url))}")` } : undefined}>
         <div className="give-hero-in">
-          {/* The organization (with a bigger logo) on one side and its email and phone on the other (Moshe Henig, 2026-11-11). */}
+          {/* The organization (with a bigger logo) on one side and its phone and email on the other (Moshe Henig, 2026-11-11);
+              phone above email, and the name and logo a little in from the edge (Moshe, 2026-11-25). */}
           <div className="give-hero-top">
             <div className="give-org">
               {data.org.logo_url ? <img src={sharpLogoUrl(data.org.logo_url)!} alt="" decoding="async" /> : <span className="give-org-mark">{String(data.org.name ?? '?')[0]}</span>}
