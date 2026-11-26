@@ -247,6 +247,9 @@ export function UnprintedCheckTask({ checkId, onDone }: { checkId: string; onDon
 // ---------------------------------------------------------------------------
 // On a payout: print its check, or see the one already printed
 // ---------------------------------------------------------------------------
+/** A payout paid by check ("Check", or a method typed with "check" in it, e.g. "Northfield check"). Moshe, 2026-11-26. */
+export const isCheckPayout = (method: unknown) => /check|cheque/i.test(String(method ?? ''));
+
 export function PayoutCheckActions({ record, onDone }: { record: Row; onDone: (row: Row) => void }) {
   const [checks, setChecks] = useState<Row[]>([]);
   const [printing, setPrinting] = useState<boolean | 'email'>(false);
@@ -268,7 +271,9 @@ export function PayoutCheckActions({ record, onDone }: { record: Row; onDone: (r
           {!live.printed_at && !live.emailed_at && <span className="muted small">Not confirmed printed</span>}
           <Link to="/checks" className="btn">Check register</Link>
         </>
-      ) : (
+      ) : isCheckPayout(record.method) && (
+        // Only a payout paid by check offers Print check (Moshe, 2026-11-26: it showed on card payouts too). A check
+        // already issued for a payout still shows above, whatever its method now says.
         <>
           <button type="button" className="btn" onClick={() => setPrinting(true)}><Printer size={15} /> Print check</button>
           {/* Or email it to the fundraiser instead (Moshe Henig, 2026-11-11); the window records it, then emails it. */}

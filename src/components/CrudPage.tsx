@@ -33,6 +33,8 @@ interface Props {
   openPath?: (row: Row) => string;
   /** Records that are deactivated rather than deleted. */
   noDelete?: boolean;
+  /** Summary cards shown under the page's title, inside the page (with Hide summary), not above it (Moshe, 2026-11-26). */
+  summary?: ReactNode;
 }
 
 export default function CrudPage(p: Props) {
@@ -74,6 +76,7 @@ export default function CrudPage(p: Props) {
         error={error}
         columns={p.columns}
         groupBy={p.groupBy}
+        summary={p.summary}
         onOpen={p.openPath ? r => nav(p.openPath!(r)) : canEdit ? r => setEditing(r) : undefined}
         actions={
           <>

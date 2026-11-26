@@ -162,14 +162,18 @@ export function AccountsPage() {
   return (
     <>
     {error && <div className="error">{error}</div>}
-    <div className="kpis">
-      <Kpi label="Bank balances (book)" value={money(sum('book_balance'))} icon={<Scale size={18} />} tone="blue" sub="Gifts in, less payouts and card bills paid" />
-      <Kpi label="Earmarked for card bills" value={money(sum('earmarked_for_cards'))} icon={<CreditCard size={18} />} tone="amber" sub="What the cards owe, until their bills are paid" />
-      <Kpi label="After card bills" value={money(sum('available_after_cards'))} icon={<Scale size={18} />} tone="green" />
-    </div>
     {paying && <PayCardBill card={paying} onClose={() => setPaying(null)} onDone={() => { setPaying(null); setVersion(v => v + 1); }} />}
     <CrudPage
       key={version}
+      // Inside the page under its title, like the other lists' summaries (Moshe, 2026-11-26: they were jammed against
+      // the tabs, outside the page's margins).
+      summary={(
+        <div className="kpis">
+          <Kpi label="Bank balances (book)" value={money(sum('book_balance'))} icon={<Scale size={18} />} tone="blue" sub="Gifts in, less payouts and card bills paid" />
+          <Kpi label="Earmarked for card bills" value={money(sum('earmarked_for_cards'))} icon={<CreditCard size={18} />} tone="amber" sub="What the cards owe, until their bills are paid" />
+          <Kpi label="After card bills" value={money(sum('available_after_cards'))} icon={<Scale size={18} />} tone="green" />
+        </div>
+      )}
       title="Accounts" noun="Account"
       table="accounts"
       defaults={{ kind: 'bank' }}
