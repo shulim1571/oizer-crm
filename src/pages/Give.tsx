@@ -404,8 +404,9 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
       {p.allow_other && (
         <label className={`give-other-amount ${other ? 'on' : ''}`}>
           <span aria-hidden="true">$</span>
-          {/* With no preset amounts this is the only amount, so it says "Amount", not "Other amount" (Shulim, 2026-11-27). */}
-          <input type="number" inputMode="decimal" min={p.min ?? 1} step="0.01" placeholder={presets.length ? t.other : t.amount}
+          {/* With no preset amounts this is the only amount: just the $ sign and an empty box, since "Amount" would repeat the
+              section title; screen readers still hear "Amount" (Shulim, 2026-11-27). With presets it says "Other amount". */}
+          <input type="number" inputMode="decimal" min={p.min ?? 1} step="0.01" placeholder={presets.length ? t.other : undefined}
             aria-label={presets.length ? t.other : t.amount} value={other}
             onChange={e => setOther(e.target.value)} dir="ltr" />
         </label>
