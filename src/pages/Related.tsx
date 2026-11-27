@@ -33,7 +33,7 @@ function DetailHead({ title, sub, initial, onEdit }: { title: string; sub?: Reac
   const nav = useNavigate();
   return (
     <div className="detail-head">
-      <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={18} /></button>
+      <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={20} /></button>
       <div className="hero-avatar">{initial}</div>
       <div>
         <h1>{title}</h1>
@@ -70,11 +70,11 @@ export function SourceDetail() {
       <DetailHead title={d.name} initial={d.name[0]} onEdit={() => setEditing(true)}
                   sub={<><span className="id-tag">{d.id}</span>{d.number && <span>· #{d.number}</span>}</>} />
       <div className="kpis">
-        <Kpi label="Received" value={money(d.total_amount)} icon={<TrendingUp size={18} />} tone="green" />
-        <Kpi label="Donations" value={Number(d.donation_count).toLocaleString()} icon={<HandCoins size={18} />} tone="violet"
+        <Kpi label="Received" value={money(d.total_amount)} icon={<TrendingUp size={16} />} tone="green" />
+        <Kpi label="Donations" value={Number(d.donation_count).toLocaleString()} icon={<HandCoins size={16} />} tone="violet"
              sub={`avg ${money(d.donation_count ? d.total_amount / d.donation_count : 0)}`} />
-        <Kpi label="Fees" value={money(d.total_fees)} icon={<Percent size={18} />} tone="amber" />
-        <Kpi label="Last donation" value={dateTime(d.last_donation_at) || '—'} icon={<CalendarDays size={18} />} tone="blue" small />
+        <Kpi label="Fees" value={money(d.total_fees)} icon={<Percent size={16} />} tone="amber" />
+        <Kpi label="Last donation" value={dateTime(d.last_donation_at) || '—'} icon={<CalendarDays size={16} />} tone="blue" small />
       </div>
       <PagedDonations title="Donations from this source" filter={{ column: 'source', value: d.id }} />
       {editing && (
@@ -112,16 +112,16 @@ export function AccountDetail() {
                   sub={<>{d.notes && <span>{d.notes}</span>}</>} />
       {d.kind === 'credit_card' ? (
         <div className="kpis">
-          <Kpi label="Owed on the card" value={money(d.card_owed)} icon={<Scale size={18} />} tone="amber"
+          <Kpi label="Owed on the card" value={money(d.card_owed)} icon={<Scale size={16} />} tone="amber"
                sub={d.bill_due_day ? `Bill due on day ${d.bill_due_day}` : 'Charged payouts, less bills paid'} />
-          <Kpi label="Charged" value={money(d.expenses_total)} icon={<Receipt size={18} />} tone="violet" sub={`${Number(d.expense_count).toLocaleString()} card payouts`} />
-          <Kpi label="Bills paid" value={money(d.transfers_in)} icon={<TrendingUp size={18} />} tone="green" />
+          <Kpi label="Charged" value={money(d.expenses_total)} icon={<Receipt size={16} />} tone="violet" sub={`${Number(d.expense_count).toLocaleString()} card payouts`} />
+          <Kpi label="Bills paid" value={money(d.transfers_in)} icon={<TrendingUp size={16} />} tone="green" />
         </div>
       ) : Number(d.earmarked_for_cards) > 0 || Number(d.transfers_out) > 0 ? (
         <div className="kpis">
-          <Kpi label="Book balance" value={<Balance value={d.book_balance} />} icon={<Scale size={18} />} tone="blue" sub="Gifts in, less payouts and card bills paid" />
-          <Kpi label="Earmarked for card bills" value={money(d.earmarked_for_cards)} icon={<Receipt size={18} />} tone="amber" />
-          <Kpi label="After card bills" value={<Balance value={d.available_after_cards} />} icon={<Scale size={18} />} tone="green" />
+          <Kpi label="Book balance" value={<Balance value={d.book_balance} />} icon={<Scale size={16} />} tone="blue" sub="Gifts in, less payouts and card bills paid" />
+          <Kpi label="Earmarked for card bills" value={money(d.earmarked_for_cards)} icon={<Receipt size={16} />} tone="amber" />
+          <Kpi label="After card bills" value={<Balance value={d.available_after_cards} />} icon={<Scale size={16} />} tone="green" />
         </div>
       ) : null}
       {d.kind === 'credit_card' && (
@@ -131,12 +131,12 @@ export function AccountDetail() {
       )}
       {paying && <PayCardBill card={d} onClose={() => setPaying(false)} onDone={() => { setPaying(false); setVersion(v => v + 1); }} />}
       <div className="kpis">
-        <Kpi label="Donations in" value={money(d.donations_total)} icon={<TrendingUp size={18} />} tone="green"
+        <Kpi label="Donations in" value={money(d.donations_total)} icon={<TrendingUp size={16} />} tone="green"
              sub={`${Number(d.donation_count).toLocaleString()} donations`} />
-        <Kpi label="Payouts out" value={money(d.payouts_out)} icon={<Receipt size={18} />} tone="amber"
+        <Kpi label="Payouts out" value={money(d.payouts_out)} icon={<Receipt size={16} />} tone="amber"
              sub={`${Number(d.expense_count).toLocaleString()} payouts${Number(d.returned_in) ? ` · ${money(d.returned_in)} came back` : ''}`} />
-        <Kpi label="Net" value={<Balance value={d.donations_total - d.expenses_total} />} icon={<Scale size={18} />} tone="violet" />
-        <Kpi label="Uncleared checks" value={money(d.uncleared_total)} icon={<AlertCircle size={18} />} tone="red" />
+        <Kpi label="Net" value={<Balance value={d.donations_total - d.expenses_total} />} icon={<Scale size={16} />} tone="violet" />
+        <Kpi label="Uncleared checks" value={money(d.uncleared_total)} icon={<AlertCircle size={16} />} tone="red" />
       </div>
       <CheckSettingsCard accountId={d.id} />
       <div className="tabs">
@@ -213,15 +213,15 @@ export function ManagerDetail() {
                   sub={<span>Fundraiser <StatusPill value={STATUS[d.status]} />{d.status !== 'active' && d.status_reason && <> · {d.status_reason}</>}</span>} />
       <FundraiserControls manager={d} onChange={() => setVersion(v => v + 1)} />
       <div className="kpis">
-        <Kpi label="Campaigns" value={d.campaign_count} icon={<Landmark size={18} />} tone="violet" sub={`${d.active_count} active`} />
-        <Kpi label="Raised" value={money(d.raised)} icon={<TrendingUp size={18} />} tone="green" />
-        <Kpi label="Balance" value={<Balance value={d.balance} />} icon={<Scale size={18} />} tone={Number(d.balance) < 0 ? 'red' : 'green'} />
+        <Kpi label="Campaigns" value={d.campaign_count} icon={<Landmark size={16} />} tone="violet" sub={`${d.active_count} active`} />
+        <Kpi label="Raised" value={money(d.raised)} icon={<TrendingUp size={16} />} tone="green" />
+        <Kpi label="Balance" value={<Balance value={d.balance} />} icon={<Scale size={16} />} tone={Number(d.balance) < 0 ? 'red' : 'green'} />
       </div>
       {(d.email || d.phone || d.notes) && (
         <div className="info">
-          {d.email && <span><Mail size={14} /> {d.email}</span>}
-          {d.phone && <span><Phone size={14} /> {formatPhone(d.phone)}</span>}
-          {d.notes && <span><StickyNote size={14} /> {d.notes}</span>}
+          {d.email && <span><Mail size={16} /> {d.email}</span>}
+          {d.phone && <span><Phone size={16} /> {formatPhone(d.phone)}</span>}
+          {d.notes && <span><StickyNote size={16} /> {d.notes}</span>}
         </div>
       )}
       <FundraiserPhones managerId={d.id} />

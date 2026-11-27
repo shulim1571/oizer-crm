@@ -25,7 +25,8 @@ describe('New Donation (Moshe Henig, 2026-11-11)', () => {
     const button = header.indexOf("nav('/donations/new')");
     expect(button).toBeGreaterThan(-1);
     expect(button).toBeLessThan(header.indexOf('className="icon-btn outlined bell"'));
-    expect(header).toContain("{canWork && <button className=\"btn primary small header-new-donation\"");
+    // Secondary since the Trubase UI restyle (one primary button per screen: the page's own).
+    expect(header).toContain("{canWork && <button className=\"btn small header-new-donation\"");
   });
 
   it("gives fundraisers their own page: a card payment only, through the server's fundraiser check", () => {

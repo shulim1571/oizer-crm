@@ -134,7 +134,7 @@ export function HelpAssistant() {
         <HelpCircle size={16} /><span className="help-btn-label">Help</span></button>
       {open && (
         <div className="help-panel" role="dialog" aria-label="Help assistant">
-          <div className="help-head"><b><Sparkles size={15} /> Help</b><span className="muted small">{left} question{left === 1 ? '' : 's'} left today</span>
+          <div className="help-head"><b><Sparkles size={16} /> Help</b><span className="muted small">{left} question{left === 1 ? '' : 's'} left today</span>
             <button type="button" className="icon-btn" title="Close" onClick={() => setOpen(false)}><X size={16} /></button></div>
           <div className="help-body">
             {turns.length === 0 && <p className="muted small">Ask how to do something in Oizer, like “How do I print a check?” or “Where do I set a campaign’s PIN?”. The assistant can’t see your records. Answers can be wrong; check with the office if unsure.</p>}
@@ -145,7 +145,7 @@ export function HelpAssistant() {
           </div>
           <form className="help-ask" onSubmit={ask}>
             <input value={q} onChange={e => setQ(e.target.value)} maxLength={1000} placeholder={left > 0 ? 'Ask a question…' : 'Daily limit reached'} disabled={left <= 0} aria-label="Question" />
-            <button className="btn primary" disabled={busy || !q.trim() || left <= 0} aria-label="Send"><Send size={15} /></button>
+            <button className="btn primary" disabled={busy || !q.trim() || left <= 0} aria-label="Send"><Send size={16} /></button>
           </form>
         </div>
       )}

@@ -97,8 +97,8 @@ function Importer({ kind, campaign, onDone }: { kind: Kind; campaign?: string; o
     <div className="panel-box">
       <div className="form-actions">
         <span>Template:</span>
-        <button type="button" className="btn" onClick={() => downloadTemplate(kind, 'xlsx')}><Download size={15} /> Excel</button>
-        <button type="button" className="btn" onClick={() => downloadTemplate(kind, 'csv')}><Download size={15} /> CSV</button>
+        <button type="button" className="btn" onClick={() => downloadTemplate(kind, 'xlsx')}><Download size={16} /> Excel</button>
+        <button type="button" className="btn" onClick={() => downloadTemplate(kind, 'csv')}><Download size={16} /> CSV</button>
       </div>
       <p className="muted small">Required: {t.required}. Columns: {t.columns.join(', ')}.</p>
       {t.duplicates && (
@@ -130,7 +130,7 @@ function Importer({ kind, campaign, onDone }: { kind: Kind; campaign?: string; o
           <p className="muted small">Row numbers count the header as row 1, as in the spreadsheet. Rows with errors are left out; fix them and import them separately if needed.</p>
           {!result.committed && (
             <div className="form-actions"><div className="spacer" />
-              <button type="button" className="btn primary" disabled={busy || ok === 0} onClick={() => rows && go(rows, true)}><Upload size={15} /> Import {ok} row{ok === 1 ? '' : 's'}</button>
+              <button type="button" className="btn primary" disabled={busy || ok === 0} onClick={() => rows && go(rows, true)}><Upload size={16} /> Import {ok} row{ok === 1 ? '' : 's'}</button>
             </div>
           )}
         </>
@@ -209,7 +209,7 @@ export function DataImportPage() {
 export function ContactImportDialog({ campaignId, onClose }: { campaignId: string; onClose: () => void }) {
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Import a contact list</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Import a contact list</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <p className="muted small">Adds possible donors to campaign {campaignId}'s list, ready for outreach and tasks. No donations are created.
         Anyone already on file with the same phone or email is linked as they are; nothing on their profile is changed, and any differences go to the office to review.</p>
       <Importer kind="contacts" campaign={campaignId} onDone={() => {}} />

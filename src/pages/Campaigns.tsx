@@ -74,7 +74,7 @@ export default function Campaigns({ mode }: { mode: Mode }) {
     key: 'payment_page', label: 'Payment page', value: () => '',
     render: (r: Row) => r.status === 'closed' ? null : (
       <a className="btn small" href={paymentUrl(r)} target="_blank" rel="noopener noreferrer" title="Open this campaign's payment page"
-        onClick={e => e.stopPropagation()}><ExternalLink size={14} /> Payment page</a>
+        onClick={e => e.stopPropagation()}><ExternalLink size={16} /> Payment page</a>
     ),
   };
   const columns = mode === 'all'
@@ -132,13 +132,13 @@ function Totals({ rows }: { rows: Row[] }) {
   const negative = rows.filter(r => Number(r.balance) < 0).length;
   return (
     <div className="kpis">
-      <Kpi label="Raised" value={money(raised)} icon={<TrendingUp size={18} />} tone="green" sub="Gifts and transfers in" />
-      <Kpi label="Fees" value={money(fees)} icon={<Receipt size={18} />} tone="violet" sub={`${pct(raised ? fees / raised : 0)} of raised`} />
-      <Kpi label="Expenses" value={money(sum('expenses'))} icon={<Receipt size={18} />} tone="amber" sub="Payouts and transfers out" />
+      <Kpi label="Raised" value={money(raised)} icon={<TrendingUp size={16} />} tone="green" sub="Gifts and transfers in" />
+      <Kpi label="Fees" value={money(fees)} icon={<Receipt size={16} />} tone="violet" sub={`${pct(raised ? fees / raised : 0)} of raised`} />
+      <Kpi label="Expenses" value={money(sum('expenses'))} icon={<Receipt size={16} />} tone="amber" sub="Payouts and transfers out" />
       {/* Raised - Fees - Expenses = Balance over the list (readiness #38). */}
-      <Kpi label="Balance" value={<Balance value={sum('balance')} />} icon={<Scale size={18} />} tone="violet"
+      <Kpi label="Balance" value={<Balance value={sum('balance')} />} icon={<Scale size={16} />} tone="violet"
            sub={`= raised − fees − expenses${negative ? ` · ${negative} below zero` : ''}`} />
-      <Kpi label="Pending" value={money(sum('pending_balance'))} icon={<Clock size={18} />} tone="blue" />
+      <Kpi label="Pending" value={money(sum('pending_balance'))} icon={<Clock size={16} />} tone="blue" />
     </div>
   );
 }

@@ -102,14 +102,14 @@ function AddressCard() {
   const address = s?.address as string | null;
   return (
     <div className="card inbox-card">
-      <h3><InboxIcon size={18} /> Inbox address</h3>
+      <h3><InboxIcon size={20} /> Inbox address</h3>
       {!s?.domain_set && <div className="notice">The inbox isn't switched on for the platform yet. Ask the Platform Owner.</div>}
       {address ? (
         <>
           <div className="inbox-address">
             <code>{address}</code>
             <button type="button" className="btn" onClick={() => { void navigator.clipboard?.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
-              <Copy size={15} /> {copied ? 'Copied' : 'Copy'}
+              <Copy size={16} /> {copied ? 'Copied' : 'Copy'}
             </button>
           </div>
           <p className="muted small">Made {dateTime(s?.created_at)}{s?.created_by ? ` by ${s.created_by}` : ''}. Only this organization's mail comes here.</p>
@@ -238,7 +238,7 @@ function EmailView({ id, onClose, onChanged }: { id: string; onClose: () => void
           {(q.data?.files.length ?? 0) > 0 && (
             <ul className="inbox-files">
               {q.data!.files.map(f => (
-                <li key={f.id}><Paperclip size={14} /> {f.filename || 'attachment'} <span className="muted small">{f.mime} · {Math.max(1, Math.round(Number(f.size_bytes) / 1024))} KB</span>{' '}
+                <li key={f.id}><Paperclip size={16} /> {f.filename || 'attachment'} <span className="muted small">{f.mime} · {Math.max(1, Math.round(Number(f.size_bytes) / 1024))} KB</span>{' '}
                   <button type="button" className="link" onClick={() => void download(f.storage_path)}>Download</button></li>
               ))}
             </ul>

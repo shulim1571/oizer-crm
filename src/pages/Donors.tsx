@@ -136,7 +136,7 @@ export function DonorsPage() {
         summary={
           <div className="donor-search">
             <label className="lookup-box">
-              <Search size={18} />
+              <Search size={20} />
               <input aria-label="Search donors" value={q} placeholder="Search donors by name, phone, email or ID…" onChange={e => setQ(e.target.value)} />
               {q && <button type="button" className="link" onClick={() => setQ('')}>Clear</button>}
             </label>
@@ -321,7 +321,7 @@ export function DonorDetail() {
   return (
     <div className="detail">
       <div className="detail-head">
-        <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={18} /></button>
+        <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={20} /></button>
         <div className="hero-avatar">{(d.display_name || '?')[0]}</div>
         <div>
           <h1>{d.english_title ? `${d.english_title} ` : ''}{d.display_name}</h1>
@@ -335,11 +335,11 @@ export function DonorDetail() {
       </div>
 
       <div className="kpis">
-        <Kpi label="Lifetime giving" value={money(d.total_given)} icon={<TrendingUp size={18} />} tone="green" />
-        <Kpi label="Gifts" value={d.gift_count} icon={<HandCoins size={18} />} tone="violet"
+        <Kpi label="Lifetime giving" value={money(d.total_given)} icon={<TrendingUp size={16} />} tone="green" />
+        <Kpi label="Gifts" value={d.gift_count} icon={<HandCoins size={16} />} tone="violet"
              sub={`avg ${money(d.gift_count ? d.total_given / d.gift_count : 0)}`} />
-        <Kpi label="Campaigns" value={d.campaign_count ?? 0} icon={<Landmark size={18} />} tone="blue" />
-        <Kpi label="Last gift" value={dateTime(d.last_gift_at) || '—'} icon={<CalendarDays size={18} />} tone="amber" small />
+        <Kpi label="Campaigns" value={d.campaign_count ?? 0} icon={<Landmark size={16} />} tone="blue" />
+        <Kpi label="Last gift" value={dateTime(d.last_gift_at) || '—'} icon={<CalendarDays size={16} />} tone="amber" small />
       </div>
 
       <PageTabs tabs={DONOR_TABS} value={tab} onChange={setTab} />

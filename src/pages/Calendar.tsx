@@ -66,8 +66,8 @@ export default function CalendarPage() {
   return (
     <section className="view">
       <div className="calendar-head">
-        <button type="button" className="icon-btn outlined" title="Previous" onClick={() => move(-1)}><ChevronLeft size={17} /></button>
-        <button type="button" className="icon-btn outlined" title="Next" onClick={() => move(1)}><ChevronRight size={17} /></button>
+        <button type="button" className="icon-btn outlined" title="Previous" onClick={() => move(-1)}><ChevronLeft size={20} /></button>
+        <button type="button" className="icon-btn outlined" title="Next" onClick={() => move(1)}><ChevronRight size={20} /></button>
         <button type="button" className="btn" onClick={() => setAnchor(dateOf(today))}>Today</button>
         <div className="calendar-title"><h2>{title}</h2><span className="muted small">{hebrewTitle.join(' – ')}</span></div>
         <div className="spacer" />
@@ -139,7 +139,7 @@ function DayDialog({ isAdmin, day, machines, bookings, payouts, onClose, onChang
     <Overlay onClose={onClose}>
       <div className="form-head">
         <h2>{dateOf(day.iso).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button>
       </div>
       <p className="muted"><span className="hebrew">{day.hebrew}</span> · {day.hebrewEnglish}</p>
       {(day.shabbos || day.holidays.length > 0 || day.candles) && (

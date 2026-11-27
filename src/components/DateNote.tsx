@@ -12,5 +12,5 @@ export default function DateNote({ date }: { date: string | null | undefined }) 
     import('../lib/jewishCalendar').then(m => { if (live) setNote(m.dateWarning(date)); });
     return () => { live = false; };
   }, [date]);
-  return note ? <span className="date-note" role="status"><TriangleAlert size={14} /> {note}. You can still use this date.</span> : null;
+  return note ? <span className="date-note" role="status"><TriangleAlert size={16} /> {note}. You can still use this date.</span> : null;
 }

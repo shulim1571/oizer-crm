@@ -75,7 +75,7 @@ export function MakeIngestSettings() {
       {error && <div className="error">{error}</div>}
       {secret && (
         <div className="notice">
-          <b><KeyRound size={14} /> Copy the secret now; it is shown only this once.</b>
+          <b><KeyRound size={16} /> Copy the secret now; it is shown only this once.</b>
           <div className="multi">
             <code className="api-key">{secret}</code>
             <button className="btn" onClick={() => navigator.clipboard.writeText(secret)}>Copy</button>

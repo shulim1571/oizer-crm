@@ -9,11 +9,12 @@ const css = readFileSync('src/styles.css', 'utf8');
 describe('dashboard boxes fit their amounts', () => {
   it('sizes the amount to the box, drops the text under the icon when narrow, and never lets it spill out', () => {
     expect(readFileSync('src/components/Kpi.tsx', 'utf8')).toContain('<div className="kpi-body">');
-    expect(css).toContain('.kpi { min-width: 0; flex-wrap: wrap; align-content: flex-start; }');
-    expect(css).toMatch(/\.kpi-body \{ flex: 1 1 120px; align-self: stretch; min-width: 0; container-type: inline-size; overflow-wrap: anywhere; \}/);
-    expect(css).toMatch(/\.kpi-value \{ font-size: 21px; font-size: clamp\(13px, 11\.5cqi, 21px\);/);
-    expect(css).toContain('.kpi-value { font-size: 17px; font-size: clamp(13px, 11.5cqi, 17px); }');
-    expect(css).not.toMatch(/\.kpi \{[^}]*flex-direction: column/);   // that collapsed the sized text box to nothing
+    // Trubase UI cards (2026-11-27): icon chip, label, figure, caption in a column. The sized text box is stretched to
+    // the card's full width, so it never collapses to nothing (what an earlier column layout did).
+    expect(css).toMatch(/\.kpi \{[^}]*flex-direction: column; gap: 4px; align-items: stretch; min-width: 0;/);
+    expect(css).toContain('.kpi-body { width: 100%; min-width: 0; container-type: inline-size; overflow-wrap: anywhere;');
+    // 28px figures, smaller only when the card is narrow; long amounts wrap rather than spill out.
+    expect(css).toContain('font-size: clamp(18px, 12cqi, 28px);');
   });
 
   it('shrinks the donut centre total to fit inside the ring', () => {

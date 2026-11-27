@@ -453,7 +453,7 @@ export default function DataTable(p: Props) {
                   {!inPlatformSession && <>
                     <button onClick={() => exportAs('xlsx')}>Export to Excel</button>
                     <button onClick={() => exportAs('csv')}>Export to CSV</button>
-                    <button onClick={() => exportAs('print')}><Printer size={14} /> Print or save as PDF</button>
+                    <button onClick={() => exportAs('print')}><Printer size={16} /> Print or save as PDF</button>
                   </>}
                 </div>
               )}
@@ -512,7 +512,7 @@ export default function DataTable(p: Props) {
                     <th key={c.key} style={{ minWidth: width ?? c.width, width, ...stick(i) }}
                         className={`${c.align ?? ''} ${frozenClass(i)} ${server && !c.filter ? 'nosort' : ''}`} onClick={() => toggleSort(c)}>
                       {c.label}
-                      {sort?.key === c.key && (sort.dir === 'asc' ? <ArrowUp size={13} /> : <ArrowDown size={13} />)}
+                      {sort?.key === c.key && (sort.dir === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />)}
                       {!p.plain && <span className="resize" onMouseDown={e => startResize(e, c.key)} onClick={e => e.stopPropagation()} />}
                     </th>
                   );
@@ -568,10 +568,10 @@ export default function DataTable(p: Props) {
         // filters its column exactly as the old row under the headings did.
         <aside className="filter-panel" id="list-filter-panel" aria-label="Filters">
           <div className="filter-panel-head">
-            <b><Filter size={15} /> Filters</b>
+            <b><Filter size={16} /> Filters</b>
             {activeFilters > 0 && <span className="muted small">{activeFilters} on</span>}
             {activeFilters > 0 && <button type="button" className="link small" onClick={() => setConfig({ ...config, filters: {} })}>Clear all</button>}
-            <button type="button" className="icon-btn" title="Close filters" aria-label="Close filters" onClick={() => setShowFilters(false)}><X size={15} /></button>
+            <button type="button" className="icon-btn" title="Close filters" aria-label="Close filters" onClick={() => setShowFilters(false)}><X size={16} /></button>
           </div>
           <div className="filter-panel-body">
             {panelColumns.map(c => {
@@ -627,8 +627,8 @@ function GroupPicker({ label, groups, value, onChange, badge }: {
       <button className={`chip-btn ${value ? 'active' : ''}`} onClick={() => setOpen(o => !o)}>
         {label}: {value ?? 'All'}
         {value
-          ? <X size={14} onClick={e => { e.stopPropagation(); onChange(null); }} />
-          : <ChevronDown size={14} />}
+          ? <X size={16} onClick={e => { e.stopPropagation(); onChange(null); }} />
+          : <ChevronDown size={16} />}
       </button>
       {open && (
         <div className="popover">

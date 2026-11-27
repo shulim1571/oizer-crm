@@ -42,20 +42,20 @@ export default function RichTextEditor({ value, onChange, label }: { value: stri
           <option value="">Size</option>
           {SIZE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        {tool('Bold', <Bold size={15} />, 'bold')}
-        {tool('Italic', <Italic size={15} />, 'italic')}
-        {tool('Underline', <Underline size={15} />, 'underline')}
-        {tool('Bulleted list', <List size={15} />, 'insertUnorderedList')}
-        {tool('Numbered list', <ListOrdered size={15} />, 'insertOrderedList')}
-        {tool('Align left', <AlignLeft size={15} />, 'justifyLeft')}
-        {tool('Center', <AlignCenter size={15} />, 'justifyCenter')}
-        {tool('Align right', <AlignRight size={15} />, 'justifyRight')}
+        {tool('Bold', <Bold size={16} />, 'bold')}
+        {tool('Italic', <Italic size={16} />, 'italic')}
+        {tool('Underline', <Underline size={16} />, 'underline')}
+        {tool('Bulleted list', <List size={16} />, 'insertUnorderedList')}
+        {tool('Numbered list', <ListOrdered size={16} />, 'insertOrderedList')}
+        {tool('Align left', <AlignLeft size={16} />, 'justifyLeft')}
+        {tool('Center', <AlignCenter size={16} />, 'justifyCenter')}
+        {tool('Align right', <AlignRight size={16} />, 'justifyRight')}
         <button type="button" className="icon-btn" title="Link" aria-label="Link" onMouseDown={e => {
           e.preventDefault();
           const url = prompt('Link address (starting with https://):', 'https://');
           if (url && /^(https?:\/\/|mailto:)/i.test(url.trim())) run('createLink', url.trim());
-        }}><Link2 size={15} /></button>
-        {tool('Clear formatting', <RemoveFormatting size={15} />, 'removeFormat')}
+        }}><Link2 size={16} /></button>
+        {tool('Clear formatting', <RemoveFormatting size={16} />, 'removeFormat')}
       </div>
       <div ref={box} className="rte-area give-story rich" contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label={label}
         dir="auto" onInput={emit} onBlur={emit} />

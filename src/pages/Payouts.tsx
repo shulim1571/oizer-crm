@@ -84,7 +84,7 @@ export function RequestPayoutDialog({ campaignId, onClose, onSaved }: { campaign
 
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Request a payout</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Request a payout</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <label className="field"><span>Campaign *</span>
         <SearchSelect value={campaign} options={campaigns} onChange={setCampaign} placeholder="Which campaign it's from…" required />
       </label>
@@ -96,7 +96,7 @@ export function RequestPayoutDialog({ campaignId, onClose, onSaved }: { campaign
         <label className="field check"><input type="checkbox" checked={full} onChange={e => setFull(e.target.checked)} /><span>Full balance</span></label>
       </div>
       {!full && balance != null && n > balance && (
-        <p className="date-note"><TriangleAlert size={14} /> This is more than the balance and would leave it at {money(balance - n)}. The office can still approve it.</p>
+        <p className="date-note"><TriangleAlert size={16} /> This is more than the balance and would leave it at {money(balance - n)}. The office can still approve it.</p>
       )}
       <label className="field"><span>Recipient *</span>
         {payee ? (
@@ -223,7 +223,7 @@ export function ApprovePayout({ requestId, onAct }: { requestId: string; onAct: 
         {balance != null && <><dt>Balance</dt><dd>{money(balance)}</dd></>}
       </dl>
       {flag && <div className="error"><b>Do Not Pay.</b> {flag.reason ?? 'No reason given.'} You can still approve this if it's right.</div>}
-      {balance != null && n > balance && <p className="date-note"><TriangleAlert size={14} /> Paying this leaves the balance at {money(balance - n)}.</p>}
+      {balance != null && n > balance && <p className="date-note"><TriangleAlert size={16} /> Paying this leaves the balance at {money(balance - n)}.</p>}
       <div className="fields">
         <label className="field"><span>Payee</span>
           <SearchSelect value={payee} options={payees} onChange={setPayee} placeholder={`New payee: ${r.recipient_name}`} />
@@ -322,14 +322,14 @@ export function PayoutRequestsPage() {
         actions={
           <>
             <label className="inline-check"><input type="checkbox" checked={showAll} onChange={e => setShowAll(e.target.checked)} /> Show finished</label>
-            {!isAdmin && <button type="button" className="btn primary" onClick={() => setAsking(true)}><Plus size={15} /> Request a payout</button>}
+            {!isAdmin && <button type="button" className="btn primary" onClick={() => setAsking(true)}><Plus size={16} /> Request a payout</button>}
           </>
         }
       />
       {asking && <RequestPayoutDialog onClose={() => setAsking(false)} onSaved={() => { setAsking(false); refresh(); }} />}
       {open && (
         <Overlay onClose={() => setOpen(null)}>
-          <div className="form-head"><h2>Payout request <RequestPill status={open.status} /></h2><button type="button" className="icon-btn" title="Close" onClick={() => setOpen(null)}><X size={18} /></button></div>
+          <div className="form-head"><h2>Payout request <RequestPill status={open.status} /></h2><button type="button" className="icon-btn" title="Close" onClick={() => setOpen(null)}><X size={20} /></button></div>
           <p className="muted small">{open.campaigns?.internal_name} - {open.campaign_id} · from {open.requested_by} · {dateTime(open.created_at)}</p>
           {open.status === 'pending'
             ? <ApprovePayout requestId={open.id} onAct={async (call, action, note) => {
@@ -370,7 +370,7 @@ export function PayoutMethodsPage() {
           { key: 'description', label: 'Description' },
           { key: 'notes', label: 'Notes' },
         ]}
-        actions={isSuperAdmin && <button type="button" className="btn primary" onClick={() => setEditing({ active: true })}><Plus size={15} /> Add custom method</button>}
+        actions={isSuperAdmin && <button type="button" className="btn primary" onClick={() => setEditing({ active: true })}><Plus size={16} /> Add custom method</button>}
       />
       {editing && <MethodDialog row={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); clearLookups(); setVersion(v => v + 1); }} />}
     </section>
@@ -390,7 +390,7 @@ function MethodDialog({ row, onClose, onSaved }: { row: Row; onClose: () => void
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>{row.id ? 'Edit payout method' : 'New payout method'}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>{row.id ? 'Edit payout method' : 'New payout method'}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <label className="field"><span>Name *</span><input value={name} onChange={e => setName(e.target.value)} placeholder="Like Crypto or Money Order" /></label>
       <label className="field"><span>Description</span><input value={description} onChange={e => setDescription(e.target.value)} /></label>
       <label className="field"><span>Notes for admins</span><textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} /></label>

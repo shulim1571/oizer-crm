@@ -169,9 +169,9 @@ export function AccountsPage() {
       // the tabs, outside the page's margins).
       summary={(
         <div className="kpis">
-          <Kpi label="Bank balances (book)" value={money(sum('book_balance'))} icon={<Scale size={18} />} tone="blue" sub="Gifts in, less payouts and card bills paid" />
-          <Kpi label="Earmarked for card bills" value={money(sum('earmarked_for_cards'))} icon={<CreditCard size={18} />} tone="amber" sub="What the cards owe, until their bills are paid" />
-          <Kpi label="After card bills" value={money(sum('available_after_cards'))} icon={<Scale size={18} />} tone="green" />
+          <Kpi label="Bank balances (book)" value={money(sum('book_balance'))} icon={<Scale size={16} />} tone="blue" sub="Gifts in, less payouts and card bills paid" />
+          <Kpi label="Earmarked for card bills" value={money(sum('earmarked_for_cards'))} icon={<CreditCard size={16} />} tone="amber" sub="What the cards owe, until their bills are paid" />
+          <Kpi label="After card bills" value={money(sum('available_after_cards'))} icon={<Scale size={16} />} tone="green" />
         </div>
       )}
       title="Accounts" noun="Account"

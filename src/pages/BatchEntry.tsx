@@ -140,7 +140,7 @@ export default function BatchEntry() {
                   </td>
                   <td>
                     {lines.length > 1 && (
-                      <button className="icon-btn" tabIndex={-1} title="Remove row" onClick={() => setLines(ls => ls.filter(x => x.key !== l.key))}><Trash2 size={14} /></button>
+                      <button className="icon-btn" tabIndex={-1} title="Remove row" onClick={() => setLines(ls => ls.filter(x => x.key !== l.key))}><Trash2 size={16} /></button>
                     )}
                   </td>
                 </tr>

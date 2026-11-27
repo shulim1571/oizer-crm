@@ -100,35 +100,35 @@ export function ShareDialog({ campaign, onClose }: { campaign: Row; onClose: () 
 
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Share {name}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Share {name}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       {!link ? (
         <p>This campaign has no payment link yet. An admin can add it in the campaign's details under Payment Link; the portal's own payment pages arrive later.</p>
       ) : (
         <>
           <div className="panel-box">
-            <div className="share-link"><code>{link}</code><button type="button" className="btn" onClick={() => copy(link, setNote)}><Copy size={15} /> Copy link</button></div>
+            <div className="share-link"><code>{link}</code><button type="button" className="btn" onClick={() => copy(link, setNote)}><Copy size={16} /> Copy link</button></div>
             <details><summary className="muted small">Donate widget for a website</summary>
               <p className="muted small">A Donate button that opens this campaign's form over the website:</p>
               <textarea className="snippet" readOnly rows={2} value={snippet} onFocus={e => e.target.select()} />
-              <button type="button" className="btn" onClick={() => copy(snippet, setNote)}><Copy size={15} /> Copy button code</button>
+              <button type="button" className="btn" onClick={() => copy(snippet, setNote)}><Copy size={16} /> Copy button code</button>
               <p className="muted small">Or the whole form placed right in the page:</p>
               <textarea className="snippet" readOnly rows={2} value={inline} onFocus={e => e.target.select()} />
-              <button type="button" className="btn" onClick={() => copy(inline, setNote)}><Copy size={15} /> Copy form code</button></details>
+              <button type="button" className="btn" onClick={() => copy(inline, setNote)}><Copy size={16} /> Copy form code</button></details>
             {fundraiser && (fundraiser.email || fundraiser.phone) && (
               <div className="share-contact">
                 <span className="muted small">Fundraiser{fundraiser.full_name ? ` · ${fundraiser.full_name}` : ''}</span>
-                {fundraiser.email && <span className="share-contact-item"><Mail size={14} /> {fundraiser.email}
-                  <button type="button" className="btn small" onClick={() => copy(fundraiser.email, setNote)}><Copy size={13} /> Copy</button></span>}
-                {fundraiser.phone && <span className="share-contact-item"><Phone size={14} /> {formatPhone(fundraiser.phone)}
-                  <button type="button" className="btn small" onClick={() => copy(fundraiser.phone, setNote)}><Copy size={13} /> Copy</button></span>}
+                {fundraiser.email && <span className="share-contact-item"><Mail size={16} /> {fundraiser.email}
+                  <button type="button" className="btn small" onClick={() => copy(fundraiser.email, setNote)}><Copy size={16} /> Copy</button></span>}
+                {fundraiser.phone && <span className="share-contact-item"><Phone size={16} /> {formatPhone(fundraiser.phone)}
+                  <button type="button" className="btn small" onClick={() => copy(fundraiser.phone, setNote)}><Copy size={16} /> Copy</button></span>}
               </div>
             )}
             {note && <p className="muted small">{note}</p>}
           </div>
 
           <div className="segmented">
-            <button type="button" className={channel === 'email' ? 'on' : ''} onClick={() => setChannel('email')}><Mail size={15} /> Email</button>
-            <button type="button" className={channel === 'sms' ? 'on' : ''} onClick={() => setChannel('sms')}><MessageSquare size={15} /> Text</button>
+            <button type="button" className={channel === 'email' ? 'on' : ''} onClick={() => setChannel('email')}><Mail size={16} /> Email</button>
+            <button type="button" className={channel === 'sms' ? 'on' : ''} onClick={() => setChannel('sms')}><MessageSquare size={16} /> Text</button>
           </div>
           <div className="fields">
             <label className="field wide"><span>{channel === 'email' ? 'Email addresses' : 'Phone numbers'}</span>
@@ -143,7 +143,7 @@ export function ShareDialog({ campaign, onClose }: { campaign: Row; onClose: () 
           {result && <div className="notice">Sent to {result.queued}.{(result.skipped as Row[]).length > 0 && ` Skipped: ${(result.skipped as Row[]).map(s => `${s.to} (${s.reason})`).join('; ')}`}</div>}
           {error && <div className="error">{error}</div>}
           <div className="form-actions"><div className="spacer" />
-            <button type="button" className="btn primary" disabled={!recipients.length} onClick={send}><Send size={15} /> Send to {recipients.length || ''}</button></div>
+            <button type="button" className="btn primary" disabled={!recipients.length} onClick={send}><Send size={16} /> Send to {recipients.length || ''}</button></div>
         </>
       )}
       {(history.data as Row[] | undefined)?.length ? (
@@ -308,7 +308,7 @@ export function OutreachPage() {
             <label className="field wide"><span>Subject</span><input value={subject} onChange={e => setSubject(e.target.value)} /></label>
             <label className="field wide"><span>Email</span><textarea rows={8} value={body} onChange={e => setBody(e.target.value)} />
               <small className="muted">{EMAIL_HELP} Fill in per person: {MERGE_FIELDS.map(t => token(t))}</small></label>
-            <label className="field wide"><span><Paperclip size={13} /> PDF attachment (optional)</span>
+            <label className="field wide"><span><Paperclip size={16} /> PDF attachment (optional)</span>
               <input type="file" accept="application/pdf,.pdf" onChange={e => setFile(e.target.files?.[0] ?? null)} /></label>
           </div>
         )}
@@ -342,7 +342,7 @@ export function OutreachPage() {
             <tbody>{recipients.map(r => (
               <tr key={r.key} className={(channel !== 'sms' && !r.email) && (channel !== 'email' && !r.phone) || (channel === 'email' && !r.email) || (channel === 'sms' && !r.phone) ? 'muted' : ''}>
                 <td>{r.name}{r.kind === 'fundraiser' && <> <Pill>Fundraiser</Pill></>}</td><td>{r.email ?? '—'}</td><td>{r.phone ? formatPhone(r.phone) : '—'}</td><td>{r.campaign_name ?? ''}</td>
-                <td><button type="button" className="icon-btn" title="Remove" onClick={() => setRecipients(x => x.filter(y => y.key !== r.key))}><X size={15} /></button></td>
+                <td><button type="button" className="icon-btn" title="Remove" onClick={() => setRecipients(x => x.filter(y => y.key !== r.key))}><X size={16} /></button></td>
               </tr>
             ))}</tbody>
           </table></div>
@@ -376,7 +376,7 @@ export function OutreachPage() {
         {result && <div className="notice">{later ? 'Scheduled' : 'Sent'} to {result.queued}.{(result.skipped as Row[]).length > 0 && ` Skipped ${(result.skipped as Row[]).length}: ${(result.skipped as Row[]).map(s => `${s.to} (${s.reason})`).join('; ')}`} Track it in Outreach History.</div>}
         {error && <div className="error">{error}</div>}
         <div className="form-actions"><button type="button" className="btn" onClick={() => setStep(2)}>Back</button><div className="spacer" />
-          <button type="button" className="btn primary" disabled={busy || !reachable || (later && !when)} onClick={send}><Send size={15} /> {later ? 'Schedule' : 'Send'} to {reachable}</button></div>
+          <button type="button" className="btn primary" disabled={busy || !reachable || (later && !when)} onClick={send}><Send size={16} /> {later ? 'Schedule' : 'Send'} to {reachable}</button></div>
       </div>}
     </section>
   );
@@ -425,7 +425,7 @@ function OutreachDialog({ send: s, onClose, onChanged }: { send: Row; onClose: (
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>{s.subject ?? 'Text message'} <Pill>{sendStatus(s)}</Pill></h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>{s.subject ?? 'Text message'} <Pill>{sendStatus(s)}</Pill></h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <dl className="record-facts">
         <dt>Sent by</dt><dd>{s.created_by} · {dateTime(s.created_at)}</dd>
         <dt>Send time</dt><dd>{dateTime(s.send_after)}</dd>
@@ -495,7 +495,7 @@ function TemplateDialog({ template: t, onClose, onSaved }: { template: Row; onCl
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>{t.id ? t.name : 'New template'}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>{t.id ? t.name : 'New template'}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <div className="fields">
         <label className="field wide"><span>Name</span><input value={name} onChange={e => setName(e.target.value)} /></label>
         <label className="field wide"><span>Email subject</span><input value={subject} onChange={e => setSubject(e.target.value)} /></label>
@@ -507,7 +507,7 @@ function TemplateDialog({ template: t, onClose, onSaved }: { template: Row; onCl
       <p className="help">Fill in per person, in the subject, email or text: <code>{'{first_name}'}</code>, <code>{'{last_name}'}</code>, <code>{'{campaign_name}'}</code>. Where someone has no name or campaign on file, that field is left blank.</p>
       {error && <div className="error">{error}</div>}
       <div className="form-actions">
-        {t.id && <button type="button" className="btn danger" onClick={remove}><Trash2 size={15} /> Delete</button>}
+        {t.id && <button type="button" className="btn danger" onClick={remove}><Trash2 size={16} /> Delete</button>}
         <div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
         <button type="button" className="btn primary" disabled={!name.trim()} onClick={save}>Save</button></div>
     </Overlay>

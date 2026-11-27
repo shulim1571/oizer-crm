@@ -60,7 +60,7 @@ describe('Email to fundraiser (Moshe Henig, 2026-11-11)', () => {
     expect(checks).toContain("supabase.rpc('email_check_to_fundraiser', { p_check: checkId, p_pdf_base64: bytesToBase64(bytes) })");
     expect(checks).toContain('<EmailCheckButton checkId={live.id} onSent={() => setVersion(v => v + 1)} />');   // payout, after printing too
     expect(checks).toContain('<EmailCheckButton checkId={checkId} onSent={onDone} />');                          // Check Not Printed task
-    expect(checks).toContain("onClick={() => setPrinting('email')}><Mail size={15} /> Email to fundraiser</button>"); // Check To Print task
+    expect(checks).toContain("onClick={() => setPrinting('email')}><Mail size={16} /> Email to fundraiser</button>"); // Check To Print task
     expect(checks).toContain("{ label: 'Email to fundraiser', onClick: () => { emailCheck(r.id)");                // register
   });
 });

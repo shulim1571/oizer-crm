@@ -8,7 +8,7 @@ import type { Row } from '../lib/supabase';
 export default function CampaignName({ c }: { c: { featured?: unknown; internal_name?: unknown; campaign_name?: unknown; external_name?: unknown } | Row }) {
   return (
     <div>
-      <div>{!!c.featured && <Star size={14} className="featured" />} {String(c.internal_name || c.campaign_name || '')}</div>
+      <div>{!!c.featured && <Star size={16} className="featured" />} {String(c.internal_name || c.campaign_name || '')}</div>
       {!!c.external_name && c.external_name !== c.internal_name && <div className="muted small">{String(c.external_name)}</div>}
     </div>
   );

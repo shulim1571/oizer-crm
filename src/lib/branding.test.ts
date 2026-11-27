@@ -47,10 +47,18 @@ describe('FundBase branding', () => {
     expect(tokens).toContain('--fb-bg-dark: #0F1116;');
     expect(tokens).toContain('--fb-font-display: "Jost"');
     expect(readFileSync('src/main.tsx', 'utf8')).toContain("import './fundbase-tokens.css';");
+    // Since 2026-11-27 the app's colors come from the shared Trubase UI design system, with Fund teal selected.
+    const ui = readFileSync('src/trubase-tokens.css', 'utf8');
+    const fund = ui.slice(ui.indexOf('[data-app="fundbase"] {'), ui.indexOf('}', ui.indexOf('[data-app="fundbase"] {')));
+    expect(fund).toContain('--accent-500: #0E8A74;');
+    expect(fund).toContain('--accent-600: #0C7461;');
+    expect(fund).toContain('--accent-dark: #41C8B0;');
+    expect(fund).toContain('--accent-soft: #E7F3F1;');
+    expect(ui).toMatch(/@media \(prefers-color-scheme: dark\)[\s\S]*--bg: #0F1116;[\s\S]*--accent: var\(--accent-dark\);/);
+    expect(readFileSync('src/main.tsx', 'utf8')).toContain("import './trubase-tokens.css';");
+    expect(readFileSync('index.html', 'utf8')).toContain('<html lang="en" data-app="fundbase">');
     const css = readFileSync('src/styles.css', 'utf8');
-    expect(css).toContain('--accent: var(--fb-accent-500);');
-    expect(css).toContain('--accent-text: var(--fb-accent-600);');
-    expect(css).toMatch(/--accent: var\(--fb-accent-dark\);[\s\S]*--on-accent: var\(--fb-bg-dark\);/);
+    expect(css).not.toMatch(/--accent:\s*#/);   // the system's accent, never a second hardcoded one
     expect(css).not.toContain('--db-');
     expect(css).not.toMatch(/#4f46e5|#7c3aed|#4338ca/i);
     const html = readFileSync('index.html', 'utf8');
@@ -58,8 +66,10 @@ describe('FundBase branding', () => {
     expect(html).not.toContain('Jost');
     expect(readFileSync('public/privacy.html', 'utf8')).not.toContain('Jost');
     expect(css).not.toMatch(/font-family:[^;]*(Jost|--font-display|--fb-font-display)/);
-    expect(css).toContain('h1 { font-size: 22px; font-weight: 650; letter-spacing: -.02em; margin: 0; }');
-    expect(css).toContain('h2 { font-size: 16px; font-weight: 600; letter-spacing: -.01em; margin: 24px 0 10px; }');
+    // Trubase UI type roles (2026-11-27): page title 24/32, section title 16/24, both 600, Inter; weights 400/500/600 only.
+    expect(css).toContain('h1 { font: var(--fw-semibold) var(--fs-24)/var(--lh-32) var(--font-ui);');
+    expect(css).toContain('h2 { font: var(--fw-semibold) var(--fs-16)/var(--lh-24) var(--font-ui);');
+    expect(css).not.toMatch(/font-weight:\s*(300|450|550|650|700|800|bold)\b/);
     expect(readFileSync('public/brand/fundbase-logo.svg', 'utf8')).not.toMatch(/<text|font-family/);   // wordmark is drawn, needs no font
     expect(html).toContain('<meta name="theme-color" content="#0E8A74"');
     for (const f of ['index.html', 'public/site.webmanifest', 'src/components/Layout.tsx', 'src/lib/org.ts', 'src/pages/Login.tsx', 'src/pages/Organization.tsx']) {
@@ -68,7 +78,7 @@ describe('FundBase branding', () => {
     const manifest = JSON.parse(readFileSync('public/site.webmanifest', 'utf8'));
     expect(manifest.icons.map((i: { src: string }) => i.src)).toEqual(['/brand/app-icon-192.png', '/brand/app-icon-512.png']);
     expect(readFileSync('src/pages/Login.tsx', 'utf8')).toContain('<ProductLockup endorsed light />');   // light, not black (Moshe, 2026-11-23)
-    expect(css).toMatch(/\.auth \{\n {2}--bg: var\(--fb-bg-subtle\);[^}]*color-scheme: light;/);
+    expect(css).toMatch(/\.auth \{\n  \/\* The system's light values[^\n]*\n  --bg: #F4F5F7;[^}]*color-scheme: light;/);   // light, whatever the device
     expect(existsSync('public/brand/fundbase-logo-endorsed.svg')).toBe(true);
     for (const f of ['src/components/Layout.tsx', 'src/pages/Login.tsx', 'index.html', 'public/site.webmanifest']) expect(readFileSync(f, 'utf8')).not.toMatch(/offering|heart|alternates/i);
   });

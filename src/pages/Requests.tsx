@@ -142,7 +142,7 @@ function RequestDialog({ id, onClose, onChanged }: { id: string; onClose: () => 
         <>
           <div className="form-head">
             <h2>{r.name} <StatusPill value={STATUS[r.status]} /></h2>
-            <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button>
+            <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button>
           </div>
           <RequestFacts r={r} />
           {error && <div className="error">{error}</div>}

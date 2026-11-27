@@ -337,7 +337,7 @@ export default function RecordForm(p: Props) {
             {arr.map(id => (
               <span key={id} className="chip">
                 {(opts[f.name] ?? []).find(o => o.value === id)?.label ?? id}
-                <button type="button" onClick={() => set(f.name, arr.filter(x => x !== id))}><X size={12} /></button>
+                <button type="button" onClick={() => set(f.name, arr.filter(x => x !== id))}><X size={16} /></button>
               </span>
             ))}
             <SearchSelect value={null} options={(opts[f.name] ?? []).filter(o => !arr.includes(o.value))}

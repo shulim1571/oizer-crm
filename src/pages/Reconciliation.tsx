@@ -82,14 +82,14 @@ function ReconciliationScreen() {
       {a && (
         <>
           <div className="kpis">
-            <Kpi label="Lines to match" value={String(a.unmatched_lines)} icon={<Landmark size={18} />} tone={Number(a.unmatched_lines) ? 'amber' : 'green'} sub={`${money(a.unmatched_total)} unreconciled`} />
+            <Kpi label="Lines to match" value={String(a.unmatched_lines)} icon={<Landmark size={16} />} tone={Number(a.unmatched_lines) ? 'amber' : 'green'} sub={`${money(a.unmatched_total)} unreconciled`} />
             {/* Readiness #32: book deposits the bank doesn't show yet. */}
-            <Kpi label="Deposits in transit" value={String(a.deposits_unmatched ?? 0)} icon={<ArrowLeftRight size={18} />} tone={Number(a.deposits_unmatched) ? 'amber' : 'green'}
+            <Kpi label="Deposits in transit" value={String(a.deposits_unmatched ?? 0)} icon={<ArrowLeftRight size={16} />} tone={Number(a.deposits_unmatched) ? 'amber' : 'green'}
               sub={`${money(a.deposits_unmatched_total ?? 0)} since ${a.deposits_since ? usDate(a.deposits_since) : '—'}`} />
-            <Kpi label="Signed off through" value={a.locked_through ? usDate(a.locked_through) : 'Not yet'} icon={<Lock size={18} />} tone="blue"
+            <Kpi label="Signed off through" value={a.locked_through ? usDate(a.locked_through) : 'Not yet'} icon={<Lock size={16} />} tone="blue"
               sub={a.last_statement_balance != null ? `Ending balance ${money(a.last_statement_balance)}` : undefined} />
-            <Kpi label="Latest bank line" value={a.last_line_date ? usDate(a.last_line_date) : 'None yet'} icon={<FileUp size={18} />} tone="violet" small />
-            <Kpi label="Outstanding checks" value={String(a.outstanding_checks)} icon={<Scale size={18} />} tone="amber" sub={money(a.outstanding_checks_total)} />
+            <Kpi label="Latest bank line" value={a.last_line_date ? usDate(a.last_line_date) : 'None yet'} icon={<FileUp size={16} />} tone="violet" small />
+            <Kpi label="Outstanding checks" value={String(a.outstanding_checks)} icon={<Scale size={16} />} tone="amber" sub={money(a.outstanding_checks_total)} />
           </div>
           {/* The usual order of work: bring in the statement, match it, record moves between banks, sign off. */}
           <ol className="stepper" aria-label="Reconciliation steps">
@@ -316,7 +316,7 @@ function MatchedDialog({ account, onClose, onChanged }: { account: string; onClo
   };
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Matched (latest 200)</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Matched (latest 200)</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       {error && <div className="error">{error}</div>}
       <div className="table-wrap dialog-table"><table className="grid">
         <thead><tr><th className="nosort">Bank</th><th className="nosort">Books</th><th className="nosort right">Difference</th><th className="nosort">By</th><th className="nosort" /></tr></thead>
@@ -330,7 +330,7 @@ function MatchedDialog({ account, onClose, onChanged }: { account: string; onClo
                   <button type="button" className="link small" onClick={() => applyFee(m)}>Apply fee difference</button>}
                 {m.fee_applied_at && <div className="muted small">Fee applied by {m.fee_applied_by}</div>}</>}</td>
               <td className="small">{m.kind === 'auto' ? 'Automatic' : m.created_by}<div className="muted">{dateTime(m.created_at)}</div></td>
-              <td><button type="button" className="link" onClick={() => unmatch(m.id)}><Undo2 size={13} /> Unmatch</button></td>
+              <td><button type="button" className="link" onClick={() => unmatch(m.id)}><Undo2 size={16} /> Unmatch</button></td>
             </tr>
           ))}
           {!q.loading && !(q.data ?? []).length && <tr><td colSpan={5} className="muted">Nothing matched yet.</td></tr>}
@@ -395,7 +395,7 @@ function LinesTab({ account, version, onChanged }: { account: string; version: n
                 <td>{i.file_name ?? 'File'}{i.undone_at && <> <Pill>Undone</Pill></>}</td>
                 <td className="right">{i.added}</td><td className="right">{i.skipped}</td>
                 <td className="small">{i.created_by} <span className="muted">{dateTime(i.created_at)}</span></td>
-                <td>{!i.undone_at && <button type="button" className="link" onClick={() => act('undo_bank_import', { p_import: i.id }, `Take back the ${i.added} lines this file added?`)}><Undo2 size={13} /> Undo</button>}</td>
+                <td>{!i.undone_at && <button type="button" className="link" onClick={() => act('undo_bank_import', { p_import: i.id }, `Take back the ${i.added} lines this file added?`)}><Undo2 size={16} /> Undo</button>}</td>
               </tr>
             ))}
           </tbody>
@@ -460,7 +460,7 @@ function ImportDialog({ account, file, name, onClose, onDone }: { account: strin
 
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Bring in {name}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Bring in {name}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <p className="muted small">Check which column is which. Money coming in should show as positive.</p>
       <div className="fields">
         {column('Date', 'date', false)}
@@ -510,7 +510,7 @@ function AddLineDialog({ account, onClose, onDone }: { account: string; onClose:
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Type a bank line</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Type a bank line</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <div className="fields">
         <label className="field"><span>Date</span><input type="date" value={date} onChange={e => setDate(e.target.value)} /></label>
         <label className="field"><span>Money</span><select value={direction} onChange={e => setDirection(e.target.value as 'in' | 'out')}><option value="in">In (deposit)</option><option value="out">Out (withdrawal)</option></select></label>
@@ -602,7 +602,7 @@ function BankTransferDialog({ accounts, start, onClose, onDone }: { accounts: Ro
   );
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Transfer between bank accounts</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Transfer between bank accounts</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <p className="muted small">Record money the bank moved between the organization's own accounts. Campaign balances don't change.</p>
       <div className="fields">
         {pick(from, setFrom, 'From')}{pick(to, setTo, 'To')}
@@ -697,7 +697,7 @@ function PeriodsTab({ account, accountName, version, onChanged }: { account: str
               <td className="small">{p.signed_by} <span className="muted">{dateTime(p.signed_at)}</span>
                 {p.status === 'reopened' && <div className="muted">Reopened by {p.reopened_by}: {p.reopen_reason}</div>}</td>
               <td>
-                <button type="button" className="link" onClick={() => printPeriod(p, accountName).catch(e => alert(e.message))}><Printer size={13} /> Print / PDF</button>
+                <button type="button" className="link" onClick={() => printPeriod(p, accountName).catch(e => alert(e.message))}><Printer size={16} /> Print / PDF</button>
                 {' · '}<button type="button" className="link" onClick={() => periodCsv(p, accountName)}>CSV</button>
                 {isSuperAdmin && p.id === last?.id && <> · <button type="button" className="link" onClick={() => reopen(p)}>Reopen</button></>}
               </td>

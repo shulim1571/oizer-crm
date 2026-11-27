@@ -137,7 +137,7 @@ function TaskView({ task: t, onClose }: { task: Row; onClose: () => void }) {
     <Overlay onClose={onClose}>
       <div className="form-head">
         <h2>{t.title} <StatusPill value={statusOf(t)} /></h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button>
       </div>
       <p className="muted small">This is {t.owner?.full_name ?? 'a fundraiser'}'s personal task. You can see it, but only they can change it.</p>
       <dl className="record-facts">
@@ -276,7 +276,7 @@ function CallListDialog({ id, onClose }: { id: string; onClose: () => void }) {
     <Overlay onClose={onClose}>
       <div className="form-head">
         <h2>{t?.title ?? 'Call list'}</h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button>
       </div>
       <p className="muted small">
         {items.filter(i => i.contacted).length} of {items.length} reached

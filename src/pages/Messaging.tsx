@@ -82,7 +82,7 @@ export function SendDocumentDialog({ kind, recordId, donorId, campaignId, title,
 
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Send {kind === 'receipt' ? 'receipt' : 'statement'} {title}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Send {kind === 'receipt' ? 'receipt' : 'statement'} {title}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       {sent ? (
         <>
           {sent.map(m => (
@@ -95,9 +95,9 @@ export function SendDocumentDialog({ kind, recordId, donorId, campaignId, title,
       ) : (
         <>
           <div className="fields">
-            <label className="inline-check"><input type="checkbox" checked={useEmail} onChange={e => setUseEmail(e.target.checked)} /> <Mail size={15} /> Email</label>
+            <label className="inline-check"><input type="checkbox" checked={useEmail} onChange={e => setUseEmail(e.target.checked)} /> <Mail size={16} /> Email</label>
             <label className="field"><span>Email address</span><input type="email" value={email} disabled={!useEmail} onChange={e => setEmail(e.target.value)} /></label>
-            <label className="inline-check"><input type="checkbox" checked={useText} onChange={e => setUseText(e.target.checked)} /> <MessageSquare size={15} /> Text</label>
+            <label className="inline-check"><input type="checkbox" checked={useText} onChange={e => setUseText(e.target.checked)} /> <MessageSquare size={16} /> Text</label>
             <label className="field"><span>Phone</span><input type="tel" value={phone} disabled={!useText} onChange={e => setPhone(e.target.value)} /></label>
           </div>
           <p className="muted small">The email carries the {kind} itself. The text carries a private link that opens it, good for a year.
@@ -105,7 +105,7 @@ export function SendDocumentDialog({ kind, recordId, donorId, campaignId, title,
           {error && <div className="error">{error}</div>}
           <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
             <button type="button" className="btn primary" disabled={busy || (!useEmail && !useText) || (useEmail && !email.trim()) || (useText && !phone.trim())} onClick={send}>
-              <Send size={15} /> Send</button></div>
+              <Send size={16} /> Send</button></div>
         </>
       )}
     </Overlay>
@@ -154,7 +154,7 @@ function MessageDialog({ message: m, onClose, onChanged }: { message: Row; onClo
   return (
     <Overlay onClose={onClose}>
       <div className="form-head"><h2>{channelLabel(m.channel)} to {m.to_name ?? m.to_address} <MessagePill status={m.status} /></h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <dl className="record-facts">
         <dt>To</dt><dd>{m.to_address}</dd>
         <dt>What</dt><dd>{kindLabel(m.kind)}{m.donor_id && <> · <Link to={`/donors/${encodeURIComponent(m.donor_id)}`}>donor</Link></>}</dd>
@@ -191,7 +191,7 @@ export function ResendMessage({ messageId, address, channel, onDone }: { message
       <label className="field"><span>Send again to</span><input type={channel === 'sms' ? 'tel' : 'email'} value={to} onChange={e => setTo(e.target.value)} /></label>
       <p className="muted small">Check the {channel === 'sms' ? 'number' : 'address'} first, and fix it on the donor or fundraiser record too if it was wrong.</p>
       {error && <div className="error">{error}</div>}
-      <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" disabled={!to.trim()} onClick={resend}><Send size={15} /> Send again</button></div>
+      <div className="form-actions"><div className="spacer" /><button type="button" className="btn primary" disabled={!to.trim()} onClick={resend}><Send size={16} /> Send again</button></div>
     </div>
   );
 }
@@ -325,7 +325,7 @@ export function MessagingSettingsPage() {
           <label className="field"><span>To</span><input value={testTo} onChange={e => setTestTo(e.target.value)} placeholder={testChannel === 'sms' ? 'Phone number' : 'Email address'} /></label>
         </div>
         {testResult && <p>{testResult}</p>}
-        <div className="form-actions"><div className="spacer" /><button type="button" className="btn" disabled={!testTo.trim()} onClick={sendTest}><Send size={15} /> Send test</button></div>
+        <div className="form-actions"><div className="spacer" /><button type="button" className="btn" disabled={!testTo.trim()} onClick={sendTest}><Send size={16} /> Send test</button></div>
       </div>
 
       </>}

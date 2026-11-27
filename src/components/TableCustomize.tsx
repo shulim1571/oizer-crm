@@ -180,8 +180,8 @@ export default function TableCustomize({ columns, visibleKeys, saved, onClose }:
             <button className="link" onClick={() => saved.apply(v)}>{v.name}</button>
             <span className="spacer" />
             <button className={`icon-btn ${v.is_default ? 'default-view' : ''}`} title={v.is_default ? 'Opens by default. Click to stop.' : 'Open this view by default'}
-                    onClick={() => saved.setDefault(v, !v.is_default)}><Star size={14} /></button>
-            <button className="icon-btn" title="Delete view" onClick={() => saved.remove(v)}><Trash2 size={14} /></button>
+                    onClick={() => saved.setDefault(v, !v.is_default)}><Star size={16} /></button>
+            <button className="icon-btn" title="Delete view" onClick={() => saved.remove(v)}><Trash2 size={16} /></button>
           </li>
         ))}
       </ul>
@@ -207,13 +207,13 @@ export default function TableCustomize({ columns, visibleKeys, saved, onClose }:
               onDragStart={() => { dragging.current = k; }}
               onDragOver={e => e.preventDefault()}
               onDrop={e => { e.preventDefault(); if (dragging.current && dragging.current !== k) move(dragging.current, i); dragging.current = null; }}>
-            <GripVertical size={14} className="muted" />
+            <GripVertical size={16} className="muted" />
             <label>
               <input type="checkbox" checked disabled={visibleKeys.length === 1} onChange={() => setColumns(visibleKeys.filter(x => x !== k))} /> {byKey.get(k)?.label}
             </label>
             <span className="spacer" />
-            <button className="icon-btn" title="Move up" disabled={i === 0} onClick={() => move(k, i - 1)}><ArrowUp size={13} /></button>
-            <button className="icon-btn" title="Move down" disabled={i === visibleKeys.length - 1} onClick={() => move(k, i + 1)}><ArrowDown size={13} /></button>
+            <button className="icon-btn" title="Move up" disabled={i === 0} onClick={() => move(k, i - 1)}><ArrowUp size={16} /></button>
+            <button className="icon-btn" title="Move down" disabled={i === visibleKeys.length - 1} onClick={() => move(k, i + 1)}><ArrowDown size={16} /></button>
           </li>
         ))}
         {hidden.map(c => (

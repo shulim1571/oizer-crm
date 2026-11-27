@@ -74,10 +74,10 @@ export default function InboxPage() {
         <div className="view-title"><h1>Messages</h1><span className="count">{isAdmin ? 'Conversations with fundraisers' : 'Your conversations with the office'}</span></div>
         {isAdmin && (
           <div className="view-actions">
-            <button type="button" className="btn" onClick={() => setDialog('new')}><Plus size={15} /> New conversation</button>
-            <button type="button" className="btn" onClick={() => setDialog('group')}><Users size={15} /> Group chat</button>
-            <button type="button" className="btn" onClick={() => setDialog('broadcast')}><Radio size={15} /> Broadcast</button>
-            <button type="button" className="btn" onClick={() => setDialog('announce')}><Megaphone size={15} /> Announcement</button>
+            <button type="button" className="btn" onClick={() => setDialog('new')}><Plus size={16} /> New conversation</button>
+            <button type="button" className="btn" onClick={() => setDialog('group')}><Users size={16} /> Group chat</button>
+            <button type="button" className="btn" onClick={() => setDialog('broadcast')}><Radio size={16} /> Broadcast</button>
+            <button type="button" className="btn" onClick={() => setDialog('announce')}><Megaphone size={16} /> Announcement</button>
             <button type="button" className="btn" onClick={() => setDialog('replies')}>Quick replies</button>
           </div>
         )}
@@ -174,7 +174,7 @@ function Conversation({ threadId, thread, onChanged }: { threadId: string; threa
   return (
     <div className="conversation">
       <div className="conversation-head">
-        <button type="button" className="icon-btn back-btn" title="Back" onClick={() => nav('/inbox')}><ArrowLeft size={18} /></button>
+        <button type="button" className="icon-btn back-btn" title="Back" onClick={() => nav('/inbox')}><ArrowLeft size={20} /></button>
         <b>{thread?.title ?? 'Conversation'}</b>
         {thread?.kind === 'group' && <Pill tone="blue">Group</Pill>}
         <div className="spacer" />
@@ -204,7 +204,7 @@ function Conversation({ threadId, thread, onChanged }: { threadId: string; threa
           <textarea rows={2} value={text} placeholder="Write a message" onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && text.trim()) { e.preventDefault(); void send(text.trim()); } }} />
           <Recorder disabled={busy} onSend={v => send(text.trim(), v)} onError={setError} />
-          <button type="button" className="btn primary" disabled={busy || !text.trim()} onClick={() => send(text.trim())}><Send size={15} /> Send</button>
+          <button type="button" className="btn primary" disabled={busy || !text.trim()} onClick={() => send(text.trim())}><Send size={16} /> Send</button>
         </div>
       )}
     </div>
@@ -226,8 +226,8 @@ function VoicePlayer({ messageId, seconds, downloadable }: { messageId: string; 
   const len = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
   return url ? (
     <div className="voice"><audio src={url} controls autoPlay />
-      {downloadable && <a className="icon-btn" href={url} download={`voice-${messageId}.${mime.includes('mp4') ? 'm4a' : 'webm'}`} title="Download"><Download size={15} /></a>}</div>
-  ) : <button type="button" className="btn voice" onClick={fetchIt}><Play size={15} /> Voice message · {len}</button>;
+      {downloadable && <a className="icon-btn" href={url} download={`voice-${messageId}.${mime.includes('mp4') ? 'm4a' : 'webm'}`} title="Download"><Download size={16} /></a>}</div>
+  ) : <button type="button" className="btn voice" onClick={fetchIt}><Play size={16} /> Voice message · {len}</button>;
 }
 
 type Voice = { data: string; mime: string; seconds: number };
@@ -296,8 +296,8 @@ export function Recorder({ disabled, onSend, onError }: { disabled: boolean; onS
     <div className="voice-ready" role="group" aria-label="Voice message ready to send">
       <audio src={ready.url} controls />
       <span className="muted small">{len(ready.seconds)}</span>
-      <button type="button" className="btn" onClick={discard} disabled={sending} title="Discard this voice message"><Trash2 size={15} /> Discard</button>
-      <button type="button" className="btn primary" onClick={sendIt} disabled={sending || disabled}><Send size={15} /> {sending ? 'Sending…' : 'Send voice message'}</button>
+      <button type="button" className="btn" onClick={discard} disabled={sending} title="Discard this voice message"><Trash2 size={16} /> Discard</button>
+      <button type="button" className="btn primary" onClick={sendIt} disabled={sending || disabled}><Send size={16} /> {sending ? 'Sending…' : 'Send voice message'}</button>
     </div>
   );
   return (
@@ -322,7 +322,7 @@ function PickDialog({ title, label, note, load, onPick, onClose }: { title: stri
   useEffect(() => { void load().then(setOptions); }, [load]);
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>{title}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>{title}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <label className="field"><span>{label}</span><SearchSelect value={value} options={options} onChange={setValue} /></label>
       {note && <p className="muted small">{note}</p>}
       {error && <div className="error">{error}</div>}
@@ -351,7 +351,7 @@ function BroadcastDialog({ onClose, onSent }: { onClose: () => void; onSent: () 
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Broadcast</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Broadcast</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <label className="field"><span>Send to</span>
         <select value={audience} onChange={e => setAudience(e.target.value as typeof audience)}>
           <option value="all">All fundraisers</option><option value="primary">Primary fundraisers only</option><option value="chosen">Fundraisers I choose</option>
@@ -366,7 +366,7 @@ function BroadcastDialog({ onClose, onSent }: { onClose: () => void; onSent: () 
       <p className="muted small">Each fundraiser gets it in their conversation with the office and can reply there.</p>
       {error && <div className="error">{error}</div>}
       <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
-        <button type="button" className="btn primary" disabled={!body.trim() || (audience === 'chosen' && !chosen.length)} onClick={send}><Send size={15} /> Send broadcast</button></div>
+        <button type="button" className="btn primary" disabled={!body.trim() || (audience === 'chosen' && !chosen.length)} onClick={send}><Send size={16} /> Send broadcast</button></div>
       {past.length > 0 && (
         <>
           <h3 className="section-title">Past broadcasts</h3>
@@ -397,14 +397,14 @@ function AnnouncementDialog({ current, onClose, onDone }: { current: Row | null;
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Pinned announcement</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Pinned announcement</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <label className="field wide"><span>Announcement</span><textarea rows={4} value={body} onChange={e => setBody(e.target.value)} placeholder="New payout process starting Monday" /></label>
       <p className="muted small">Shown at the top of every fundraiser's messages until you change or remove it. They can't dismiss it.</p>
       {error && <div className="error">{error}</div>}
       <div className="form-actions">
-        {current && <button type="button" className="btn danger" onClick={remove}><Trash2 size={15} /> Remove</button>}
+        {current && <button type="button" className="btn danger" onClick={remove}><Trash2 size={16} /> Remove</button>}
         <div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
-        <button type="button" className="btn primary" disabled={!body.trim() || body.trim() === current?.body} onClick={post}><Pin size={15} /> Pin</button></div>
+        <button type="button" className="btn primary" disabled={!body.trim() || body.trim() === current?.body} onClick={post}><Pin size={16} /> Pin</button></div>
     </Overlay>
   );
 }
@@ -429,10 +429,10 @@ function QuickRepliesDialog({ onClose }: { onClose: () => void }) {
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Quick replies</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Quick replies</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <p className="muted small">Ready-made replies every admin can pick in a conversation. Only the Super Admin can change them.</p>
       <ul className="plain-list">{list.map(r => (
-        <li key={r.id}>{r.body}{isSuperAdmin && <button type="button" className="icon-btn" title="Remove" onClick={() => remove(r.id)}><Trash2 size={14} /></button>}</li>
+        <li key={r.id}>{r.body}{isSuperAdmin && <button type="button" className="icon-btn" title="Remove" onClick={() => remove(r.id)}><Trash2 size={16} /></button>}</li>
       ))}</ul>
       <div className="fields"><label className="field wide"><span>Add a reply</span><input value={text} onChange={e => setText(e.target.value)} /></label></div>
       {error && <div className="error">{error}</div>}

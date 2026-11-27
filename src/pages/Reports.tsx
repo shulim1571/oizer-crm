@@ -202,7 +202,7 @@ export function CampaignReportDialog({ campaign, onClose }: { campaign: Row; onC
 
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Campaign report</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Campaign report</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <div className="filter-bar">
         <label className="inline-check"><input type="checkbox" checked={all} onChange={e => setAll(e.target.checked)} /> All time</label>
         {!all && <RangePicker range={range} setRange={setRange} from={from} setFrom={setFrom} to={to} setTo={setTo} />}
@@ -227,7 +227,7 @@ export function CampaignReportDialog({ campaign, onClose }: { campaign: Row; onC
         <button type="button" className="btn primary" disabled={q.loading} onClick={() => printReport(`Campaign report · ${title}`, chosen, data, {
           subtitle: all ? 'All time' : `${start} to ${end}`, summary, landscape: chosen.length > 6,
           before: subs ? [{ title: 'By campaign', columns: [{ key: 'campaign', label: 'Campaign' }, { key: 'count', label: 'Gifts', align: 'right' }, { key: 'total', label: 'Total', align: 'right' }], rows: byCampaign }] : [],
-        }).catch(e => setError(e.message))}><Printer size={15} /> Print or save as PDF</button>
+        }).catch(e => setError(e.message))}><Printer size={16} /> Print or save as PDF</button>
       </div>
     </Overlay>
   );
@@ -276,7 +276,7 @@ export function DonorListDialog({ campaign, onClose }: { campaign: Row; onClose:
   const name = `campaign-${campaign.id}-donors`;
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Donor list</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Donor list</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <div className="filter-bar">
         <select aria-label="Sort" value={sort} onChange={e => setSort(e.target.value as typeof sort)}>
           <option value="total">Most given first</option><option value="name">By name</option><option value="last">Latest donation first</option>
@@ -291,7 +291,7 @@ export function DonorListDialog({ campaign, onClose }: { campaign: Row; onClose:
         <button type="button" className="btn" onClick={() => exportRows('xlsx', name, cols, data)}>Excel</button>
         <div className="spacer" />
         <button type="button" className="btn primary" disabled={q.loading} onClick={() => printReport(`Donors · ${campaign.external_name || campaign.internal_name} (${campaign.id})`, cols, data)
-          .catch(e => setError(e.message))}><Printer size={15} /> Print or save as PDF</button>
+          .catch(e => setError(e.message))}><Printer size={16} /> Print or save as PDF</button>
       </div>
     </Overlay>
   );

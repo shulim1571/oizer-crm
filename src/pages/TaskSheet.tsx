@@ -326,7 +326,7 @@ function TaskPanel({ item, onClose, onDone, onChanged }: { item: Row; onClose: (
     <Overlay onClose={onClose}>
       <div className="form-head">
         <h2><TypePill type={item.task_type} /></h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button>
       </div>
       <dl className="record-facts">
         {item.fundraiser && <><dt>Fundraiser</dt><dd>{item.fundraiser}</dd></>}

@@ -30,7 +30,7 @@ export default function AddressEditor({ donor, onClose, onSaved }: { donor: Row;
     <Overlay onClose={onClose}>
       <form className="record-form" onSubmit={save}>
         <div className="form-head"><h2>Address · {donor.display_name}</h2>
-          <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+          <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
         <AddressBoxes value={donor.address} onChange={(_, parts) => setA(parts)} />
         {combined && <p className="muted small">Saved as: <span style={{ whiteSpace: 'pre-line' }}>{combined}</span></p>}
         {error && <div className="error">{error}</div>}

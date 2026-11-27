@@ -12,8 +12,8 @@ export default function OrgContact({ email, phone, className = 'org-contact' }: 
   return (
     <div className={className}>
       {/* Phone on top, email under it (Moshe, 2026-11-25). */}
-      {p && <a href={`tel:${p.replace(/[^\d+]/g, '')}`}><Phone size={13} /> {formatPhone(p)}</a>}
-      {e && <a href={`mailto:${e}`}><Mail size={13} /> {e}</a>}
+      {p && <a href={`tel:${p.replace(/[^\d+]/g, '')}`}><Phone size={16} /> {formatPhone(p)}</a>}
+      {e && <a href={`mailto:${e}`}><Mail size={16} /> {e}</a>}
     </div>
   );
 }

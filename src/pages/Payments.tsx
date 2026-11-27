@@ -271,8 +271,8 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
 
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2><CreditCard size={18} /> {title ?? 'Take a payment'} {cfg?.sandbox && <Pill tone="amber">Sandbox</Pill>}</h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2><CreditCard size={20} /> {title ?? 'Take a payment'} {cfg?.sandbox && <Pill tone="amber">Sandbox</Pill>}</h2>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       {config.loading ? null : !cfg?.ifields_key || !cfg.api_key_set ? (
         fundraiser ? <p>Card payments aren't set up yet. Ask the office to set them up.</p>
           : <p>Card payments aren't set up yet. The Super Admin adds this organization's Sola keys under <Link to="/payments-settings">Settings → Payments</Link>.</p>
@@ -473,7 +473,7 @@ export function SavedCards({ donor }: { donor: Row }) {
   return (
     <div className="card">
       <div className="card-head"><h3>Cards and accounts</h3>
-        <span><button type="button" className="btn" onClick={() => setCharging(null)}><CreditCard size={15} /> Take a payment</button>
+        <span><button type="button" className="btn" onClick={() => setCharging(null)}><CreditCard size={16} /> Take a payment</button>
           <button type="button" className="link" onClick={() => setSaving(true)}>Save a card or account</button></span></div>
       {list.length === 0 ? <p className="muted small">Nothing saved. Save one, or tick "Save" when taking a payment.</p> : (
         <ul className="plain-list">{list.map(k => {
@@ -483,7 +483,7 @@ export function SavedCards({ donor }: { donor: Row }) {
               {powering.length > 0 && <> · <Pill tone="blue">Pays a recurring donation</Pill></>}</span>
               <span><button type="button" className="link" onClick={() => setCharging(k.id)}>Charge</button>
                 <button type="button" className="link" onClick={() => setSettingUp(k.id)}>Recurring</button>
-                <button type="button" className="icon-btn" title="Delete" onClick={() => remove(k)}><Trash2 size={14} /></button></span></li>
+                <button type="button" className="icon-btn" title="Delete" onClick={() => remove(k)}><Trash2 size={16} /></button></span></li>
           );
         })}</ul>
       )}

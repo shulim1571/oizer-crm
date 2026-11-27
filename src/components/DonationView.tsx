@@ -22,7 +22,7 @@ export default function DonationView({ row, onEdit, onClose }: { row: Row; onEdi
         <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><X size={20} /></button>
       </div>
       <div className="donation-view-actions">
-        <button type="button" className="btn primary" onClick={onEdit}><Pencil size={15} /> Edit</button>
+        <button type="button" className="btn primary" onClick={onEdit}><Pencil size={16} /> Edit</button>
         <ReceiptActions donationId={String(row.id)} />
       </div>
       <dl className="donation-view">

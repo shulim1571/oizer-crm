@@ -164,7 +164,7 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
   return (
     <div className={`give ${rtl ? 'give-rtl' : ''} ${framed ? 'give-framed' : ''}`} lang={lang === 'en' ? 'en' : lang === 'he' ? 'he' : 'yi'}>
       <header className={`give-hero ${data.page.banner_url ? 'has-banner' : ''}`}
-        style={data.page.banner_url ? { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.6)), url("${encodeURI(String(data.page.banner_url))}")` } : undefined}>
+        style={data.page.banner_url ? { backgroundImage: `linear-gradient(rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.45)), url("${encodeURI(String(data.page.banner_url))}")` } : undefined}>
         <div className="give-hero-in">
           {/* The organization (with a bigger logo) on one side and its phone and email on the other (Moshe Henig, 2026-11-11);
               phone above email, and the name and logo a little in from the edge (Moshe, 2026-11-25). */}
@@ -209,7 +209,7 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
         {teams.length > 0 && (
           <aside className="give-card give-teams" aria-label={t.teams}>
             <div className="give-teams-head">
-              <span className="give-teams-icon"><Users size={18} /></span>
+              <span className="give-teams-icon"><Users size={20} /></span>
               <div><h2 dir="auto">{t.teams}</h2><p dir="auto">{t.teams_sub}</p></div>
               <span className="give-teams-count">{teams.length}</span>
             </div>

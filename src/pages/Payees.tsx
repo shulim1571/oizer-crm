@@ -47,7 +47,7 @@ export function PayeesPage() {
           { key: 'last_payout_at', label: 'Last payout', render: r => dateTime(r.last_payout_at) },
           { key: 'preferred_method', label: 'Preferred method' },
         ]}
-        actions={isAdmin && <button type="button" className="btn primary" onClick={() => setAdding(true)}><Plus size={15} /> New payee</button>}
+        actions={isAdmin && <button type="button" className="btn primary" onClick={() => setAdding(true)}><Plus size={16} /> New payee</button>}
       />
       {adding && <RecordForm table="payees" title="New payee" fields={payeeFields} onClose={() => setAdding(false)} onSaved={r => { setAdding(false); refresh(); setOpen(r.id); }} />}
       {open && <PayeeDialog id={open} onClose={() => setOpen(null)} onChanged={refresh} onMerged={keep => { refresh(); setOpen(keep); }} />}
@@ -97,7 +97,7 @@ function PayeeDialog({ id, onClose, onChanged, onMerged }: { id: string; onClose
     <Overlay onClose={onClose}>
       <div className="form-head">
         <h2>{p.name} <span className="id-tag">{p.id}</span> {q.data?.flag && <Pill tone="red">Do Not Pay</Pill>}</h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button>
       </div>
       {q.data?.flag && <div className="error"><b>Do Not Pay.</b> {q.data.flag.reason ?? 'No reason given.'} · {q.data.flag.flagged_by}, {dateTime(q.data.flag.flagged_at)}</div>}
       <dl className="record-facts">
@@ -171,7 +171,7 @@ function MergePayees({ payee, onClose, onDone }: { payee: Row; onClose: () => vo
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Merge payees</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Merge payees</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <label className="field"><span>The same person as {payee.name}</span>
         <SearchSelect value={other} options={options} onChange={setOther} placeholder="Find the duplicate…" />
       </label>

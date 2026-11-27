@@ -28,7 +28,7 @@ export const transferColumns = (onReverse: (r: Row) => void): Column[] => [
   {
     key: 'reverse', label: '', value: () => '',
     render: r => r.from_campaign_id && r.to_campaign_id && (
-      <button type="button" className="link" onClick={e => { e.stopPropagation(); onReverse(r); }}><Undo2 size={13} /> Reverse</button>
+      <button type="button" className="link" onClick={e => { e.stopPropagation(); onReverse(r); }}><Undo2 size={16} /> Reverse</button>
     ),
   },
 ];

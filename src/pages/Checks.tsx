@@ -148,7 +148,7 @@ export function EmailCheckButton({ checkId, onSent, label = 'Email to fundraiser
   }
   return (
     <>
-      <button type="button" className="btn" disabled={busy} onClick={() => void send()}><Mail size={15} /> {busy ? 'Emailing…' : label}</button>
+      <button type="button" className="btn" disabled={busy} onClick={() => void send()}><Mail size={16} /> {busy ? 'Emailing…' : label}</button>
       {note && <span className="notice small">{note}</span>}
       {error && <span className="error small">{error}</span>}
     </>
@@ -234,7 +234,7 @@ export function UnprintedCheckTask({ checkId, onDone }: { checkId: string; onDon
   }
   return (
     <div className="donation-actions">
-      <button type="button" className="btn primary" onClick={() => printer.print(checkId)}><Printer size={15} /> Print check</button>
+      <button type="button" className="btn primary" onClick={() => printer.print(checkId)}><Printer size={16} /> Print check</button>
       <EmailCheckButton checkId={checkId} onSent={onDone} />
       <button type="button" className="btn" onClick={markPrinted}>It already printed</button>
       <Link to="/checks" className="btn">Check register</Link>
@@ -265,7 +265,7 @@ export function PayoutCheckActions({ record, onDone }: { record: Row; onDone: (r
       {live ? (
         <>
           <span>Check #{live.check_number} <CheckPill status={live.status} /></span>
-          <button type="button" className="btn" onClick={() => printer.print(live.id)}><Printer size={15} /> Print again</button>
+          <button type="button" className="btn" onClick={() => printer.print(live.id)}><Printer size={16} /> Print again</button>
           <EmailCheckButton checkId={live.id} onSent={() => setVersion(v => v + 1)} />
           {live.emailed_at && <span className="muted small">Emailed to {live.emailed_to}</span>}
           {!live.printed_at && !live.emailed_at && <span className="muted small">Not confirmed printed</span>}
@@ -275,9 +275,9 @@ export function PayoutCheckActions({ record, onDone }: { record: Row; onDone: (r
         // Only a payout paid by check offers Print check (Moshe, 2026-11-26: it showed on card payouts too). A check
         // already issued for a payout still shows above, whatever its method now says.
         <>
-          <button type="button" className="btn" onClick={() => setPrinting(true)}><Printer size={15} /> Print check</button>
+          <button type="button" className="btn" onClick={() => setPrinting(true)}><Printer size={16} /> Print check</button>
           {/* Or email it to the fundraiser instead (Moshe Henig, 2026-11-11); the window records it, then emails it. */}
-          <button type="button" className="btn" onClick={() => setPrinting('email')}><Mail size={15} /> Email to fundraiser</button>
+          <button type="button" className="btn" onClick={() => setPrinting('email')}><Mail size={16} /> Email to fundraiser</button>
         </>
       )}
       {checks.filter(k => k !== live).map(k => <span key={k.id} className="muted small">#{k.check_number} {STATUS[k.status]?.label.toLowerCase()}{k.status_reason ? `: ${k.status_reason}` : ''}</span>)}
@@ -367,7 +367,7 @@ function PrintCheckDialog({ payout, emailFirst = false, onClose, onIssued, onEma
     // Laid out to breathe at any width (Moshe Henig, 2026-11-13: the window looked cramped and button labels wrapped).
     <Overlay onClose={onClose} size="medium">
       <div className="check-dialog">
-      <div className="form-head"><h2>{emailFirst ? "Email a check to the fundraiser" : "Print a check"}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>{emailFirst ? "Email a check to the fundraiser" : "Print a check"}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <div className="check-summary">
         <div><span className="muted small">Pay to</span><b>{payout.payee || <span className="error">Choose a payee on the payout first</span>}</b></div>
         <div className="check-amount"><span className="muted small">Amount</span><b>{money(payout.amount)}</b></div>
@@ -384,7 +384,7 @@ function PrintCheckDialog({ payout, emailFirst = false, onClose, onIssued, onEma
       {account && settings === null && <p className="muted small">No check settings for this account yet. <Link to={`/accounts/${encodeURIComponent(account)}`}>Set them up</Link></p>}
       {ready(settings) && <p className="muted small">This will be check #{settings!.next_check_number} on {settings!.bank_name}.</p>}
       <label className="field"><span>Memo</span><input value={memo} onChange={e => setMemo(e.target.value)} /></label>
-      {hasFont === false && <p className="date-note"><TriangleAlert size={14} /> No MICR font is set up, so checks can't be printed yet. <Link to="/checks">Add it on the Checks page</Link>.</p>}
+      {hasFont === false && <p className="date-note"><TriangleAlert size={16} /> No MICR font is set up, so checks can't be printed yet. <Link to="/checks">Add it on the Checks page</Link>.</p>}
       {printer === 'stale' && (
         <div className="error">{STALE_MESSAGE} <button type="button" className="btn" onClick={() => window.location.reload()}>Reload</button></div>
       )}
@@ -395,8 +395,8 @@ function PrintCheckDialog({ payout, emailFirst = false, onClose, onIssued, onEma
           <button type="button" className="btn" disabled={!ready(settings) || printer !== 'ready'} onClick={preview}>Preview (marked VOID)</button>
         </div>
         <div className="check-actions-main">
-          <button type="button" className={`btn ${emailFirst ? 'primary' : ''}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issueAndEmail}><Mail size={15} /> Record and email to fundraiser</button>
-          <button type="button" className={`btn ${emailFirst ? '' : 'primary'}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issue}><Printer size={15} /> Print and record check</button>
+          <button type="button" className={`btn ${emailFirst ? 'primary' : ''}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issueAndEmail}><Mail size={16} /> Record and email to fundraiser</button>
+          <button type="button" className={`btn ${emailFirst ? '' : 'primary'}`} disabled={busy || !ready(settings) || !hasFont || !payout.payee || printer !== 'ready'} onClick={issue}><Printer size={16} /> Print and record check</button>
         </div>
       </div>
       </div>

@@ -145,7 +145,7 @@ export function PledgeDialog({ id, onClose, onChanged }: { id: string; onClose: 
     <>
       <div className="form-head">
         <h2>{p.reference} <StatusPill value={PLEDGE_STATUS[p.status]} /></h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button>
       </div>
       <dl className="record-facts">
         <dt>Donor</dt><dd>{p.donor_id ? <Link to={`/donors/${encodeURIComponent(p.donor_id)}`}>{p.donor_name}</Link> : p.donor_name || '—'}</dd>

@@ -40,7 +40,7 @@ export function RequestTransferDialog({ campaignId, onClose, onSent }: { campaig
   }
   return (
     <Overlay onClose={onClose} size="medium">
-      <div className="form-head"><h2>Request a transfer</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Request a transfer</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <p className="muted small">Ask the office to move money from this campaign to another of yours. Nothing moves until an admin approves it.</p>
       <dl className="record-facts">
         <dt>From</dt><dd>{from ? campLabel(from) : campaignId}{from && <span className="muted small"> · balance {money(from.balance)}</span>}</dd>

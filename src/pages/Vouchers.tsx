@@ -181,7 +181,7 @@ export function VoucherDialog({ id, onClose, onChanged }: { id: string; onClose:
     <>
       <div className="form-head">
         <h2>{v.id} <StatusPill value={VOUCHER_STATUS[v.status]} />{v.overdue && <> <Pill tone="red">Overdue</Pill></>}</h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button>
       </div>
       <dl className="record-facts">
         <dt>Issuer</dt><dd>{issuerName(v.issuer)}{v.issuer_number && ` · #${v.issuer_number}`}</dd>

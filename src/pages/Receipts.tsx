@@ -90,8 +90,8 @@ export function ReceiptActions({ donationId, beforeIssue }: { donationId: string
       {live ? (
         <>
           <span>Receipt <b>{live.receipt_number}</b>{Number(live.amount) !== Number(live.actual_amount) && ` for ${money(live.amount)}`}</span>
-          <button type="button" className="btn" onClick={() => printReceipts([live.id]).catch(e => setError(e.message))}><Printer size={15} /> Print receipt</button>
-          <button type="button" className="btn" onClick={() => setSending(true)}><Send size={15} /> Send receipt</button>
+          <button type="button" className="btn" onClick={() => printReceipts([live.id]).catch(e => setError(e.message))}><Printer size={16} /> Print receipt</button>
+          <button type="button" className="btn" onClick={() => setSending(true)}><Send size={16} /> Send receipt</button>
           <button type="button" className="btn" onClick={() => setCorrecting(live)}>Void & Correct</button>
         </>
       ) : (
@@ -144,7 +144,7 @@ function IssueReceiptDialog({ donationId, onClose, onDone }: { donationId: strin
 
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Issue receipt</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Issue receipt</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <p className="muted small">{d.donors?.display_name ?? d.name} · {money(d.amount)} to {d.campaigns?.external_name || d.campaigns?.internal_name}. Receipt numbers are permanent; a mistake is fixed with Void & Correct.</p>
       <div className="fields">
         <label className="field"><span>Amount on the receipt</span><input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)} /></label>
@@ -161,7 +161,7 @@ function IssueReceiptDialog({ donationId, onClose, onDone }: { donationId: strin
       )}
       {error && <div className="error">{error}</div>}
       <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
-        <button type="button" className="btn primary" disabled={!(Number(amount) > 0)} onClick={issue}><Printer size={15} /> Issue and print</button></div>
+        <button type="button" className="btn primary" disabled={!(Number(amount) > 0)} onClick={issue}><Printer size={16} /> Issue and print</button></div>
     </Overlay>
   );
 }
@@ -192,7 +192,7 @@ function CorrectReceiptDialog({ receipt, onClose, onDone }: { receipt: Row; onCl
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Void & Correct {receipt.receipt_number}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Void & Correct {receipt.receipt_number}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <p className="muted small">The old receipt stays on record as voided. The corrected one gets a new number and points back to it.</p>
       <div className="fields">
         <label className="field"><span>Amount</span><input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)} /></label>
@@ -250,7 +250,7 @@ export function ReceiptsPage() {
       />
       {open && (
         <Overlay onClose={() => setOpen(null)}>
-          <div className="form-head"><h2>{open.receipt_number} <ReceiptPill status={open.status} /></h2><button type="button" className="icon-btn" title="Close" onClick={() => setOpen(null)}><X size={18} /></button></div>
+          <div className="form-head"><h2>{open.receipt_number} <ReceiptPill status={open.status} /></h2><button type="button" className="icon-btn" title="Close" onClick={() => setOpen(null)}><X size={20} /></button></div>
           <dl className="record-facts">
             <dt>Donor</dt><dd>{open.donor_name}{open.donor_id && <> · <Link to={`/donors/${encodeURIComponent(open.donor_id)}`}>profile</Link></>}</dd>
             <dt>Amount</dt><dd>{money(open.amount)}{Number(open.amount) !== Number(open.actual_amount) && ` (donation ${money(open.actual_amount)})`}</dd>
@@ -260,7 +260,7 @@ export function ReceiptsPage() {
           </dl>
           <ReceiptActions donationId={open.donation_id} />
           <div className="form-actions"><div className="spacer" />
-            <button type="button" className="btn" onClick={() => printReceipts([open.id])}><Printer size={15} /> Print this receipt</button></div>
+            <button type="button" className="btn" onClick={() => printReceipts([open.id])}><Printer size={16} /> Print this receipt</button></div>
         </Overlay>
       )}
       {bulk && <BulkReceipts onClose={() => setBulk(false)} onDone={() => { setBulk(false); setVersion(v => v + 1); }} />}
@@ -296,7 +296,7 @@ function BulkReceipts({ onClose, onDone }: { onClose: () => void; onDone: () => 
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Receipt a date range</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Receipt a date range</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <p className="muted small">Lists completed donations in the range that have no receipt yet, leaving out DAF money and vouchers.</p>
       <div className="fields">
         <label className="field"><span>From</span><input type="date" value={from} onChange={e => { setFrom(e.target.value); setList(null); }} /></label>
@@ -313,7 +313,7 @@ function BulkReceipts({ onClose, onDone }: { onClose: () => void; onDone: () => 
       <div className="form-actions">
         <button type="button" className="btn" onClick={preview}>Preview</button>
         <div className="spacer" />
-        <button type="button" className="btn primary" disabled={busy || !list?.length} onClick={issueAll}><Printer size={15} /> Issue {list?.length ?? ''} and print</button>
+        <button type="button" className="btn primary" disabled={busy || !list?.length} onClick={issueAll}><Printer size={16} /> Issue {list?.length ?? ''} and print</button>
       </div>
     </Overlay>
   );
@@ -487,7 +487,7 @@ function StatementDialog({ donor, onClose, onDone }: { donor: Row; onClose: () =
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2>Year-end tax statement</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2>Year-end tax statement</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <div className="fields">
         <label className="field"><span>Tax year</span><input type="number" value={year} onChange={e => setYear(Number(e.target.value))} /></label>
         <label className="field"><span>Covering</span>
@@ -518,8 +518,8 @@ function StatementDialog({ donor, onClose, onDone }: { donor: Row; onClose: () =
       <p className="muted small">DAF grants and vouchers are left out; the DAF sends the donor its own paperwork. Each statement printed is logged on the donor for good.</p>
       {error && <div className="error">{error}</div>}
       <div className="form-actions"><div className="spacer" /><button type="button" className="btn" onClick={onClose}>Cancel</button>
-        <button type="button" className="btn" disabled={!items || (scope === 'fundraiser' && !manager)} onClick={send}><Send size={15} /> Send statement</button>
-        <button type="button" className="btn primary" disabled={!items || (scope === 'fundraiser' && !manager)} onClick={print}><Printer size={15} /> Print statement</button></div>
+        <button type="button" className="btn" disabled={!items || (scope === 'fundraiser' && !manager)} onClick={send}><Send size={16} /> Send statement</button>
+        <button type="button" className="btn primary" disabled={!items || (scope === 'fundraiser' && !manager)} onClick={print}><Printer size={16} /> Print statement</button></div>
     </Overlay>
   );
 }

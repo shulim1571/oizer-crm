@@ -162,7 +162,7 @@ export default function UsersPage() {
                     <h3>Fundraiser records</h3>
                     <div className="multi">
                       {selected.managers.map((m: string) => (
-                        <span className="chip" key={m}>{label(m)}<button aria-label={`Unlink ${label(m)}`} onClick={() => unlink(selected, m)}><Trash2 size={12} /></button></span>
+                        <span className="chip" key={m}>{label(m)}<button aria-label={`Unlink ${label(m)}`} onClick={() => unlink(selected, m)}><Trash2 size={16} /></button></span>
                       ))}
                       {selected.managers.length === 0 && <span className="muted small">None yet: they see nothing until one is linked.</span>}
                     </div>

@@ -71,8 +71,8 @@ export function BookingActions({ booking, onAct, version = 0 }: {
       {booking.status === 'pending' && <button type="button" className="btn" onClick={() => onAct(supabase.rpc('waitlist_booking', { p_booking: booking.id, p_note: note || null }), 'waitlisted', note)}>Waitlist</button>}
       {waiting && (
         <>
-          <button type="button" className="icon-btn" title="Move up in line" onClick={() => reasonThen('Why does this go ahead of an earlier request? A reason is required:', r => onAct(supabase.rpc('move_booking', { p_booking: booking.id, p_up: true, p_reason: r }), 'moved up', r))}><ArrowUp size={15} /></button>
-          <button type="button" className="icon-btn" title="Move down in line" onClick={() => reasonThen('Why does this go behind a later request? A reason is required:', r => onAct(supabase.rpc('move_booking', { p_booking: booking.id, p_up: false, p_reason: r }), 'moved down', r))}><ArrowDown size={15} /></button>
+          <button type="button" className="icon-btn" title="Move up in line" onClick={() => reasonThen('Why does this go ahead of an earlier request? A reason is required:', r => onAct(supabase.rpc('move_booking', { p_booking: booking.id, p_up: true, p_reason: r }), 'moved up', r))}><ArrowUp size={16} /></button>
+          <button type="button" className="icon-btn" title="Move down in line" onClick={() => reasonThen('Why does this go behind a later request? A reason is required:', r => onAct(supabase.rpc('move_booking', { p_booking: booking.id, p_up: false, p_reason: r }), 'moved down', r))}><ArrowDown size={16} /></button>
         </>
       )}
       <button type="button" className="btn danger" onClick={() => reasonThen('Cancel this request? Add a reason if useful:', r => onAct(supabase.rpc('cancel_booking', { p_booking: booking.id, p_reason: r || null }), 'cancelled', r))}>Cancel request</button>
@@ -263,7 +263,7 @@ export function MachineDialog({ id, onClose, onChanged }: { id: string; onClose:
     <Overlay onClose={onClose}>
       <div className="form-head">
         <h2>Machine {m.nickname} {!m.active && <Pill>Retired</Pill>}</h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button>
       </div>
       <div className="tabs">
         <button className={tab === 'details' ? 'active' : ''} onClick={() => setTab('details')}>Details</button>

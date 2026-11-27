@@ -260,11 +260,11 @@ export default function CampaignDetail() {
     <div className="detail">
       {arrivedNotice && <div className="notice">{arrivedNotice}</div>}
       <div className="detail-head">
-        <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={18} /></button>
+        <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={20} /></button>
         <div className="hero-avatar">{(c.internal_name || c.campaign_name || '#')[0]}</div>
         <div>
           <h1>
-            {c.featured && <Star size={18} className="featured" />}
+            {c.featured && <Star size={20} className="featured" />}
             {c.internal_name || c.campaign_name}
             <span className="id-tag">#{c.id}</span>
             <StatusPill value={STATUS_LABEL[c.status]} />
@@ -284,7 +284,7 @@ export default function CampaignDetail() {
         {c.status !== 'closed' && <a className="btn" href={paymentUrl(c)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Open payment page</a>}
         {canWork && c.status !== 'closed' && <button className="btn primary" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>}
         <RowMenu label="More campaign actions" text="More" items={[
-          { label: 'Edit campaign', icon: <Pencil size={14} />, onClick: () => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c }), hidden: !isAdmin },
+          { label: 'Edit campaign', icon: <Pencil size={16} />, onClick: () => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c }), hidden: !isAdmin },
           { label: 'Change template', onClick: () => setSwitchingTemplate(true), hidden: !isAdmin },
           { label: 'Remove phone PIN', onClick: async () => {
               if (!confirm('Remove this campaign’s phone PIN? Unregistered phones won’t be able to reach it until a new one is set.')) return;
@@ -309,32 +309,32 @@ export default function CampaignDetail() {
       </div>
 
       <div className="kpis">
-        <Kpi label={combines ? 'Raised (gifts), with teams' : 'Raised (gifts)'} value={money(Number(c.combined_raised) - tIn)} icon={<TrendingUp size={18} />} tone="green"
+        <Kpi label={combines ? 'Raised (gifts), with teams' : 'Raised (gifts)'} value={money(Number(c.combined_raised) - tIn)} icon={<TrendingUp size={16} />} tone="green"
              sub={[combines && `${money(c.raised)} directly`, `${Number(c.combined_donations).toLocaleString()} donations${withTeams ? ' incl. teams' : ''}`, c.goal != null && Number(c.goal) > 0 && `${pct(Number(c.combined_raised) / Number(c.goal))} of ${money(c.goal)} goal`].filter(Boolean).join(' · ')} />
-        <Kpi label={withTeams ? 'Fees, with teams' : 'Fees'} value={money(c.combined_fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(Number(c.combined_raised) ? Number(c.combined_fees) / Number(c.combined_raised) : 0)} of raised`} />
-        {tIn > 0 && <Kpi label="Transfers in" value={money(tIn)} icon={<TrendingUp size={18} />} tone="green" sub="From other campaigns" />}
-        <Kpi label={withTeams ? 'Expenses (payouts), with teams' : 'Expenses (payouts)'} value={money(Number(c.combined_expenses) - tOut)} icon={<Receipt size={18} />} tone="amber" />
-        {tOut > 0 && <Kpi label="Transfers out" value={money(tOut)} icon={<Receipt size={18} />} tone="amber" sub="To other campaigns" />}
+        <Kpi label={withTeams ? 'Fees, with teams' : 'Fees'} value={money(c.combined_fees)} icon={<Percent size={16} />} tone="violet" sub={`${pct(Number(c.combined_raised) ? Number(c.combined_fees) / Number(c.combined_raised) : 0)} of raised`} />
+        {tIn > 0 && <Kpi label="Transfers in" value={money(tIn)} icon={<TrendingUp size={16} />} tone="green" sub="From other campaigns" />}
+        <Kpi label={withTeams ? 'Expenses (payouts), with teams' : 'Expenses (payouts)'} value={money(Number(c.combined_expenses) - tOut)} icon={<Receipt size={16} />} tone="amber" />
+        {tOut > 0 && <Kpi label="Transfers out" value={money(tOut)} icon={<Receipt size={16} />} tone="amber" sub="To other campaigns" />}
         {c.balance_mode === 'shared'
-          ? <Kpi label="Balance" value={<span className="muted">Shared</span>} icon={<Scale size={18} />} tone="blue" sub="Counted in the parent's balance" />
-          : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'}
+          ? <Kpi label="Balance" value={<span className="muted">Shared</span>} icon={<Scale size={16} />} tone="blue" sub="Counted in the parent's balance" />
+          : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={16} />} tone={Number(c.balance) < 0 ? 'red' : 'green'}
               sub={[`= gifts${tIn ? ' + transfers in' : ''} − fees − payouts${tOut ? ' − transfers out' : ''}`, Number(c.sub_count) > 0 && 'includes its teams; sub-campaigns keep their own balance'].filter(Boolean).join(' · ')} />}
         {avail && c.balance_mode !== 'shared' && (
-          <Kpi label="Available to pay out" value={<Balance value={avail.available} />} icon={<Scale size={18} />} tone={Number(avail.available) < 0 ? 'red' : 'blue'} sub={availableNote(avail)} />
+          <Kpi label="Available to pay out" value={<Balance value={avail.available} />} icon={<Scale size={16} />} tone={Number(avail.available) < 0 ? 'red' : 'blue'} sub={availableNote(avail)} />
         )}
-        {Number(c.post_dated_amount) > 0 && <Kpi label="Post-dated checks" value={money(c.post_dated_amount)} icon={<Clock size={18} />} tone="blue" sub="Not in the balance yet" />}
+        {Number(c.post_dated_amount) > 0 && <Kpi label="Post-dated checks" value={money(c.post_dated_amount)} icon={<Clock size={16} />} tone="blue" sub="Not in the balance yet" />}
         {/* Checks recorded but not yet delivered stay out of the balance like post-dated ones (Moshe Henig, 2026-11-13). */}
-        {Number(c.undelivered_checks_count) > 0 && <Kpi label="Checks not delivered" value={money(c.undelivered_checks_amount)} icon={<Clock size={18} />} tone="amber"
+        {Number(c.undelivered_checks_count) > 0 && <Kpi label="Checks not delivered" value={money(c.undelivered_checks_amount)} icon={<Clock size={16} />} tone="amber"
           sub={`${c.undelivered_checks_count} check${Number(c.undelivered_checks_count) === 1 ? '' : 's'} · not in the balance yet`} />}
-        {Number(c.awaiting_approval) > 0 && <Kpi label="Awaiting approval" value={money(c.awaiting_approval)} icon={<Clock size={18} />} tone="amber" sub="Not in the balance yet" />}
-        <Kpi label="Pledged (open)" value={money(c.pledged_open)} icon={<Handshake size={18} />} tone="blue"
+        {Number(c.awaiting_approval) > 0 && <Kpi label="Awaiting approval" value={money(c.awaiting_approval)} icon={<Clock size={16} />} tone="amber" sub="Not in the balance yet" />}
+        <Kpi label="Pledged (open)" value={money(c.pledged_open)} icon={<Handshake size={16} />} tone="blue"
              sub={Number(c.pledge_scheduled_90) > 0 ? `Recurring: ${money(c.pledge_scheduled_30)} next 30 days, ${money(c.pledge_scheduled_90)} next 90` : 'Not in the balance'} />
         {/* Raised + open pledges + pending + checks not delivered (Moshe Henig, 2026-11-13). Nothing counts twice: raised
             leaves out undelivered checks and batches' pending amounts, and a payment matched to a pledge takes it off the
             open pledges. */}
-        <Kpi label="Total potential" value={money(totalPotential(c))} icon={<Target size={18} />} tone="violet" sub={`Raised + pledged + pending + checks not delivered${withTeams || Number(c.combined_pledged_open ?? 0) !== Number(c.pledged_open ?? 0) || Number(c.combined_undelivered_checks ?? 0) !== Number(c.undelivered_checks_amount ?? 0) ? ', with teams' : ''}`} />
-        {Number(c.awaiting_funds) > 0 && <Kpi label="Vouchers awaiting funds" value={money(c.awaiting_funds)} icon={<Ticket size={18} />} tone="amber" sub="Not in the balance yet" />}
-        <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={18} />} tone="blue"
+        <Kpi label="Total potential" value={money(totalPotential(c))} icon={<Target size={16} />} tone="violet" sub={`Raised + pledged + pending + checks not delivered${withTeams || Number(c.combined_pledged_open ?? 0) !== Number(c.pledged_open ?? 0) || Number(c.combined_undelivered_checks ?? 0) !== Number(c.undelivered_checks_amount ?? 0) ? ', with teams' : ''}`} />
+        {Number(c.awaiting_funds) > 0 && <Kpi label="Vouchers awaiting funds" value={money(c.awaiting_funds)} icon={<Ticket size={16} />} tone="amber" sub="Not in the balance yet" />}
+        <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={16} />} tone="blue"
              sub={c.last_donation_at ? `last gift ${dateTime(c.last_donation_at)}` : undefined} />
       </div>
 
@@ -342,9 +342,9 @@ export default function CampaignDetail() {
 
       {(c.email || c.phone || c.notes) && (
         <div className="info">
-          {c.email && <span><Mail size={14} /> {c.email}</span>}
-          {c.phone && <span><Phone size={14} /> {formatPhone(c.phone)}</span>}
-          {c.notes && <span><StickyNote size={14} /> {c.notes}</span>}
+          {c.email && <span><Mail size={16} /> {c.email}</span>}
+          {c.phone && <span><Phone size={16} /> {formatPhone(c.phone)}</span>}
+          {c.notes && <span><StickyNote size={16} /> {c.notes}</span>}
         </div>
       )}
 

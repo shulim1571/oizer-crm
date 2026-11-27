@@ -10,6 +10,6 @@ describe('payment page banner', () => {
   it('stacks them at the far edge, and moves the name and logo in from the edge', () => {
     const css = readFileSync('src/styles.css', 'utf8');
     expect(css).toContain('.give-hero-top .give-contact { flex-direction: column; align-items: flex-end; gap: 4px; }');
-    expect(css).toContain('.give-hero-top .give-org, .give-hero h1 { margin-inline-start: clamp(10px, 3vw, 36px); }');
+    expect(css).toContain('.give-hero-top .give-org, .give-hero h1 { margin-inline-start: clamp(8px, 3vw, 32px); }');
   });
 });

@@ -75,7 +75,7 @@ export function SettingsFields({ value, onChange }: { value: Row; onChange: (v: 
             {FIELD_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           <label className="inline-check"><input type="checkbox" checked={!!f.required} onChange={e => setField(i, { required: e.target.checked })} /> Required</label>
-          <button type="button" className="icon-btn" title="Remove" onClick={() => set('custom_fields', fields.filter((_, j) => j !== i))}><Trash2 size={14} /></button>
+          <button type="button" className="icon-btn" title="Remove" onClick={() => set('custom_fields', fields.filter((_, j) => j !== i))}><Trash2 size={16} /></button>
         </div>
       ))}
     </>
@@ -178,7 +178,7 @@ export function TemplateDialog({ record, onClose, onDone }: { record: Row | null
             </select>
             <input aria-label="% rate" type="number" step="0.01" min="0" placeholder="%" value={f.fee_percent ?? 0} onChange={e => setFee(i, { fee_percent: Number(e.target.value) })} />
             <input aria-label="Flat $" type="number" step="0.01" min="0" placeholder="$" value={f.fee_flat ?? 0} onChange={e => setFee(i, { fee_flat: Number(e.target.value) })} />
-            <button type="button" className="icon-btn" title="Remove" onClick={() => setFees(x => x.filter((_, j) => j !== i))}><Trash2 size={14} /></button>
+            <button type="button" className="icon-btn" title="Remove" onClick={() => setFees(x => x.filter((_, j) => j !== i))}><Trash2 size={16} /></button>
           </div>
         ))}
         {error && <div className="error">{error}</div>}

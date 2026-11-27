@@ -297,7 +297,7 @@ function SlipView({ id, onClose, onChanged }: { id: string; onClose: () => void;
             ))}</tbody>
           </table>
           {error && <div className="error">{error}</div>}
-          <div className="donation-actions"><button type="button" className="btn" onClick={print}><Printer size={15} /> Print slip</button></div>
+          <div className="donation-actions"><button type="button" className="btn" onClick={print}><Printer size={16} /> Print slip</button></div>
         </>
       )}
     </Overlay>

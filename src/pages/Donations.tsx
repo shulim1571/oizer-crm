@@ -65,7 +65,7 @@ function RequestReceiptDialog({ row, onClose }: { row: Row; onClose: () => void 
   return (
     <Overlay onClose={onClose}>
       <form className="record-form" onSubmit={send}>
-        <div className="form-head"><h2>Donation {row.id}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+        <div className="form-head"><h2>Donation {row.id}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
         <dl className="record-facts">
           <dt>Amount</dt><dd>{money(row.amount)}</dd>
           <dt>Donor</dt><dd>{row.donors?.display_name || row.donor_name || row.name || '—'}</dd>
@@ -446,7 +446,7 @@ export function FundraiserNewDonation() {
         <h2>Card payment</h2>
         <p className="muted small">Charge the donor's card now. It goes straight onto the campaign once the card is approved.</p>
         <div className="form-actions"><div className="spacer" />
-          <button type="button" className="btn primary" onClick={() => setCharging(true)}><CreditCard size={15} /> Charge a card</button></div>
+          <button type="button" className="btn primary" onClick={() => setCharging(true)}><CreditCard size={16} /> Charge a card</button></div>
       </div>
       {charging && <CardChargeDialog fundraiser onClose={() => setCharging(false)} onDone={t => setLast({ amount: t.amount, campaign_id: t.campaign_id })} />}
       {last && (
@@ -485,7 +485,7 @@ export function NewDonation() {
     <section className="view narrow">
       <div className="view-head">
         <div className="view-title"><h1>New Donation</h1><span className="count">Record a gift against a campaign</span></div>
-        <div className="view-actions"><button type="button" className="btn" onClick={() => setCharging(true)}><CreditCard size={15} /> Charge a card</button></div>
+        <div className="view-actions"><button type="button" className="btn" onClick={() => setCharging(true)}><CreditCard size={16} /> Charge a card</button></div>
       </div>
       <p className="muted small">Record a gift you already have (cash, check, Zelle…) below. To take a card payment now, use <b>Charge a card</b>.</p>
       {charging && <CardChargeDialog onClose={() => setCharging(false)} onDone={t => setLast({ amount: t.amount, campaign_id: t.campaign_id })} />}

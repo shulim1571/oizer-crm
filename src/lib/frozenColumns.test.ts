@@ -12,9 +12,9 @@ describe('frozen list columns', () => {
   });
   it('paint each row state solidly, cover the seam, match the header, and end in a divider', () => {
     expect(css).toContain('--cell-bg: var(--surface); background: var(--cell-bg); box-shadow: 1px 0 0 var(--cell-bg);');
-    expect(css).toContain('.grid tbody tr:nth-child(even) td.frozen { --cell-bg: var(--surface-2); }');
+    expect(css).toContain('.grid tbody tr:nth-child(even) td.frozen { --cell-bg: var(--row-alt); }');   // the zebra (Trubase UI)
     expect(css).toContain('.grid tr.clickable:hover td.frozen { --cell-bg: var(--surface-2); }');
-    expect(css).toContain('.grid thead th.frozen { z-index: 3; --cell-bg: var(--surface-2); }');
+    expect(css).toContain('.grid thead th.frozen { z-index: 3; --cell-bg: var(--table-head); }');
     expect(css).toContain('.grid th.frozen-last, .grid td.frozen-last');
   });
 });

@@ -63,7 +63,7 @@ interface NavSection { title: string; items: NavItem[] }
 
 // One entry per kind of work. Views of the same list (active/archived campaigns, last 7 days/all transactions…)
 // are tabs above the page instead of separate entries; every page keeps its own address.
-const I = 18;
+const I = 20;   // sidebar and top-bar icons are 20px (Trubase UI)
 const NAV: NavSection[] = [
   {
     title: 'Home',
@@ -249,7 +249,7 @@ export default function Layout() {
                   title={here ? 'The open page is in this section' : undefined}>
                   <span>{section.title}</span>
                   {shut && count > 0 && <span className="nav-count">{count}</span>}
-                  <ChevronDown size={14} className={`nav-chev ${shut ? 'shut' : ''}`} />
+                  <ChevronDown size={16} className={`nav-chev ${shut ? 'shut' : ''}`} />
                 </button>
                 {!shut && items.map(n => (
                   <NavLink key={n.label} to={entryTo(n)} className={() => (current?.item?.label === n.label ? 'active' : '')}>
@@ -267,7 +267,7 @@ export default function Layout() {
                 <div className="me-email" title={email}>{email}</div>
                 <div className="me-role">{inPlatformSession ? 'Platform Owner' : ROLE_LABEL[role ?? ''] ?? (isPlatformOwner ? 'Platform Owner' : '')}</div>
               </div>
-              <button className="icon-btn" title="Sign out" onClick={signOut}><LogOut size={17} /></button>
+              <button className="icon-btn" title="Sign out" onClick={signOut}><LogOut size={20} /></button>
             </div>
           </div>
         </nav>
@@ -312,7 +312,8 @@ export default function Layout() {
           )}
           {/* New Donation on every page, just before the bell (Moshe Henig, 2026-11-11); it's an admin page. */}
           {/* Fundraisers too (Moshe Henig, 2026-11-12): theirs takes card payments, and manual ones with the permission. */}
-          {canWork && <button className="btn primary small header-new-donation" onClick={() => nav('/donations/new')}><PlusCircle size={15} /> New Donation</button>}
+          {/* Secondary, so each page's own main action is the screen's one primary button (Trubase UI, 2026-11-27). */}
+          {canWork && <button className="btn small header-new-donation" onClick={() => nav('/donations/new')}><PlusCircle size={16} /> New Donation</button>}
           {canWork && (
             <button className="icon-btn outlined bell" title={`${unread} unread message${unread === 1 ? '' : 's'}${isAdmin ? `, ${taskCount} on the Task Sheet` : ''}`}
               onClick={() => nav(isAdmin && !unread && taskCount ? '/task-sheet' : '/inbox')}>

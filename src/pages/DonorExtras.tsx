@@ -38,7 +38,7 @@ export function ContactLog({ donorId }: { donorId: string }) {
   return (
     <div className="card">
       <div className="dialog-section"><h3>Contact log</h3>
-        {!adding && <button type="button" className="link" onClick={() => setAdding(true)}><Plus size={13} /> Add entry</button>}
+        {!adding && <button type="button" className="link" onClick={() => setAdding(true)}><Plus size={16} /> Add entry</button>}
       </div>
       {adding && (
         <div className="panel-box">

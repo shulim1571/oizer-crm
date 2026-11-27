@@ -109,7 +109,7 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
 
   return (
     <div className="panel-box plaid-panel">
-      <h3><Link2 size={15} /> Plaid {env && (live ? <Pill tone="green">Production</Pill> : <Pill tone="amber">Sandbox</Pill>)} {s && <Pill tone="green">Linked</Pill>}</h3>
+      <h3><Link2 size={16} /> Plaid {env && (live ? <Pill tone="green">Production</Pill> : <Pill tone="amber">Sandbox</Pill>)} {s && <Pill tone="green">Linked</Pill>}</h3>
       {s ? (
         <p className="muted small">
           {s.institution_name ?? 'Bank'} · {s.account_name ?? 'Account'}{s.account_mask ? ` ••${s.account_mask}` : ''} · linked {dateTime(s.linked_at)}
@@ -132,9 +132,9 @@ export default function PlaidPanel({ account, onSynced }: { account: string; onS
         <span className="muted small">30 to 730; used when a bank is connected.{daysSaved ? '' : ' Default 365.'}</span>
       </div>
       <div className="form-actions">
-        {!s && <button type="button" className="btn primary" disabled={!!busy} onClick={connect}><Link2 size={15} /> {busy === 'connect' ? 'Opening Plaid…' : live ? 'Connect the bank with Plaid' : 'Connect with Plaid (sandbox)'}</button>}
-        {s && !otherEnv && <button type="button" className="btn primary" disabled={!!busy} onClick={sync}><RefreshCw size={15} /> {busy === 'sync' ? 'Syncing…' : 'Sync now'}</button>}
-        {s && <button type="button" className="btn" disabled={!!busy} onClick={unlink}><Unlink size={15} /> Disconnect</button>}
+        {!s && <button type="button" className="btn primary" disabled={!!busy} onClick={connect}><Link2 size={16} /> {busy === 'connect' ? 'Opening Plaid…' : live ? 'Connect the bank with Plaid' : 'Connect with Plaid (sandbox)'}</button>}
+        {s && !otherEnv && <button type="button" className="btn primary" disabled={!!busy} onClick={sync}><RefreshCw size={16} /> {busy === 'sync' ? 'Syncing…' : 'Sync now'}</button>}
+        {s && <button type="button" className="btn" disabled={!!busy} onClick={unlink}><Unlink size={16} /> Disconnect</button>}
       </div>
     </div>
   );

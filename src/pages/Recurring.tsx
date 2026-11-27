@@ -62,7 +62,7 @@ export function SaveCardDialog({ donorId, onClose, onSaved }: { donorId: string;
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2><CreditCard size={18} /> Save a card or account</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2><CreditCard size={20} /> Save a card or account</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       {!cfg?.ifields_key ? <p>Card payments aren't set up yet.</p> : (
         <>
           <p className="muted small">Saved with Sola for later payments and recurring donations. Nothing is charged now. A DAF card is saved by ticking "Save" on its first grant.</p>
@@ -115,7 +115,7 @@ export function SetupRecurringDialog({ donor, cards, cardId, onClose, onDone }: 
   const n = f.fixed ? Number(f.count) : 0;
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2><Repeat size={18} /> Recurring donation for {donor.display_name}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2><Repeat size={20} /> Recurring donation for {donor.display_name}</h2><button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <div className="fields">
         <label className="field"><span>Campaign</span><SearchSelect value={f.campaign} options={campaigns} onChange={v => set('campaign', v)} required /></label>
         <label className="field"><span>Card</span>
@@ -183,8 +183,8 @@ export function RecurringDialog({ id, onClose, onChanged }: { id: string; onClos
   }
   return (
     <Overlay onClose={onClose}>
-      <div className="form-head"><h2><Repeat size={18} /> {r.donor_name} · {money(r.amount)} {freqLabel(r.frequency).toLowerCase()} <RecurringPill r={r} /></h2>
-        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={18} /></button></div>
+      <div className="form-head"><h2><Repeat size={20} /> {r.donor_name} · {money(r.amount)} {freqLabel(r.frequency).toLowerCase()} <RecurringPill r={r} /></h2>
+        <button type="button" className="icon-btn" title="Close" onClick={onClose}><X size={20} /></button></div>
       <dl className="record-facts">
         <dt>Donor</dt><dd><Link to={`/donors/${encodeURIComponent(r.donor_id)}`}>{r.donor_name}</Link></dd>
         <dt>Campaign</dt><dd><Link to={`/campaigns/${encodeURIComponent(r.campaign_id)}`}>{r.campaign_label}</Link></dd>
@@ -266,10 +266,10 @@ export function RecurringPage() {
   return (
     <section className="view">
       <div className="kpis">
-        <Kpi label="Active" value={active.length} icon={<Repeat size={18} />} />
-        <Kpi label="Due in 30 days" value={money(sum('due_30'))} icon={<CalendarClock size={18} />} tone="green" />
-        <Kpi label="Due in 90 days" value={money(sum('due_90'))} icon={<CalendarClock size={18} />} tone="blue" />
-        <Kpi label="Paused or retrying" value={all.filter(r => r.status === 'paused' || (r.status === 'active' && r.failures > 0)).length} icon={<Repeat size={18} />} tone="amber" />
+        <Kpi label="Active" value={active.length} icon={<Repeat size={16} />} />
+        <Kpi label="Due in 30 days" value={money(sum('due_30'))} icon={<CalendarClock size={16} />} tone="green" />
+        <Kpi label="Due in 90 days" value={money(sum('due_90'))} icon={<CalendarClock size={16} />} tone="blue" />
+        <Kpi label="Paused or retrying" value={all.filter(r => r.status === 'paused' || (r.status === 'active' && r.failures > 0)).length} icon={<Repeat size={16} />} tone="amber" />
       </div>
       <DataTable title="Recurring Donations" subtitle="Charged on their dates with the donor's saved card. A failed charge is retried after 3 days, then 7."
         rows={rows} loading={q.loading} error={q.error} columns={columns} exportName="recurring" onOpen={r => setOpen(r.id)}
