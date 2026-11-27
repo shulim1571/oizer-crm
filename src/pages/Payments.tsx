@@ -169,7 +169,7 @@ export function CardChargeDialog({ campaignId, donorId, cardId, amount: startAmo
   // Recurring: today's charge is the first payment, or nothing now and the first charge on a later date.
   const [rec, setRec] = useState({ on: false, frequency: 'monthly', when: 'today' as 'today' | 'later', later: '', fixed: true, count: '12' });
   const [schedule, setSchedule] = useState<string | null>(null);
-  const tokens = useRef<() => Promise<{ card: string; cvv: string }>>();
+  const tokens = useRef<(() => Promise<{ card: string; cvv: string }>) | undefined>(undefined);
   const setTokens = useRef((get: () => Promise<{ card: string; cvv: string }>) => { tokens.current = get; }).current;
 
   useEffect(() => {

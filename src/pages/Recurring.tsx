@@ -41,7 +41,7 @@ export function SaveCardDialog({ donorId, onClose, onSaved }: { donorId: string;
   const [bank, setBank] = useState<BankValue>(emptyBank());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const tokens = useRef<() => Promise<{ card: string; cvv: string }>>();
+  const tokens = useRef<(() => Promise<{ card: string; cvv: string }>) | undefined>(undefined);
   const setTokens = useRef((get: () => Promise<{ card: string; cvv: string }>) => { tokens.current = get; }).current;
   async function save() {
     setError(null);

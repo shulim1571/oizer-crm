@@ -281,7 +281,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [human, setHuman] = useState<string | null>(null);
-  const tokens = useRef<() => Promise<{ card: string; cvv: string }>>();
+  const tokens = useRef<(() => Promise<{ card: string; cvv: string }>) | undefined>(undefined);
   const setTokens = useRef((get: () => Promise<{ card: string; cvv: string }>) => { tokens.current = get; }).current;
   const turnstileBox = useRef<HTMLDivElement>(null);
   const turnstileId = useRef<string | null>(null);
