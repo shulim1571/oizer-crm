@@ -404,7 +404,9 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
       {p.allow_other && (
         <label className={`give-other-amount ${other ? 'on' : ''}`}>
           <span aria-hidden="true">$</span>
-          <input type="number" inputMode="decimal" min={p.min ?? 1} step="0.01" placeholder={t.other} aria-label={t.other} value={other}
+          {/* With no preset amounts this is the only amount, so it says "Amount", not "Other amount" (Shulim, 2026-11-27). */}
+          <input type="number" inputMode="decimal" min={p.min ?? 1} step="0.01" placeholder={presets.length ? t.other : t.amount}
+            aria-label={presets.length ? t.other : t.amount} value={other}
             onChange={e => setOther(e.target.value)} dir="ltr" />
         </label>
       )}
