@@ -1,0 +1,19 @@
+import { Mail, Phone } from 'lucide-react';
+import { formatPhone } from '../lib/format';
+
+/**
+ * The organization's email and phone from its settings (Moshe Henig, 2026-11-10), on the payment page banner.
+ * Each is left out when it isn't set.
+ */
+export default function OrgContact({ email, phone, className = 'org-contact' }: { email?: string | null; phone?: string | null; className?: string }) {
+  const e = email?.trim();
+  const p = phone?.trim();
+  if (!e && !p) return null;
+  return (
+    <div className={className}>
+      {/* Phone on top, email under it (Moshe, 2026-11-25). */}
+      {p && <a href={`tel:${p.replace(/[^\d+]/g, '')}`}><Phone size={16} /> {formatPhone(p)}</a>}
+      {e && <a href={`mailto:${e}`}><Mail size={16} /> {e}</a>}
+    </div>
+  );
+}

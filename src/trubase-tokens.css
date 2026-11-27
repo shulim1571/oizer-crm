@@ -1,0 +1,218 @@
+/* Trubase UI design system tokens (copied from /workspace/trubase-logo/ui-system/tokens.css, 2026-11-27).
+   The shared shell for EdBase, FundBase and Trubase Admin; <html data-app="fundbase"> selects Fund teal. Fonts load from
+   Google Fonts in index.html (the source's @font-face rules point at files on the design machine and are left out).
+   Dark mode: [data-theme="dark"] as in the source, and also when the device is set to dark (unless a page forces
+   light), as FundBase did before. Keep in step with the source; DESIGN-RULES.md there has the rules. */
+
+/* Trubase UI design tokens
+   Shared shell for EdBase, FundBase, and Trubase Admin.
+   Accents match the app brand kits. Only --accent, --accent-* tints,
+   and the logo change per app. Status colors never vary.
+   Source of truth also lives in tokens.json. */
+
+:root {
+  /* ---- Parent anchors (Trubase vibe) ---- */
+  --tb-blue: #1F5FE0;
+  --tb-navy: #2546A0;
+  --tb-charcoal: #2B2D33;
+  --tb-slate: #6B7489;
+  --tb-light: #E6E9EF;
+  --tb-dark-bg: #0F1116;
+  --tb-dark-blue: #3D7BFF;
+  --tb-dark-slate: #6B7489;
+
+  /* ---- Typography ---- */
+  --font-ui: "Inter", Helvetica, Arial, sans-serif;
+  --font-num: "Inter", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --font-brand: "Jost", "Inter", Helvetica, Arial, sans-serif; /* wordmark only */
+  --tracking-wordmark: 0.30em;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  --fs-11: 11px; --fs-12: 12px; --fs-13: 13px; --fs-14: 14px;
+  --fs-16: 16px; --fs-24: 24px; --fs-28: 28px;
+  --lh-16: 16px; --lh-20: 20px; --lh-24: 24px; --lh-32: 32px; --lh-36: 36px;
+  --tr-tight: -0.01em;
+  --tr-caps: 0.06em;
+  --tr-caps-wide: 0.08em;
+  --tr-badge: 0.01em;
+
+  /* ---- Spacing (4px grid; allowed set) ---- */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---- Shell ---- */
+  --sidebar-w: 240px;
+  --topbar-h: 56px;
+  --content-max: 1440px;
+  --nav-h: 36px;
+  --control-h: 32px;
+  --btn-h: 36px;
+  --row-h: 48px;
+  --thead-h: 40px;
+  --icon-btn: 32px;
+  --gutter: var(--space-5);
+  --cols: 12;
+
+  /* ---- Radii (same as app brand kits) ---- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+  --radius: var(--radius-lg);
+  --radius-control: var(--radius-md);
+
+  /* ---- Icons ---- */
+  --icon-stroke: 1.5;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-chip: 32px;
+
+  /* ---- Neutrals (light) ---- */
+  --bg: #F4F5F7;
+  --surface: #FFFFFF;
+  --surface-2: #EEF1F4;
+  --text: #2B2D33;
+  --text-muted: #636B78; /* one step past brand slate so 12px captions pass on zebra */
+  --text-inverse: #E6E9EF;
+  --border: #E6E9EF;
+  --row-alt: #F5F8FA;
+  --row-line: #E6EDF2;
+  --table-head: var(--bg);
+  --shadow: 0 1px 2px rgb(43 45 51 / 0.04);
+  --focus: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+  --line: 1px;
+  --focus-line: 2px;
+
+  /* ---- Status (shared, never per-app) ---- */
+  --ok: #1F8A4A;
+  --ok-soft: #E6F5EC;
+  --warn: #C9892E;
+  --warn-soft: #F8F0DE;
+  --danger: #C4473A;
+  --danger-soft: #F8E8E6;
+  --info: #1F5FE0;
+  --info-soft: #E6EEFB;
+
+  /* ---- Default accent: Trubase Admin royal blue ---- */
+  --accent-50: #F2F5FD;
+  --accent-100: #E0E9FB;
+  --accent-200: #BCCFF6;
+  --accent-300: #8BACEF;
+  --accent-400: #5082E7;
+  --accent-500: #1F5FE0;
+  --accent-600: #194DB7;
+  --accent-700: #153F95;
+  --accent-800: #103173;
+  --accent-900: #0C2353;
+  --accent: var(--accent-500);
+  --accent-dark: #3D7BFF;
+  --accent-mid: #223763;
+  --accent-soft: #E9EFFC; /* 10% tint of #1F5FE0 */
+  --on-accent: #FFFFFF;
+  --accent-text: var(--accent-600);
+}
+
+/* Per-app accents. Soft tint is a 10% mix of the accent on white. */
+[data-app="admin"] {
+  --accent-50: #F2F5FD; --accent-100: #E0E9FB; --accent-200: #BCCFF6;
+  --accent-300: #8BACEF; --accent-400: #5082E7; --accent-500: #1F5FE0;
+  --accent-600: #194DB7; --accent-700: #153F95; --accent-800: #103173;
+  --accent-900: #0C2353;
+  --accent: var(--accent-500);
+  --accent-dark: #3D7BFF;
+  --accent-mid: #223763;
+  --accent-soft: #E9EFFC;
+  --accent-text: var(--accent-600);
+  --on-accent: #FFFFFF;
+}
+[data-app="edbase"] {
+  --accent-50: #F6F4FC; --accent-100: #EBE6F9; --accent-200: #D4CAF2;
+  --accent-300: #B4A3E9; --accent-400: #8E75DD; --accent-500: #6E4ED4;
+  --accent-600: #593FAD; --accent-700: #48328C; --accent-800: #36256C;
+  --accent-900: #261A4E;
+  --accent: var(--accent-500);
+  --accent-dark: #9F8DD8;
+  --accent-mid: #35285D;
+  --accent-soft: #F0EDFB;
+  --accent-text: var(--accent-600);
+  --on-accent: #FFFFFF;
+}
+[data-app="fundbase"] {
+  --accent-50: #F1F8F7; --accent-100: #DDEFEC; --accent-200: #B7DCD5;
+  --accent-300: #82C2B7; --accent-400: #43A493; --accent-500: #0E8A74;
+  --accent-600: #0C7461; --accent-700: #0A6252; --accent-800: #084F43;
+  --accent-900: #063E34;
+  --accent: var(--accent-500);
+  --accent-dark: #41C8B0;
+  --accent-mid: #216358;
+  --accent-soft: #E7F3F1;
+  --accent-text: var(--accent-600);
+  --on-accent: #FFFFFF;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0F1116;
+  --surface: #16181E;
+  --surface-2: #1D2028;
+  --text: #E6E9EF;
+  --text-muted: #9AA3B5;
+  --text-inverse: #2B2D33;
+  --border: #2A2E36;
+  --row-alt: #292A30;
+  --row-line: #2A2E36;
+  --table-head: #12141A;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  --accent: var(--accent-dark);
+  --accent-soft: color-mix(in srgb, var(--accent-dark) 16%, #16181E);
+  --accent-text: var(--accent-dark);
+  --on-accent: #0F1116;
+  --ok: #6FD39A;
+  --ok-soft: color-mix(in srgb, #1F8A4A 18%, #16181E);
+  --warn: #E0B15A;
+  --warn-soft: color-mix(in srgb, #C9892E 18%, #16181E);
+  --danger: #E88980;
+  --danger-soft: color-mix(in srgb, #C4473A 18%, #16181E);
+  --focus: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  color-scheme: dark;
+  --bg: #0F1116;
+  --surface: #16181E;
+  --surface-2: #1D2028;
+  --text: #E6E9EF;
+  --text-muted: #9AA3B5;
+  --text-inverse: #2B2D33;
+  --border: #2A2E36;
+  --row-alt: #292A30;
+  --row-line: #2A2E36;
+  --table-head: #12141A;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  --accent: var(--accent-dark);
+  --accent-soft: color-mix(in srgb, var(--accent-dark) 16%, #16181E);
+  --accent-text: var(--accent-dark);
+  --on-accent: #0F1116;
+  --ok: #6FD39A;
+  --ok-soft: color-mix(in srgb, #1F8A4A 18%, #16181E);
+  --warn: #E0B15A;
+  --warn-soft: color-mix(in srgb, #C9892E 18%, #16181E);
+  --danger: #E88980;
+  --danger-soft: color-mix(in srgb, #C4473A 18%, #16181E);
+  --focus: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+  }
+}

@@ -1,32 +1,87 @@
-import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import RowMenu from '../components/RowMenu';
+import { CardChargeDialog } from './Payments';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Clock, ExternalLink, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, StickyNote, TrendingUp,
+  ArrowLeft, Clock, CreditCard, ExternalLink, Handshake, Target, Ticket, Mail, Pencil, Percent, Phone, Plus, Receipt, Scale, Share2, Star, StickyNote, TrendingUp,
 } from 'lucide-react';
+import { ShareDialog, paymentUrl } from './Outreach';
 import DataTable from '../components/DataTable';
 import RecordForm, { type Field } from '../components/RecordForm';
-import { campLabel } from '../components/CrudPage';
 import Kpi from '../components/Kpi';
 import AdminLink from '../components/AdminLink';
 import { Balance, Pill, StatusPill } from '../components/Pill';
 import { fetchAll, supabase, type Row } from '../lib/supabase';
 import { useQuery } from '../lib/useQuery';
+import { availableNote, useAvailable } from '../components/CampaignBalanceNote';
+import { ALL_TOPICS, useLiveRefresh } from '../lib/live';
 import { useAuth } from '../lib/auth';
-import { date, dateTime, money, pct, yn } from '../lib/format';
-import { campaignFields, donationFields, expenseFields, taskFields, transferFields } from '../lib/schemas';
+import { dateTime, money, pct, yn, formatPhone } from '../lib/format';
+import { campaignFields, editDonationFields, expenseFields, newDonationFields, fundraiserDonationFields, newPayoutDefaults, taskFields, transferEditFields } from '../lib/schemas';
+import { clearLookups } from '../lib/lookups';
 import { DONATION_SELECT, donationColumns } from './donationColumns';
+import { STATUS_LABEL } from './Campaigns';
+import { NewPledgeButtons, PledgeDialog, pledgeColumns } from './Pledges';
+import { NewVoucherButton, VoucherDialog, voucherColumns } from './Vouchers';
+import { ChangeModeDialog, SubCampaignsTab, modeLabel } from './SubCampaigns';
+import { TRANSFER_SELECT, TransferDialog, transferColumns } from './Transfers';
+import { RequestForm, RequestTeamDialog } from './Requests';
+import { MyTransferRequests, RequestTransferDialog } from './TransferRequests';
+import { CampaignSettingsTab, SwitchTemplateDialog } from './Templates';
+import { PayoutStatusPill, RequestPayoutDialog, payoutStatus } from './Payouts';
+import { CampaignReportDialog, DonorListDialog } from './Reports';
+import { balanceAfterColumn, balanceIndex, loadStatement, statementColumns } from './campaignStatement';
+import { ContactImportDialog } from './Imports';
 
-type Tab = 'donations' | 'expenses' | 'transfers' | 'tasks' | 'pledges';
-const CAMP = 'id, real_name, campaign_name, friendly_name';
+type Tab = 'donations' | 'expenses' | 'transfers' | 'statement' | 'tasks' | 'pledges' | 'vouchers' | 'teams' | 'sub-campaigns' | 'settings';
 
 export default function CampaignDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
-  const { isAdmin, role } = useAuth();
+  // A donation recorded from this page comes back here saying so (Moshe Henig, #54).
+  const arrivedNotice = (useLocation().state as { notice?: string } | null)?.notice ?? null;
+  const { isAdmin, canWork, permissions, defaultAccountId } = useAuth();
   const [tab, setTab] = useState<Tab>('donations');
+  const [charging, setCharging] = useState(false);
   const [form, setForm] = useState<{ table: string; title: string; fields: Field[]; record?: Row | null; defaults?: Row } | null>(null);
   const [version, setVersion] = useState(0);
+  const [canEnter, setCanEnter] = useState(false);
+  const [isPrimary, setIsPrimary] = useState(false);
+  const [openPledge, setOpenPledge] = useState<string | null>(null);
+  const [openVoucher, setOpenVoucher] = useState<string | null>(null);
+  const [transferStart, setTransferStart] = useState<Row | null>(null);
+  const [changingMode, setChangingMode] = useState(false);
+  const [requestingTeam, setRequestingTeam] = useState(false);
+  const [requestingSub, setRequestingSub] = useState<'independent' | 'shared' | null>(null);
+  const [requestingTransfer, setRequestingTransfer] = useState(false);
+  const [transferRequestsVersion, setTransferRequestsVersion] = useState(0);
+  const [sharing, setSharing] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [reporting, setReporting] = useState<'report' | 'donors' | 'contacts' | null>(null);
+  const [switchingTemplate, setSwitchingTemplate] = useState(false);
+  const [settingsKey, setSettingsKey] = useState(0);
+  const [canRequestPayout, setCanRequestPayout] = useState(false);
 
+  // A fundraiser with the override can enter payments here, held for approval.
+  useEffect(() => {
+    if (isAdmin) return setCanEnter(true);
+    supabase.rpc('has_override', { p_permission: 'enter_manual_payments', p_campaign: id }).then(({ data }) => setCanEnter(!!data));
+  }, [id, isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) return setIsPrimary(true);
+    supabase.rpc('is_primary_on', { p_campaign: id }).then(({ data }) => setIsPrimary(!!data));
+  }, [id, isAdmin]);
+
+  // Payouts are asked for by the primary fundraiser, or someone given that right. Admins enter them directly.
+  useEffect(() => {
+    if (isAdmin) return setCanRequestPayout(false);
+    supabase.rpc('can_request_payout', { p_campaign: id }).then(({ data }) => setCanRequestPayout(!!data));
+  }, [id, isAdmin]);
+
+  // Whether the campaign has a phone PIN (never the PIN itself, which is only kept hashed).
+  const pin = useQuery(async () => (isAdmin ? (((await supabase.rpc('campaign_pin_status', { p_campaign: id })).data ?? []) as Row[])[0] ?? null : null), [id, isAdmin]);
+  const avail = useAvailable(id);
   const summary = useQuery(
     async () => {
       const { data, error } = await supabase.from('campaign_summary').select('*').eq('id', id).maybeSingle();
@@ -40,63 +95,142 @@ export default function CampaignDetail() {
     [id, version],
   );
 
+  // Shared teams: their gifts and payouts are in this campaign's figures, so the lists show them too (readiness #37).
+  const teams = useQuery(async () => ((await supabase.from('campaigns').select('id').eq('parent_campaign_id', id).eq('balance_mode', 'shared').is('deleted_at', null)).data ?? []).map(t => String(t.id)), [id]);
+  const family = [id, ...((teams.data as string[] | null) ?? [])];
+  // Transfers in and out, apart from gifts and payouts (readiness #43). Raised and expenses include them.
+  const moves = useQuery(async () => {
+    const rows = ((await supabase.rpc('campaign_transfer_totals')).data ?? []) as Row[];
+    const mine = rows.filter(r => family.includes(String(r.campaign_id)));
+    return { in: mine.reduce((t, r) => t + Number(r.amount_in ?? 0), 0), out: mine.reduce((t, r) => t + Number(r.amount_out ?? 0), 0) };
+  }, [id, version, family.join(',')], { live: ['transfers'] });
   const rows = useQuery(async () => {
     const page = <T,>(q: (a: number, b: number) => PromiseLike<T>) => fetchAll(q as never);
     switch (tab) {
       case 'donations':
-        return page((a, b) => supabase.from('donations').select(DONATION_SELECT).eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
+        return page((a, b) => supabase.from('donations').select(DONATION_SELECT).in('campaign_id', family).order('created_at', { ascending: false }).range(a, b));
       case 'expenses':
-        return page((a, b) => supabase.from('expenses').select('*, accounts(name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
+        // Fundraisers get the list through a function that leaves out the payee for those who may not see it.
+        if (!isAdmin) return (await supabase.rpc('campaign_payouts', { p_campaign: id })).data ?? [];
+        return page((a, b) => supabase.from('expenses').select('*, accounts(name)').in('campaign_id', family).order('created_at', { ascending: false }).range(a, b));
       case 'transfers':
+        // Fundraisers: read-only, through campaign_transfers (Moshe Henig, 2026-11-15).
+        if (!isAdmin) return (await supabase.rpc('campaign_transfers', { p_campaign: id })).data ?? [];
         return page((a, b) => supabase.from('transfers')
-          .select(`*, from:campaigns!transfers_from_campaign_id_fkey(${CAMP}), to:campaigns!transfers_to_campaign_id_fkey(${CAMP})`)
+          .select(TRANSFER_SELECT)
           .or(`from_campaign_id.eq.${id},to_campaign_id.eq.${id}`).order('created_at', { ascending: false }).range(a, b));
+      case 'statement':
+        return loadStatement(id);
       case 'tasks':
         return page((a, b) => supabase.from('tasks').select('*, donors(display_name)').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
       case 'pledges':
-        return page((a, b) => supabase.from('pledges').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
+        return page((a, b) => supabase.from('pledge_list').select('*').eq('campaign_id', id).order('date_pledged', { ascending: false }).range(a, b));
+      case 'teams':
+      case 'sub-campaigns':
+      case 'settings':
+        return [];
+      case 'vouchers':
+        return page((a, b) => supabase.from('voucher_list').select('*').eq('campaign_id', id).order('created_at', { ascending: false }).range(a, b));
     }
-  }, [id, tab, version]);
+  }, [id, tab, version, family.join(',')]);
+  // The running balance (Shulim, 2026-11-25): staff only, and not on a team that shares its parent's balance (it has
+  // none of its own; the parent's statement includes it).
+  const showStatement = canWork && !summary.data?.pool_id;
+  const balances = useQuery(async () => (showStatement && ['donations', 'expenses', 'transfers'].includes(tab) ? balanceIndex(await loadStatement(id)) : null),
+    [id, tab, version, showStatement]);
+  // Each tab's rows are kept, so switching back shows them at once while they refresh (readiness #55).
+  const tabRows = useRef(new Map<string, Row[]>());
+  useEffect(() => { tabRows.current.clear(); }, [id]);
+  useEffect(() => { if (!rows.loading && rows.data) tabRows.current.set(tab, rows.data as Row[]); }, [rows.loading, rows.data, tab]);
+  const shownRows = rows.loading ? tabRows.current.get(tab) ?? null : (rows.data as Row[] | null);
+  // The summary (balances) and the open tab update on their own (live refresh, Moshe Henig, 2026-11-15).
+  useLiveRefresh(ALL_TOPICS, () => { void summary.reload({ quiet: true }); void rows.reload({ quiet: true }); });
 
   const c = summary.data;
   if (summary.loading && !c) return <div className="view"><p className="muted pad">Loading…</p></div>;
   if (!c) return <div className="view"><p className="pad">Campaign not found or you don't have access. <Link to="/campaigns/active">Back</Link></p></div>;
 
   const saved = () => { setForm(null); setVersion(v => v + 1); };
-  const canEditTasks = role === 'admin' || role === 'manager';
+  const combines = Number(c.combined_raised) !== Number(c.raised);
+  const tIn = Number((moves.data as Row | null)?.in ?? 0);
+  const tOut = Number((moves.data as Row | null)?.out ?? 0);
+  // Teams' gifts or payouts are in the figures (readiness #37): say so on every box that includes them.
+  const withTeams = combines || Number(c.combined_fees) !== Number(c.fees) || Number(c.combined_expenses) !== Number(c.expenses)
+    || Number(c.combined_donations) !== Number(c.donation_count);
+  const canAddSub = c.status !== 'closed' && isPrimary;
+  // Fundraisers see transfers in and out of their campaign, read-only (Moshe Henig, 2026-11-15).
+  const tabs: Tab[] = ['donations', 'expenses', 'transfers', ...(showStatement ? ['statement' as Tab] : []), 'tasks', 'pledges', 'vouchers', 'teams', 'sub-campaigns', ...(isPrimary ? ['settings' as Tab] : [])];
+  const canEditTasks = canWork;
+  const setStatus = async (status: string, question: string) => {
+    if (!confirm(question)) return;
+    const { error } = await supabase.from('campaigns').update({ status }).eq('id', id);
+    if (error) return alert(error.message);
+    clearLookups();
+    setVersion(v => v + 1);
+  };
 
+  const balanceCol = (kind: 'donation' | 'payout' | 'transfer') => (showStatement ? [balanceAfterColumn(balances.data as Map<string, number> | null, kind)] : []);
   const tabConfig = {
     donations: {
-      columns: donationColumns({ hideCampaign: true }),
-      add: isAdmin && { table: 'donations', title: 'New Donation', fields: donationFields, defaults: { campaign_id: id, type: 'Payment', source: 'Manual', account_id: '8d4b5fbe', created_at: new Date().toISOString() } },
-      edit: isAdmin && { table: 'donations', title: 'Edit Donation', fields: donationFields },
+      // With shared teams, each row says which campaign (this one or a team) it's on.
+      columns: [...donationColumns({ hideCampaign: family.length < 2 }), ...balanceCol('donation')],
+      add: !isAdmin && canEnter ? { table: 'donations', title: 'New payment (held for approval)', fields: fundraiserDonationFields, defaults: { campaign_id: id, source: 'Manual' } } : isAdmin && { table: 'donations', title: 'New Donation', fields: newDonationFields, defaults: { campaign_id: id, type: 'Payment', status: 'completed', source: 'Manual', created_at: new Date().toISOString() } },
+      edit: isAdmin && { table: 'donations', title: 'Edit Donation', fields: editDonationFields },
     },
     expenses: {
       columns: [
+        ...(family.length > 1 ? [{ key: 'campaign_id', label: 'Campaign', campaignLink: (r: Row) => r.campaign_id }] : []),
+        { key: 'status', label: 'Status', value: payoutStatus, render: (r: Row) => <PayoutStatusPill row={r} /> },
         { key: 'payee', label: 'To' },
         { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
+        { key: 'reference', label: 'Reference', optional: true },
         { key: 'method', label: 'Method' },
-        { key: 'check_number', label: 'Check #' },
-        { key: 'memo', label: 'Memo' },
-        { key: 'description', label: 'Description' },
-        { key: 'account', label: 'Account', value: (r: Row) => r.accounts?.name },
+        { key: 'check_number', label: 'Check #', optional: true },
+        { key: 'memo', label: 'Memo', optional: true, long: true },
+        { key: 'description', label: 'Description', long: true },
+        { key: 'account', label: 'Account', optional: true, value: (r: Row) => r.accounts?.name },
         { key: 'cleared', label: 'Cleared', render: (r: Row) => yn(r.cleared) },
         { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
+        ...balanceCol('payout'),
       ],
-      add: isAdmin && { table: 'expenses', title: 'New Expense', fields: expenseFields, defaults: { campaign_id: id, account_id: '8d4b5fbe', created_at: new Date().toISOString() } },
-      edit: isAdmin && { table: 'expenses', title: 'Edit Expense', fields: expenseFields },
+      add: isAdmin && { table: 'expenses', title: 'New Payout', fields: expenseFields, defaults: { campaign_id: id, account_id: defaultAccountId, ...newPayoutDefaults() } },
+      edit: isAdmin && { table: 'expenses', title: 'Edit Payout', fields: expenseFields },
     },
     transfers: {
-      columns: [
-        { key: 'direction', label: 'Direction', value: (r: Row) => (r.to_campaign_id === id ? 'In' : 'Out'), render: (r: Row) => (r.to_campaign_id === id ? <Pill tone="green">In</Pill> : <Pill tone="amber">Out</Pill>) },
+      columns: isAdmin ? [
+        { key: 'direction', label: 'Direction', value: (r: Row) => (r.to_campaign_id === id ? 'Transfer In' : 'Transfer Out'), render: (r: Row) => (r.to_campaign_id === id ? <Pill tone="green">Transfer In</Pill> : <Pill tone="amber">Transfer Out</Pill>) },
+        ...transferColumns(r => setTransferStart({ from_campaign_id: r.to_campaign_id, to_campaign_id: r.from_campaign_id, amount: r.amount, description: `Reverses transfer ${r.id}` })),
+        ...balanceCol('transfer'),
+      ] : [
+        { key: 'direction', label: 'Direction', value: (r: Row) => (r.direction === 'in' ? 'Transfer In' : 'Transfer Out'), render: (r: Row) => (r.direction === 'in' ? <Pill tone="green">Transfer In</Pill> : <Pill tone="amber">Transfer Out</Pill>) },
         { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
-        { key: 'from', label: 'From', value: (r: Row) => campLabel(r.from) },
-        { key: 'to', label: 'To', value: (r: Row) => campLabel(r.to) },
-        { key: 'description', label: 'Description' },
-        { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
+        { key: 'other', label: 'From / to', value: (r: Row) => (r.other_campaign_id ? `${r.other_campaign_name ?? ''} - ${r.other_campaign_id}` : r.other_campaign_name) },
+        { key: 'description', label: 'Memo' },
+        { key: 'created_at', label: 'Date', render: (r: Row) => dateTime(r.created_at) },
+        ...balanceCol('transfer'),
       ],
-      add: isAdmin && { table: 'transfers', title: 'New Transfer', fields: transferFields, defaults: { from_campaign_id: id, created_at: new Date().toISOString() } },
-      edit: isAdmin && { table: 'transfers', title: 'Edit Transfer', fields: transferFields },
+      add: false as const,
+      edit: isAdmin && { table: 'transfers', title: 'Edit memo', fields: transferEditFields },
+    },
+    statement: {
+      columns: statementColumns(family.length > 1),
+      add: false as const,
+      edit: false as const,
+    },
+    teams: {
+      columns: [],
+      add: false as const,
+      edit: false as const,
+    },
+    'sub-campaigns': {
+      columns: [],
+      add: false as const,
+      edit: false as const,
+    },
+    settings: {
+      columns: [],
+      add: false as const,
+      edit: false as const,
     },
     tasks: {
       columns: [
@@ -111,14 +245,12 @@ export default function CampaignDetail() {
       edit: canEditTasks && { table: 'tasks', title: 'Edit Task', fields: taskFields },
     },
     pledges: {
-      columns: [
-        { key: 'donor_label', label: 'Donor', value: (r: Row) => r.donor_label || r.name },
-        { key: 'amount', label: 'Amount', render: (r: Row) => money(r.amount), align: 'right' as const },
-        { key: 'source', label: 'Source' },
-        { key: 'phone', label: 'Phone' },
-        { key: 'notes', label: 'Notes' },
-        { key: 'created_at', label: 'Timestamp', render: (r: Row) => dateTime(r.created_at) },
-      ],
+      columns: pledgeColumns(true),
+      add: false as const,
+      edit: false as const,
+    },
+    vouchers: {
+      columns: voucherColumns(true),
       add: false as const,
       edit: false as const,
     },
@@ -126,72 +258,165 @@ export default function CampaignDetail() {
 
   return (
     <div className="detail">
+      {arrivedNotice && <div className="notice">{arrivedNotice}</div>}
       <div className="detail-head">
-        <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={18} /></button>
-        <div className="hero-avatar">{(c.real_name || c.campaign_name || '#')[0]}</div>
+        <button className="icon-btn outlined" onClick={() => nav(-1)} title="Back"><ArrowLeft size={20} /></button>
+        <div className="hero-avatar">{(c.internal_name || c.campaign_name || '#')[0]}</div>
         <div>
           <h1>
-            {c.real_name || c.campaign_name}
+            {c.featured && <Star size={20} className="featured" />}
+            {c.internal_name || c.campaign_name}
             <span className="id-tag">#{c.id}</span>
-            <StatusPill value={c.archived_at ? 'Archived' : 'Active'} />
+            <StatusPill value={STATUS_LABEL[c.status]} />
+            {c.parent_campaign_id && <Pill tone={c.balance_mode === 'shared' ? 'blue' : 'violet'}>{modeLabel(c.balance_mode)}</Pill>}
           </h1>
           <div className="sub">
-            {c.friendly_name && <span>{c.friendly_name}</span>}
-            {c.manager_name && <span>· Managed by <b><AdminLink to={`/managers/${encodeURIComponent(c.manager_id)}`}>{c.manager_name}</AdminLink></b></span>}
+            {c.parent_campaign_id && <span>{modeLabel(c.balance_mode)} of <Link to={`/campaigns/${encodeURIComponent(c.parent_campaign_id)}`}>#{c.parent_campaign_id}</Link> ·</span>}
+            {c.external_name && c.external_name !== (c.internal_name || c.campaign_name) && <span>{c.external_name}</span>}
+            {c.manager_name && <span>· Primary: <b><AdminLink to={`/managers/${encodeURIComponent(c.manager_id)}`}>{c.manager_name}</AdminLink></b></span>}
             {c.sub_managers.length > 0 && <span>· with {c.sub_managers.map((m: Row) => m.full_name).join(', ')}</span>}
-            {c.archived_at && <span>· archived {date(c.archived_at)}</span>}
+            {c.archived_at && <span>· archived {dateTime(c.archived_at)}</span>}
+            {c.closed_at && <span>· closed {dateTime(c.closed_at)}</span>}
           </div>
         </div>
         <div className="spacer" />
-        {c.payment_link && (
-          <a className="btn" href={c.payment_link} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Payment page</a>
-        )}
-        {isAdmin && (
-          <button className="btn" onClick={() => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c })}>
-            <Pencil size={16} /> Edit
-          </button>
-        )}
+        {/* Moshe Henig: the payment page sits where Edit was; Edit is in More. */}
+        {c.status !== 'closed' && <a className="btn" href={paymentUrl(c)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} /> Open payment page</a>}
+        {canWork && c.status !== 'closed' && <button className="btn primary" onClick={() => setSharing(true)}><Share2 size={16} /> Share</button>}
+        <RowMenu label="More campaign actions" text="More" items={[
+          { label: 'Edit campaign', icon: <Pencil size={16} />, onClick: () => setForm({ table: 'campaigns', title: 'Edit campaign', fields: campaignFields, record: c }), hidden: !isAdmin },
+          { label: 'Change template', onClick: () => setSwitchingTemplate(true), hidden: !isAdmin },
+          { label: 'Remove phone PIN', onClick: async () => {
+              if (!confirm('Remove this campaign’s phone PIN? Unregistered phones won’t be able to reach it until a new one is set.')) return;
+              const { error: e } = await supabase.rpc('set_campaign_pin', { p_campaign: id, p_pin: null });
+              if (e) alert(e.message); else pin.reload();
+            }, hidden: !(isAdmin && (pin.data as Row | null)?.pin_set) },
+          { label: 'Batch entry', onClick: () => nav(`/campaigns/${encodeURIComponent(id)}/batch`), hidden: !(canEnter && c.status !== 'closed') },
+          { label: 'Report', onClick: () => setReporting('report'), hidden: !canWork },
+          { label: 'Donor list', onClick: () => setReporting('donors'), hidden: !canWork },
+          { label: 'Import contacts', onClick: () => setReporting('contacts'), hidden: !(canWork && c.status !== 'closed') },
+          { label: 'Request a team member', onClick: () => setRequestingTeam(true), hidden: !(!isAdmin && isPrimary) },
+          // Fundraisers ask for a sub-campaign or team under this campaign; admins approve (Moshe Henig, 2026-11-15).
+          { label: 'Request a sub-campaign', onClick: () => setRequestingSub('independent'), hidden: !(!isAdmin && isPrimary && c.status === 'active') },
+          { label: 'Request a team', onClick: () => setRequestingSub('shared'), hidden: !(!isAdmin && isPrimary && c.status === 'active') },
+          { label: c.balance_mode === 'shared' ? 'Change to a sub-campaign' : 'Change to a team', onClick: () => setChangingMode(true), hidden: !(isAdmin && c.parent_campaign_id) },
+          { label: 'Publish', onClick: () => setStatus('active', 'Publish this campaign?'), hidden: !(isAdmin && c.status === 'draft') },
+          { label: 'Archive', onClick: () => setStatus('archived', 'Archive this campaign? It leaves the active list, but a new donation brings it back.'), hidden: !(isAdmin && c.status === 'active') },
+          { label: 'Reactivate', onClick: () => setStatus('active', 'Reactivate this campaign?'), hidden: !(isAdmin && c.status === 'archived') },
+          { label: 'Reopen', onClick: () => setStatus('active', 'Reopen this closed campaign?'), hidden: !(c.status === 'closed' && permissions.includes('reopen_campaigns')) },
+          { label: 'Close campaign', danger: true, onClick: () => setStatus('closed', 'This will lock this campaign. No new transactions can be entered. Only the Super Admin can reopen it.'), hidden: !(isAdmin && c.status !== 'closed') },
+        ]} />
       </div>
 
       <div className="kpis">
-        <Kpi label="Raised" value={money(c.raised)} icon={<TrendingUp size={18} />} tone="green"
-             sub={`${Number(c.donation_count).toLocaleString()} donations`} />
-        <Kpi label="Fees" value={money(c.fees)} icon={<Percent size={18} />} tone="violet" sub={`${pct(c.fee_percent)} of raised`} />
-        <Kpi label="Expenses" value={money(c.expenses)} icon={<Receipt size={18} />} tone="amber" />
-        <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={18} />} tone={Number(c.balance) < 0 ? 'red' : 'green'} />
-        <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={18} />} tone="blue"
-             sub={c.last_donation_at ? `last gift ${date(c.last_donation_at)}` : undefined} />
+        <Kpi label={combines ? 'Raised (gifts), with teams' : 'Raised (gifts)'} value={money(Number(c.combined_raised) - tIn)} icon={<TrendingUp size={16} />} tone="green"
+             sub={[combines && `${money(c.raised)} directly`, `${Number(c.combined_donations).toLocaleString()} donations${withTeams ? ' incl. teams' : ''}`, c.goal != null && Number(c.goal) > 0 && `${pct(Number(c.combined_raised) / Number(c.goal))} of ${money(c.goal)} goal`].filter(Boolean).join(' · ')} />
+        <Kpi label={withTeams ? 'Fees, with teams' : 'Fees'} value={money(c.combined_fees)} icon={<Percent size={16} />} tone="violet" sub={`${pct(Number(c.combined_raised) ? Number(c.combined_fees) / Number(c.combined_raised) : 0)} of raised`} />
+        {tIn > 0 && <Kpi label="Transfers in" value={money(tIn)} icon={<TrendingUp size={16} />} tone="green" sub="From other campaigns" />}
+        <Kpi label={withTeams ? 'Expenses (payouts), with teams' : 'Expenses (payouts)'} value={money(Number(c.combined_expenses) - tOut)} icon={<Receipt size={16} />} tone="amber" />
+        {tOut > 0 && <Kpi label="Transfers out" value={money(tOut)} icon={<Receipt size={16} />} tone="amber" sub="To other campaigns" />}
+        {c.balance_mode === 'shared'
+          ? <Kpi label="Balance" value={<span className="muted">Shared</span>} icon={<Scale size={16} />} tone="blue" sub="Counted in the parent's balance" />
+          : <Kpi label="Balance" value={<Balance value={c.balance} />} icon={<Scale size={16} />} tone={Number(c.balance) < 0 ? 'red' : 'green'}
+              sub={[`= gifts${tIn ? ' + transfers in' : ''} − fees − payouts${tOut ? ' − transfers out' : ''}`, Number(c.sub_count) > 0 && 'includes its teams; sub-campaigns keep their own balance'].filter(Boolean).join(' · ')} />}
+        {avail && c.balance_mode !== 'shared' && (
+          <Kpi label="Available to pay out" value={<Balance value={avail.available} />} icon={<Scale size={16} />} tone={Number(avail.available) < 0 ? 'red' : 'blue'} sub={availableNote(avail)} />
+        )}
+        {Number(c.post_dated_amount) > 0 && <Kpi label="Post-dated checks" value={money(c.post_dated_amount)} icon={<Clock size={16} />} tone="blue" sub="Not in the balance yet" />}
+        {/* Checks recorded but not yet delivered stay out of the balance like post-dated ones (Moshe Henig, 2026-11-13). */}
+        {Number(c.undelivered_checks_count) > 0 && <Kpi label="Checks not delivered" value={money(c.undelivered_checks_amount)} icon={<Clock size={16} />} tone="amber"
+          sub={`${c.undelivered_checks_count} check${Number(c.undelivered_checks_count) === 1 ? '' : 's'} · not in the balance yet`} />}
+        {Number(c.awaiting_approval) > 0 && <Kpi label="Awaiting approval" value={money(c.awaiting_approval)} icon={<Clock size={16} />} tone="amber" sub="Not in the balance yet" />}
+        <Kpi label="Pledged (open)" value={money(c.pledged_open)} icon={<Handshake size={16} />} tone="blue"
+             sub={Number(c.pledge_scheduled_90) > 0 ? `Recurring: ${money(c.pledge_scheduled_30)} next 30 days, ${money(c.pledge_scheduled_90)} next 90` : 'Not in the balance'} />
+        {/* Raised + open pledges + pending + checks not delivered (Moshe Henig, 2026-11-13). Nothing counts twice: raised
+            leaves out undelivered checks and batches' pending amounts, and a payment matched to a pledge takes it off the
+            open pledges. */}
+        <Kpi label="Total potential" value={money(totalPotential(c))} icon={<Target size={16} />} tone="violet" sub={`Raised + pledged + pending + checks not delivered${withTeams || Number(c.combined_pledged_open ?? 0) !== Number(c.pledged_open ?? 0) || Number(c.combined_undelivered_checks ?? 0) !== Number(c.undelivered_checks_amount ?? 0) ? ', with teams' : ''}`} />
+        {Number(c.awaiting_funds) > 0 && <Kpi label="Vouchers awaiting funds" value={money(c.awaiting_funds)} icon={<Ticket size={16} />} tone="amber" sub="Not in the balance yet" />}
+        <Kpi label="Pending" value={money(c.pending_balance)} icon={<Clock size={16} />} tone="blue"
+             sub={c.last_donation_at ? `last gift ${dateTime(c.last_donation_at)}` : undefined} />
       </div>
+
+      {Number(c.undelivered_checks_count) > 0 && <UndeliveredChecks campaignId={c.id} canMark={isAdmin} onChange={() => setVersion(v => v + 1)} />}
 
       {(c.email || c.phone || c.notes) && (
         <div className="info">
-          {c.email && <span><Mail size={14} /> {c.email}</span>}
-          {c.phone && <span><Phone size={14} /> {c.phone}</span>}
-          {c.notes && <span><StickyNote size={14} /> {c.notes}</span>}
+          {c.email && <span><Mail size={16} /> {c.email}</span>}
+          {c.phone && <span><Phone size={16} /> {formatPhone(c.phone)}</span>}
+          {c.notes && <span><StickyNote size={16} /> {c.notes}</span>}
         </div>
       )}
 
       <div className="tabs">
-        {(['donations', 'expenses', 'transfers', 'tasks', 'pledges'] as Tab[]).map(t => (
-          <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t[0].toUpperCase() + t.slice(1)}</button>
+        {tabs.map(t => (
+          <button key={t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t === 'expenses' ? 'Payouts' : t[0].toUpperCase() + t.slice(1)}</button>
         ))}
       </div>
 
-      <DataTable
+      {tab === 'transfers' && !isAdmin && <MyTransferRequests campaignId={id} version={transferRequestsVersion} />}
+      {tab === 'settings' ? <CampaignSettingsTab key={settingsKey} campaignId={id} /> : tab === 'teams' || tab === 'sub-campaigns' ? <SubCampaignsTab key={tab} parent={c} kind={tab === 'teams' ? 'team' : 'sub'} canAdd={canAddSub} onChanged={() => setVersion(v => v + 1)} /> : <DataTable
         title={tab[0].toUpperCase() + tab.slice(1)}
         exportName={`${c.id}-${tab}`}
-        rows={(rows.data as Row[]) ?? []}
-        loading={rows.loading}
+        rows={shownRows ?? []}
+        loading={rows.loading && !shownRows}
         error={rows.error}
         columns={tabConfig.columns}
-        onOpen={tabConfig.edit ? r => setForm({ ...tabConfig.edit as { table: string; title: string; fields: Field[] }, record: r }) : undefined}
-        actions={tabConfig.add && (
-          <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
-            <Plus size={16} /> Add
-          </button>
-        )}
-      />
+        onOpen={tab === 'pledges' ? r => setOpenPledge(r.id) : tab === 'vouchers' ? r => setOpenVoucher(r.id)
+          : tabConfig.edit ? r => setForm({ ...tabConfig.edit as { table: string; title: string; fields: Field[] }, record: r }) : undefined}
+        actions={
+          tab === 'transfers' ? c.status === 'active' && c.balance_mode !== 'shared' && (isAdmin
+            ? <button className="btn primary" onClick={() => setTransferStart({ from_campaign_id: id })}><Plus size={16} /> New transfer</button>
+            // Fundraisers ask; an admin approves on the Task Sheet (Moshe Henig, 2026-11-15).
+            : isPrimary && <button className="btn primary" onClick={() => setRequestingTransfer(true)}><Plus size={16} /> Request a transfer</button>)
+          : tab === 'expenses' ? <>
+              {canRequestPayout && <button type="button" className={isAdmin ? 'btn' : 'btn primary'} onClick={() => setRequesting(true)}>Request payout</button>}
+              {tabConfig.add && c.status !== 'closed' && (
+                <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
+                  <Plus size={16} /> New payout
+                </button>
+              )}
+            </>
+          : tab === 'pledges' ? canWork && c.status !== 'closed' && <NewPledgeButtons campaignId={id} onSaved={() => setVersion(v => v + 1)} />
+          : tab === 'vouchers' ? isAdmin && c.status !== 'closed' && <NewVoucherButton campaignId={id} onSaved={() => setVersion(v => v + 1)} />
+          : tab === 'donations' ? <>
+              {/* The same Charge a card as elsewhere (donor picker, saved cards, recurring), for this campaign. */}
+              {isAdmin && c.status !== 'closed' && <button type="button" className="btn" onClick={() => setCharging(true)}><CreditCard size={16} /> Charge a card</button>}
+              {/* Admins: New Donation with this campaign filled in, back here after saving (Moshe Henig, #54; readiness #35).
+                  Fundraisers: the held-for-approval form, right here. */}
+              {tabConfig.add && (
+                <button className="btn primary" onClick={() => (isAdmin
+                  ? nav(`/donations/new?campaign=${encodeURIComponent(id)}`)
+                  : setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null }))}>
+                  <Plus size={16} /> Add donation
+                </button>
+              )}
+            </>
+          : tabConfig.add && (
+            <button className="btn primary" onClick={() => setForm({ ...tabConfig.add as { table: string; title: string; fields: Field[]; defaults: Row }, record: null })}>
+              <Plus size={16} /> Add
+            </button>
+          )
+        }
+      />}
 
+      {charging && <CardChargeDialog campaignId={id} onClose={() => setCharging(false)} onDone={() => setVersion(v => v + 1)} />}
+      {transferStart && <TransferDialog start={transferStart} onClose={() => setTransferStart(null)} onDone={() => { setTransferStart(null); setVersion(v => v + 1); }} />}
+      {requesting && <RequestPayoutDialog campaignId={id} onClose={() => setRequesting(false)} onSaved={() => { setRequesting(false); alert('Your payout request was sent to the office. You can follow it under Payout Requests.'); }} />}
+      {reporting === 'report' && <CampaignReportDialog campaign={c} onClose={() => setReporting(null)} />}
+      {reporting === 'donors' && <DonorListDialog campaign={c} onClose={() => setReporting(null)} />}
+      {reporting === 'contacts' && <ContactImportDialog campaignId={id} onClose={() => setReporting(null)} />}
+      {requestingTeam && <RequestTeamDialog campaignId={id} onClose={() => setRequestingTeam(false)} />}
+      {requestingTransfer && <RequestTransferDialog campaignId={id} onClose={() => setRequestingTransfer(false)}
+        onSent={() => { setRequestingTransfer(false); setTransferRequestsVersion(v => v + 1); alert('Your transfer request was sent to the office. Nothing moves until an admin approves it.'); }} />}
+      {requestingSub && <RequestForm under={id} kind={requestingSub} onClose={() => setRequestingSub(null)}
+        onDone={() => { setRequestingSub(null); alert(`Your ${requestingSub === 'shared' ? 'team' : 'sub-campaign'} request was sent to the office. You can follow it under Campaigns → Requests.`); }} />}
+      {sharing && <ShareDialog campaign={c} onClose={() => setSharing(false)} />}
+      {changingMode && <ChangeModeDialog campaign={c} onClose={() => setChangingMode(false)} onDone={() => { setChangingMode(false); setVersion(v => v + 1); }} />}
+      {openPledge && <PledgeDialog id={openPledge} onClose={() => setOpenPledge(null)} onChanged={() => setVersion(v => v + 1)} />}
+      {openVoucher && <VoucherDialog id={openVoucher} onClose={() => setOpenVoucher(null)} onChanged={() => setVersion(v => v + 1)} />}
+
+      {switchingTemplate && <SwitchTemplateDialog campaignId={id} onClose={() => setSwitchingTemplate(false)} onDone={() => { setSwitchingTemplate(false); setSettingsKey(k => k + 1); }} />}
       {form && (
         <RecordForm
           table={form.table}
@@ -207,3 +432,45 @@ export default function CampaignDetail() {
     </div>
   );
 }
+
+/**
+ * The campaign's checks that are recorded but not yet delivered (Moshe Henig, 2026-11-13). They aren't in the balance
+ * until delivered; an admin marks each one delivered when it arrives, and it counts from then on.
+ */
+function UndeliveredChecks({ campaignId, canMark, onChange }: { campaignId: string; canMark: boolean; onChange: () => void }) {
+  const [version, setVersion] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const q = useQuery(async () => (await supabase.from('transaction_list').select('id, amount, check_number, donor_name, name, created_at, payment_method')
+    .eq('campaign_id', campaignId).eq('status', 'completed').eq('delivered', false).ilike('payment_method', '%check%').order('created_at')).data as Row[] ?? [], [campaignId, version], { live: ['gifts'] });
+  async function delivered(r: Row) {
+    if (!confirm(`Mark the ${money(r.amount)} check${r.check_number ? ` #${r.check_number}` : ''} as delivered? It then counts in the balance.`)) return;
+    setError(null);
+    const { error: e } = await supabase.from('donations').update({ delivered: true }).eq('id', r.id);
+    if (e) return setError(e.message);
+    setVersion(v => v + 1);
+    onChange();
+  }
+  const rows = (q.data as Row[]) ?? [];
+  return (
+    <div className="panel-box">
+      <h2>Checks not delivered yet</h2>
+      <p className="muted small">Recorded on this campaign but not delivered, so they're left out of the balance, like post-dated checks.</p>
+      <table className="mini"><thead><tr><th>Date</th><th>From</th><th>Check #</th><th className="right">Amount</th>{canMark && <th />}</tr></thead><tbody>
+        {rows.map(r => (
+          <tr key={r.id}>
+            <td>{dateTime(r.created_at)}</td><td>{r.donor_name || r.name || '—'}</td><td>{r.check_number || '—'}</td>
+            <td className="right num">{money(r.amount)}</td>
+            {canMark && <td className="right"><button type="button" className="btn small" onClick={() => void delivered(r)}>Mark delivered</button></td>}
+          </tr>
+        ))}
+      </tbody></table>
+      {error && <div className="error">{error}</div>}
+    </div>
+  );
+}
+
+/** Everything the campaign has or is expecting: raised, open pledges, batches' pending amounts and undelivered checks.
+ *  A parent's figure includes its teams' amounts, just like its own (Moshe #11). */
+export const totalPotential = (c: Row) =>
+  Number(c.combined_raised ?? c.raised ?? 0) + Number(c.combined_pledged_open ?? c.pledged_open ?? 0)
+  + Number(c.combined_pending ?? c.pending_balance ?? 0) + Number(c.combined_undelivered_checks ?? c.undelivered_checks_amount ?? 0);

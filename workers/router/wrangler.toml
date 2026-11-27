@@ -1,0 +1,9 @@
+# Only for DOMAIN_PROVIDER=saas: serves Cloudflare for SaaS custom hostnames from the Pages app.
+# Deploy to the SaaS zone with a route that covers the custom hostnames (see docs/PLATFORM_ROADMAP.md, Phase 12).
+name = "oizer-router"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+[vars]
+ORIGIN = "https://oizer-drm.pages.dev/"

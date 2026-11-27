@@ -13,7 +13,7 @@ export default function Kpi({ label, value, icon, tone = 'violet', sub, small }:
   return (
     <div className="kpi">
       <div className={`kpi-icon ${tone}`}>{icon}</div>
-      <div>
+      <div className="kpi-body">
         <div className="kpi-label">{label}</div>
         <div className={`kpi-value ${small ? 'small' : ''}`}>{value}</div>
         {sub && <div className="kpi-sub">{sub}</div>}
