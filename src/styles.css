@@ -493,9 +493,16 @@ table.grid { border-collapse: separate; border-spacing: 0; width: 100%; }
 .dash-defs ul { margin: 8px 0 0; padding-left: 16px; display: grid; gap: 4px; max-width: 900px; }
 /* KPI row (Trubase UI): one row of equal cards (3-5), 12px apart, same height; more than five wrap in even columns. */
 .kpis { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-3); }
-/* Six cards: two rows of three; seven or eight: rows of four (even rows, not five and a stub). */
-.kpis:has(> :nth-child(6)) { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.kpis:has(> :nth-child(7)) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* More than five cards: rows that each fill the full width, with no empty slot (Shulim, 2026-11-27: even rows, not 4 and a
+   gap). On a 12-column grid: six are 3 + 3, seven are 4 + 3 with the second row's cards widened to the edge, eight are
+   4 + 4, nine are 3 + 3 + 3. */
+@media (min-width: 1024px) {
+  .kpis:has(> :nth-child(6)) { grid-auto-flow: row; grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .kpis:has(> :nth-child(6)) > * { grid-column: span 4; }
+  .kpis:has(> :nth-child(7)) > * { grid-column: span 3; }
+  .kpis:has(> :nth-child(7)):not(:has(> :nth-child(8))) > :nth-child(n+5) { grid-column: span 4; }
+  .kpis:has(> :nth-child(9)) > * { grid-column: span 4; }
+}
 @media (max-width: 1023px) {
   .kpis, .kpis:has(> :nth-child(6)) { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kpis > :last-child:nth-child(odd) { grid-column: span 2; }
@@ -807,6 +814,8 @@ ul.plain li { padding: 8px 0; }
 .give-names { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 @media (max-width: 359px) { .give-names { grid-template-columns: minmax(0, 1fr); } }
 .give-safe { font-size: 12px; color: var(--give-muted); margin: 0 0 8px; }
+/* Lucide lock in place of the emoji (Shulim, 2026-11-27), sitting on the text line. */
+.give-safe svg, .give-foot svg { vertical-align: -3px; margin-right: 4px; }
 .give-turnstile { margin: 16px 0 4px; }
 .give-total { font-size: 16px; margin: 16px 0 0; color: var(--give-muted); }
 .give-total b { color: var(--give-ink); font-size: 16px; }

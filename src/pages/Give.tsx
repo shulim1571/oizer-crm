@@ -2,7 +2,7 @@ import OrgContact from '../components/OrgContact';
 import AddressBoxes from '../components/AddressBoxes';
 import { PoweredBy } from '../components/PoweredBy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronRight, Users } from 'lucide-react';
+import { ChevronRight, Lock, Users } from 'lucide-react';
 import { applyOrg, resolveOrg } from '../lib/org';
 import { sharpLogoUrl } from '../lib/sharpLogo';
 import { isRichText, plainText, sanitizeHtml } from '../lib/richText';
@@ -238,7 +238,7 @@ export default function GivePage({ campaignId }: { campaignId: string }) {
         </div>
       </main>
       <footer className="give-foot">
-        <span className="give-lock" aria-hidden="true">🔒</span> {t.secure} · {data.org.name}
+        <Lock className="give-lock" size={16} aria-hidden="true" /> {t.secure} · {data.org.name}
         <PoweredBy orgId={orgId} />
       </footer>
     </div>
@@ -481,7 +481,7 @@ function GiveForm({ t, data, orgId, onDone }: { t: Record<string, string>; data:
         onChange={(m, prog) => { setMethod(m); setProgram(prog); setDaf(emptyDaf()); setError(null); }} />
       {method === 'card' && (
         <>
-          <p className="give-safe" dir="auto"><span aria-hidden="true">🔒</span> {t.safe}</p>
+          <p className="give-safe" dir="auto"><Lock size={16} aria-hidden="true" /> {t.safe}</p>
           <CardFields ifieldsKey={data.payments.ifields_key} onTokens={setTokens} exp={exp} onExp={setExp} tall labels={{ card: t.card, cvv: t.cvv, exp: t.exp, loading: t.loading }} />
         </>
       )}

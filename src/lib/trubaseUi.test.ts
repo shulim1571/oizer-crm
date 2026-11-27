@@ -50,6 +50,14 @@ describe('Trubase UI design system', () => {
     expect(css).toMatch(/\.sidebar a \{[^}]*height: var\(--nav-h\);/);
     expect(css).toMatch(/\.topbar \{[^}]*background: var\(--surface\);/);
     // One primary button per screen: the header's New Donation is secondary; each page keeps its own primary.
-    expect(readFileSync('src/components/Layout.tsx', 'utf8')).toContain('className="btn small header-new-donation"');
+    expect(readFileSync('src/components/Layout.tsx', 'utf8')).toContain('className="btn small header-new-donation" onClick={() => nav(\'/donations/new\')}><PlusCircle size={16} /> New donation</button>');
+    // More than five cards fill each row to the edge (Shulim: even rows, not 4 and a gap).
+    expect(css).toContain('.kpis:has(> :nth-child(7)):not(:has(> :nth-child(8))) > :nth-child(n+5) { grid-column: span 4; }');
+  });
+
+  it('uses Lucide icons, not emoji, on the payment page', () => {
+    const give = readFileSync('src/pages/Give.tsx', 'utf8');
+    expect(give).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);   // no emoji (the lock was 🔒 U+1F512)
+    expect(give).toContain('<Lock size={16} aria-hidden="true" /> {t.safe}');
   });
 });
